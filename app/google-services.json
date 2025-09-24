@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "761757020017",
+    "project_id": "posetrainer-capstonefall2025",
+    "storage_bucket": "posetrainer-capstonefall2025.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:761757020017:android:0bfa90cbe0ee12dd9f90d0",
+        "android_client_info": {
+          "package_name": "fpt.fall2025.posetrainer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD-tfMXManRNw18o28to-B467-Be6LtspM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
