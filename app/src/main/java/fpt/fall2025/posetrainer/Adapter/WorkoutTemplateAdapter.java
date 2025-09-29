@@ -53,7 +53,8 @@ public class WorkoutTemplateAdapter extends RecyclerView.Adapter<WorkoutTemplate
             if (context != null) {
                 Intent intent = new Intent(context, WorkoutActivity.class);
                 intent.putExtra("workoutTemplateId", workoutTemplate.getId());
-                System.out.println("WorkoutTemplateAdapter: Starting WorkoutActivity with ID: " + workoutTemplate.getId());
+                intent.putExtra("fromMainActivity", true); // Flag để biết từ MainActivity
+                System.out.println("WorkoutTemplateAdapter: Starting WorkoutActivity with ID: " + workoutTemplate.getId() + " from MainActivity");
                 context.startActivity(intent);
             } else {
                 System.out.println("WorkoutTemplateAdapter: Context is null, cannot start activity");

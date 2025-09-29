@@ -147,7 +147,7 @@ public class SquatAnalyzer implements ExerciseAnalyzerInterface {
                 }
                 stateSequence.clear();
                 incorrectPosture = false;
-            } else {
+            } else if("s2".equals(currState) || "s3".equals(currState)){
                 // Feedback động tác
                 if (hipAngle > thresholds.getHipMax()) {
                     displayText[0] = true;
@@ -265,6 +265,29 @@ public class SquatAnalyzer implements ExerciseAnalyzerInterface {
         // Thêm các threshold khác...
     }
     
+    @Override
+    public void reset() {
+        this.correctCount = 0;
+        this.incorrectCount = 0;
+        this.incorrectPosture = false;
+        this.prevState = null;
+        this.currState = null;
+        this.stateSequence.clear();
+        this.feedbackList.clear();
+        this.lowerHips = false;
+        this.inactiveTime = 0.0;
+        this.inactiveTimeFront = 0.0;
+        this.startInactiveTime = System.nanoTime() / 1e9;
+        this.startInactiveTimeFront = System.nanoTime() / 1e9;
+        this.cameraWarning = false;
+        this.offsetAngle = 0;
+        // Reset display text and count frames
+        for (int i = 0; i < displayText.length; i++) {
+            displayText[i] = false;
+            countFrames[i] = 0;
+        }
+    }
+    
     // Helper methods
     private Map<String, Float> getLandmark(List<Map<String, Float>> landmarks, int idx) {
         if (landmarks == null || idx >= landmarks.size()) {
@@ -307,7 +330,7 @@ public class SquatAnalyzer implements ExerciseAnalyzerInterface {
             return "s1";
         } else if (kneeAngle >= thresholds.getKneeTrans()[0] && kneeAngle <= thresholds.getKneeTrans()[1]) {
             return "s2";
-        } else if (kneeAngle >= thresholds.getKneePass()[0] && kneeAngle <= thresholds.getKneePass()[1]) {
+        } else if (kneeAngle >= thresholds.getKneePass()[0]) {
             return "s3";
         }
         return null;

@@ -125,15 +125,7 @@ public class JumpingJackAnalyzer implements ExerciseAnalyzerInterface {
                 stateSequence.clear();
                 incorrectPosture = false;
             } else { //không ở state 1
-                // Feedback động tác cho jumping jack
-                if (leftArmAngle < thresholds.getArmNormal()[0] || leftArmAngle > thresholds.getArmNormal()[1] ||
-                    rightArmAngle < thresholds.getArmNormal()[0] || rightArmAngle > thresholds.getArmNormal()[1]) {
-                    feedbackList.add("Keep arms in position");
-                }
-                if (leftLegAngle < thresholds.getLegNormal()[0] || leftLegAngle > thresholds.getLegNormal()[1] ||
-                    rightLegAngle < thresholds.getLegNormal()[0] || rightLegAngle > thresholds.getLegNormal()[1]) {
-                    feedbackList.add("Keep legs together");
-                }
+                
             }
             
             // Inactivity logic
@@ -216,6 +208,28 @@ public class JumpingJackAnalyzer implements ExerciseAnalyzerInterface {
         }
         if (thresholds.containsKey("legNormal")) {
             this.thresholds.setLegNormal((int[]) thresholds.get("legNormal"));
+        }
+    }
+    
+    @Override
+    public void reset() {
+        this.correctCount = 0;
+        this.incorrectCount = 0;
+        this.incorrectPosture = false;
+        this.prevState = null;
+        this.currState = null;
+        this.stateSequence.clear();
+        this.feedbackList.clear();
+        this.inactiveTime = 0.0;
+        this.inactiveTimeFront = 0.0;
+        this.startInactiveTime = System.nanoTime() / 1e9;
+        this.startInactiveTimeFront = System.nanoTime() / 1e9;
+        this.cameraWarning = false;
+        this.offsetAngle = 0;
+        // Reset display text and count frames
+        for (int i = 0; i < displayText.length; i++) {
+            displayText[i] = false;
+            countFrames[i] = 0;
         }
     }
     

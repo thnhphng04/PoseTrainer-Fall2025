@@ -178,6 +178,7 @@ public class WorkoutTemplate implements Serializable {
         private int sets;
         private int reps;
         private int restSec;
+        private String difficulty;
 
         public ExerciseConfig() {}
 
@@ -185,6 +186,14 @@ public class WorkoutTemplate implements Serializable {
             this.sets = sets;
             this.reps = reps;
             this.restSec = restSec;
+            this.difficulty = "beginner"; // Default difficulty
+        }
+
+        public ExerciseConfig(int sets, int reps, int restSec, String difficulty) {
+            this.sets = sets;
+            this.reps = reps;
+            this.restSec = restSec;
+            this.difficulty = difficulty;
         }
 
         public int getSets() {
@@ -209,6 +218,14 @@ public class WorkoutTemplate implements Serializable {
 
         public void setRestSec(int restSec) {
             this.restSec = restSec;
+        }
+
+        public String getDifficulty() {
+            return difficulty;
+        }
+
+        public void setDifficulty(String difficulty) {
+            this.difficulty = difficulty;
         }
     }
 }

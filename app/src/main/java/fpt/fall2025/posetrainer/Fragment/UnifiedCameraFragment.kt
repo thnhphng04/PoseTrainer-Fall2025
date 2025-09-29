@@ -62,6 +62,8 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
     private var sets: Int = 3
     private var reps: Int = 12
     private var exerciseType: String = ""
+    private var session: fpt.fall2025.posetrainer.Domain.Session? = null
+    private var exerciseIndex: Int = 0
 
     // Exercise state management
     private var currentSet: Int = 1
@@ -70,6 +72,7 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
     private var correctCount: Int = 0
     private var totalCorrectCount: Int = 0
     private var lastCorrectCount: Int = 0
+    private var isUIReset: Boolean = false
 
     // Analyzer and overlay
     private var currentAnalyzer: ExerciseAnalyzerInterface? = null
@@ -89,7 +92,24 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
             exercise = args.getSerializable("exercise") as Exercise
             sets = args.getInt("sets", 3)
             reps = args.getInt("reps", 12)
-            exerciseType = exercise.name.lowercase()
+            exerciseType = exercise.id.lowercase()
+            
+            // Nhận currentSetNumber để tiếp tục từ set đúng
+            currentSet = args.getInt("currentSetNumber", 1)
+            Log.d(TAG, "=== UNIFIED CAMERA FRAGMENT ===")
+            Log.d(TAG, "Received currentSetNumber: $currentSet")
+            
+            // Nhận session để biết trạng thái các set
+            session = args.getSerializable("session") as? fpt.fall2025.posetrainer.Domain.Session
+            
+            // Nhận exerciseIndex để tìm đúng PerExercise trong session
+            exerciseIndex = args.getInt("exerciseIndex", 0)
+            // Log.d(TAG, "ExerciseIndex: $exerciseIndex")
+            
+            // Nhận isResume flag
+            val isResume = args.getBoolean("isResume", false)
+            // Log.d(TAG, "Is Resume: $isResume")
+            
         }
     }
 
@@ -153,9 +173,9 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
 
     private fun initializeAnalyzer() {
         currentAnalyzer = when (exerciseType) {
-            "squat", "bodyweight squat" -> SquatAnalyzer()
-            "push-up", "pushup" -> PushUpAnalyzer()
-            "jumping jack", "jumpingjack" -> JumpingJackAnalyzer()
+            "ex_squat" -> SquatAnalyzer()
+            "ex_pushup" -> PushUpAnalyzer()
+            "ex_jumping_jack" -> JumpingJackAnalyzer()
             else -> SquatAnalyzer() // Default
         }
     }
@@ -165,15 +185,15 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         binding.overlayContainer.removeAllViews()
 
         currentOverlayView = when (exerciseType) {
-            "squat", "bodyweight squat" -> {
+            "ex_squat" -> {
                 squatOverlayView = SquatOverlayView(requireContext(), null)
                 squatOverlayView
             }
-             "push-up", "pushup" -> {
-                 pushUpOverlayView = PushUpOverlayView(requireContext(), null)
-                 pushUpOverlayView
-             }
-            "jumping jack", "jumpingjack" -> {
+            "ex_pushup" -> {
+                pushUpOverlayView = PushUpOverlayView(requireContext(), null)
+                pushUpOverlayView
+            }
+            "ex_jumping_jack" -> {
                 jumpingJackOverlayView = JumpingJackOverlayView(requireContext(), null)
                 jumpingJackOverlayView
             }
@@ -187,21 +207,24 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         currentOverlayView?.let { overlayView ->
             if (overlayView.parent == null) {
                 binding.overlayContainer.addView(overlayView)
-                Log.d(TAG, "Added overlay view to container: ${overlayView.javaClass.simpleName}")
+                // Log.d(TAG, "Added overlay view to container: ${overlayView.javaClass.simpleName}")
             } else {
-                Log.d(TAG, "Overlay view already has parent: ${overlayView.javaClass.simpleName}")
+                // Log.d(TAG, "Overlay view already has parent: ${overlayView.javaClass.simpleName}")
             }
         }
 
-        Log.d(TAG, "Set overlay view for exercise: $exerciseType")
-        Log.d(TAG, "Current overlay view: ${currentOverlayView?.javaClass?.simpleName}")
-        Log.d(TAG, "Overlay container child count: ${binding.overlayContainer.childCount}")
-        Log.d(TAG, "Overlay container size: ${binding.overlayContainer.width}x${binding.overlayContainer.height}")
+        // Log.d(TAG, "Set overlay view for exercise: $exerciseType")
+        // Log.d(TAG, "Current overlay view: ${currentOverlayView?.javaClass?.simpleName}")
+        // Log.d(TAG, "Overlay container child count: ${binding.overlayContainer.childCount}")
+        // Log.d(TAG, "Overlay container size: ${binding.overlayContainer.width}x${binding.overlayContainer.height}")
     }
     
     private fun setupUI() {
         // Set exercise name
         binding.tvExerciseType.text = exercise.name
+        
+        // Find the first incomplete set if resuming
+        findFirstIncompleteSet()
         
         // Set initial set info
         updateSetInfo()
@@ -211,6 +234,39 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         
         // Set initial correct count
         updateCorrectCount()
+    }
+    
+    /**
+     * Find the first incomplete set when resuming exercise
+     */
+    private fun findFirstIncompleteSet() {
+        Log.d(TAG, "=== FIND FIRST INCOMPLETE SET ===")
+        Log.d(TAG, "Current set from ExerciseActivity: $currentSet")
+        
+        // Check if current set is already completed or skipped
+        val currentSetStatus = getSetStatus(currentSet)
+        Log.d(TAG, "Current set $currentSet status: $currentSetStatus")
+        
+        if (currentSetStatus == "completed" || currentSetStatus == "skipped") {
+            Log.d(TAG, "Current set is $currentSetStatus, finding next incomplete set")
+            
+            // Find first incomplete set
+            for (setNumber in 1..sets) {
+                val setStatus = getSetStatus(setNumber)
+                Log.d(TAG, "Set $setNumber status: $setStatus")
+                
+                if (setStatus == "incomplete") {
+                    currentSet = setNumber
+                    Log.d(TAG, "Found first incomplete set: $currentSet")
+                    break
+                }
+            }
+        } else {
+            Log.d(TAG, "Current set $currentSet is incomplete, no need to change")
+        }
+        
+        Log.d(TAG, "Final current set: $currentSet")
+        Log.d(TAG, "=== END FIND FIRST INCOMPLETE SET ===")
     }
     
     private fun setupExerciseControls() {
@@ -235,7 +291,39 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
     }
     
     private fun updateSetInfo() {
-        binding.tvSetInfo.text = "Set $currentSet/$sets"
+        // Get set status from session
+        val setStatus = getSetStatus(currentSet)
+        val statusText = when (setStatus) {
+            "completed" -> "✓"
+            "skipped" -> "⏭"
+            "incomplete" -> ""
+            else -> ""
+        }
+        
+        Log.d(TAG, "updateSetInfo: currentSet=$currentSet, setStatus=$setStatus, statusText=$statusText")
+        binding.tvSetInfo.text = "Set $currentSet/$sets $statusText"
+    }
+    
+    /**
+     * Get status of a specific set from session
+     */
+    private fun getSetStatus(setNumber: Int): String {
+        return session?.let { session ->
+            val perExerciseList = session.perExercise
+            // Get currentExerciseNo from ExerciseActivity
+            val currentExerciseNo = (activity as? ExerciseActivity)?.let { activity ->
+                // Get exerciseNo from intent or use exerciseIndex + 1 as fallback
+                activity.intent.getIntExtra("exerciseNo", exerciseIndex + 1)
+            } ?: (exerciseIndex + 1)
+            
+            val currentPerExercise = perExerciseList?.find { it.getExerciseNo() == currentExerciseNo }
+            val setsList = currentPerExercise?.getSets() ?: ArrayList()
+            val targetSet = setsList.find { it.getSetNo() == setNumber }
+            val state = targetSet?.getState() ?: "incomplete"
+            
+            Log.d(TAG, "getSetStatus($setNumber): exerciseIndex=$exerciseIndex, currentExerciseNo=$currentExerciseNo, exerciseNo=${currentPerExercise?.getExerciseNo()}, setState=$state")
+            state
+        } ?: "incomplete"
     }
     
     private fun updateRepsInfo() {
@@ -244,12 +332,56 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
     
     private fun updateCorrectCount() {
         // Update correct count in the existing correct count display
-        Log.d(TAG, "Correct: $totalCorrectCount")
+        // Log.d(TAG, "updateCorrectCount: correctCount=$correctCount, totalCorrectCount=$totalCorrectCount")
+        
+        // Update UI with current correct count for this set
+        binding.tvCorrectCount.text = correctCount.toString()
+        // Log.d(TAG, "Updated tvCorrectCount to: ${binding.tvCorrectCount.text}")
     }
     
     private fun startExercise() {
-        Log.d(TAG, "Starting exercise")
-        isExerciseActive = true
+        // Log.d(TAG, "Starting exercise for Set $currentSet")
+        
+        // Check if current set is already completed or skipped
+        val currentSetStatus = getSetStatus(currentSet)
+        if (currentSetStatus == "completed" || currentSetStatus == "skipped") {
+            // Log.d(TAG, "Set $currentSet is $currentSetStatus, finding next incomplete set")
+            
+            // Find next incomplete set
+            var nextSet = currentSet + 1
+            while (nextSet <= sets) {
+                val setStatus = getSetStatus(nextSet)
+                if (setStatus == "incomplete") {
+                    currentSet = nextSet
+                    // Log.d(TAG, "Moved to Set $currentSet")
+                    break
+                }
+                nextSet++
+            }
+            
+            // If no incomplete set found, all sets are completed
+            if (nextSet > sets) {
+                Toast.makeText(requireContext(), "All sets are completed!", Toast.LENGTH_SHORT).show()
+                return
+            }
+            
+            // Update UI after moving to new set
+            updateSetInfo()
+            updateRepsInfo()
+        }
+        
+        // Start exercise (either current set or moved set)
+        startExerciseInternal()
+    }
+    
+    private fun startExerciseInternal() {
+        // Log.d(TAG, "Starting exercise for Set $currentSet (internal)")
+        
+        // Reset analyzer first to clear any previous feedback
+        currentAnalyzer?.reset()
+        // Log.d(TAG, "Analyzer reset completed")
+        
+        // Reset all counters first
         currentRep = 0
         correctCount = 0
         lastCorrectCount = 0
@@ -261,13 +393,25 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         // Update UI
         binding.btnStartStop.text = "Reset"
         updateRepsInfo()
-        updateCorrectCount()
         
-        Toast.makeText(requireContext(), "Exercise started! Perform $reps reps", Toast.LENGTH_SHORT).show()
+        // Set flags
+        isUIReset = true
+        isExerciseActive = true
+        
+        // Log.d(TAG, "Set $currentSet started - UI counts reset to 0, isExerciseActive=$isExerciseActive, isUIReset=$isUIReset")
+        
+        // Force UI update after a short delay to ensure it's not overridden by onResults
+        binding.root.post {
+            binding.tvCorrectCount.text = "0"
+            binding.tvIncorrectCount.text = "0"
+            // Log.d(TAG, "Forced UI update: tvCorrectCount=${binding.tvCorrectCount.text}, tvIncorrectCount=${binding.tvIncorrectCount.text}")
+        }
+        
+        Toast.makeText(requireContext(), "Set $currentSet started! Perform $reps reps", Toast.LENGTH_SHORT).show()
     }
     
     private fun stopExercise() {
-        Log.d(TAG, "Stopping exercise - cancelling current set")
+        // Log.d(TAG, "Stopping exercise - cancelling current set")
         isExerciseActive = false
         
         // Reset current set progress
@@ -288,8 +432,19 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
     }
     
     private fun completeSet() {
-        Log.d(TAG, "Set $currentSet completed")
+        // Log.d(TAG, "Set $currentSet completed")
         isExerciseActive = false
+        
+        // Cập nhật session với kết quả set vừa hoàn thành
+        (activity as? ExerciseActivity)?.updateSessionAfterSet(
+            setNumber = currentSet,
+            correctReps = correctCount,
+            targetReps = reps,
+            skipped = false
+        )
+        
+        // Force reload session to get latest data
+        reloadSessionFromActivity()
         
         // Add to total correct count
         totalCorrectCount += correctCount
@@ -305,12 +460,17 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         
         // Update UI
         binding.btnStartStop.text = "Start"
-        updateCorrectCount()
+        updateRepsInfo() // Make sure reps info is updated
         
+        // Move to next set (simple logic)
         if (currentSet < sets) {
             // Move to next set
             currentSet++
             updateSetInfo()
+            
+            // Ensure UI counts are 0 for new set
+            binding.tvCorrectCount.text = "0"
+            binding.tvIncorrectCount.text = "0"
             
             // Show continue message
             Toast.makeText(requireContext(), "Set ${currentSet - 1} completed! Ready for Set $currentSet", Toast.LENGTH_LONG).show()
@@ -320,22 +480,58 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         }
     }
     
+    /**
+     * Reload session from ExerciseActivity to get latest data
+     */
+    private fun reloadSessionFromActivity() {
+        // Log.d(TAG, "Reloading session from ExerciseActivity")
+        (activity as? ExerciseActivity)?.let { exerciseActivity ->
+            // Get updated session from activity
+            val updatedSession = exerciseActivity.getCurrentSession()
+            if (updatedSession != null) {
+                session = updatedSession
+                // Log.d(TAG, "Session reloaded from activity")
+            }
+        }
+    }
+    
     private fun continueToNextSet() {
-        if (currentSet < sets) {
-            currentSet++
+        // Find next incomplete set
+        var nextSet = currentSet + 1
+        while (nextSet <= sets) {
+            val setStatus = getSetStatus(nextSet)
+            if (setStatus == "incomplete") {
+                break
+            }
+            nextSet++
+        }
+        
+        if (nextSet <= sets) {
+            currentSet = nextSet
             currentRep = 0
             correctCount = 0
+            lastCorrectCount = 0
+            
+            // Reset UI counts to 0 for new set
+            binding.tvCorrectCount.text = "0"
+            binding.tvIncorrectCount.text = "0"
             
             updateSetInfo()
             updateRepsInfo()
-            updateCorrectCount()
+            
+            // Ensure UI counts remain 0 for new set
+            binding.tvCorrectCount.text = "0"
+            binding.tvIncorrectCount.text = "0"
             
             Toast.makeText(requireContext(), "Ready for Set $currentSet", Toast.LENGTH_SHORT).show()
+        } else {
+            // All sets completed
+            completeExercise()
         }
     }
     
     private fun completeExercise() {
-        Log.d(TAG, "Exercise completed")
+        // Log.d(TAG, "Exercise completed")
         Toast.makeText(requireContext(), "Exercise completed! Total reps: $totalCorrectCount", Toast.LENGTH_LONG).show()
         
         // Notify parent activity that exercise is completed
@@ -358,7 +554,15 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
     }
     
     private fun skipCurrentSet() {
-        Log.d(TAG, "Skipping current set: $currentSet")
+        // Log.d(TAG, "Skipping current set: $currentSet")
+        
+        // Cập nhật session với set bị skip
+        (activity as? ExerciseActivity)?.updateSessionAfterSet(
+            setNumber = currentSet,
+            correctReps = correctCount,
+            targetReps = reps,
+            skipped = true
+        )
         
         // Stop current exercise if active
         if (isExerciseActive) {
@@ -375,8 +579,9 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         binding.tvCorrectCount.text = "0"
         binding.tvIncorrectCount.text = "0"
         
-        // Move to next set or complete exercise
+        // Move to next set (simple logic)
         if (currentSet < sets) {
+            // Move to next set
             currentSet++
             updateSetInfo()
             updateRepsInfo()
@@ -388,7 +593,7 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
     }
     
     private fun skipCurrentExercise() {
-        Log.d(TAG, "Skipping current exercise")
+        // Log.d(TAG, "Skipping current exercise")
         
         // Stop current exercise if active
         if (isExerciseActive) {
@@ -409,7 +614,10 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
     }
     
     private fun skipExerciseAndGoToRest() {
-        Log.d(TAG, "Skipping exercise and going to rest screen")
+        // Log.d(TAG, "Skipping exercise and going to rest screen")
+        
+        // Gọi skipExercise() để cập nhật session
+        (activity as? ExerciseActivity)?.skipExercise()
         
         // Notify parent activity that exercise is completed (skipped)
         // This will trigger the rest screen flow
@@ -422,6 +630,8 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         if (isExerciseActive) {
             currentRep++
             updateRepsInfo()
+            
+            // Log.d(TAG, "Rep detected: $currentRep/$reps for Set $currentSet")
             
             // Show progress message
             if (currentRep < reps) {
@@ -440,6 +650,7 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         // Only count correct form when exercise is active (Start button pressed)
         if (isExerciseActive) {
             correctCount++
+            // Log.d(TAG, "onCorrectFormDetected: correctCount increased to $correctCount")
             updateCorrectCount()
             
             // Show form feedback
@@ -514,7 +725,7 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
             )
             preview?.setSurfaceProvider(binding.viewFinder.surfaceProvider)
         } catch (exc: Exception) {
-            Log.e(TAG, "Use case binding failed", exc)
+            // Log.e(TAG, "Use case binding failed", exc)
         }
     }
 
@@ -551,8 +762,22 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
                      lastFeedback?.let { feedback ->
                          // Only update UI counts when exercise is active (Start button pressed)
                          if (isExerciseActive) {
-                             binding.tvCorrectCount.text = feedback.correctCount.toString()
-                             binding.tvIncorrectCount.text = feedback.incorrectCount.toString()
+                             // Don't update UI immediately after reset - wait for meaningful feedback
+                             if (!isUIReset || (feedback.correctCount > 0 || feedback.incorrectCount > 0)) {
+                                 // Update our internal counters based on analyzer feedback
+                                 correctCount = feedback.correctCount
+                                 
+                                 // Update UI with our internal counters
+                                 binding.tvCorrectCount.text = correctCount.toString()
+                                 binding.tvIncorrectCount.text = feedback.incorrectCount.toString()
+                                 
+                                 // Log.d(TAG, "onResults: isExerciseActive=true, correctCount=$correctCount, feedback.correctCount=${feedback.correctCount}, isUIReset=$isUIReset")
+                                 
+                                 // Clear the reset flag after first meaningful update
+                                 if (isUIReset) {
+                                     isUIReset = false
+                                 }
+                             }
                              
                              // Simple rep detection - only count when correct count increases
                              if (feedback.correctCount > lastCorrectCount) {
@@ -570,6 +795,7 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
                              // When not active, show 0 counts
                              binding.tvCorrectCount.text = "0"
                              binding.tvIncorrectCount.text = "0"
+                             // Log.d(TAG, "onResults: isExerciseActive=false, UI counts set to 0")
                          }
                      }
 
@@ -586,21 +812,21 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         imageWidth: Int,
         feedback: ExerciseFeedback?
     ) {
-        Log.d(TAG, "Updating overlay view for exercise: $exerciseType")
-        Log.d(TAG, "Image size: ${imageWidth}x$imageHeight")
-        Log.d(TAG, "Pose landmarks count: ${poseResult.landmarks().firstOrNull()?.size ?: 0}")
+        // Log.d(TAG, "Updating overlay view for exercise: $exerciseType")
+        // Log.d(TAG, "Image size: ${imageWidth}x$imageHeight")
+        // Log.d(TAG, "Pose landmarks count: ${poseResult.landmarks().firstOrNull()?.size ?: 0}")
 
         when (exerciseType) {
-            "squat", "bodyweight squat" -> {
-                Log.d(TAG, "Updating SquatOverlayView")
+            "ex_squat" -> {
+                // Log.d(TAG, "Updating SquatOverlayView")
                 squatOverlayView?.setResults(poseResult, imageHeight, imageWidth, com.google.mediapipe.tasks.vision.core.RunningMode.LIVE_STREAM, feedback)
             }
-            "push-up", "pushup" -> {
-                Log.d(TAG, "Updating PushUpOverlayView")
+            "ex_pushup" -> {
+                // Log.d(TAG, "Updating PushUpOverlayView")
                 pushUpOverlayView?.setResults(poseResult, imageHeight, imageWidth, com.google.mediapipe.tasks.vision.core.RunningMode.LIVE_STREAM, feedback)
             }
-            "jumping jack", "jumpingjack" -> {
-                Log.d(TAG, "Updating JumpingJackOverlayView")
+            "ex_jumping_jack" -> {
+                // Log.d(TAG, "Updating JumpingJackOverlayView")
                 jumpingJackOverlayView?.setResults(poseResult, imageHeight, imageWidth, com.google.mediapipe.tasks.vision.core.RunningMode.LIVE_STREAM, feedback)
             }
         }
@@ -610,7 +836,7 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         activity?.runOnUiThread {
             Toast.makeText(requireContext(), error, Toast.LENGTH_SHORT).show()
             if (errorCode == PoseLandmarkerHelper.GPU_ERROR) {
-                Log.e(TAG, "GPU error, switching to CPU")
+                // Log.e(TAG, "GPU error, switching to CPU")
             }
         }
     }

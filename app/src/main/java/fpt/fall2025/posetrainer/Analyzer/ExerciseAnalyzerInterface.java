@@ -40,4 +40,10 @@ public interface ExerciseAnalyzerInterface {
      * @param thresholds Map chứa các threshold values mới
      */
     void updateThresholds(Map<String, Object> thresholds);
+    
+    /**
+     * Reset analyzer về trạng thái ban đầu
+     * Xóa tất cả counters và state
+     */
+    void reset();
 }

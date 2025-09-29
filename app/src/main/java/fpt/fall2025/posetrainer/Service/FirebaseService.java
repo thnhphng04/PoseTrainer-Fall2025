@@ -7,12 +7,14 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
 
 import fpt.fall2025.posetrainer.Domain.Exercise;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
+import fpt.fall2025.posetrainer.Domain.Session;
 
 /**
  * FirebaseService - Service để quản lý tất cả Firebase operations
@@ -206,5 +208,238 @@ public class FirebaseService {
     
     public interface OnExercisesLoadedListener {
         void onExercisesLoaded(ArrayList<Exercise> exercises);
+    }
+    
+    public interface OnSessionSavedListener {
+        void onSessionSaved(boolean success);
+    }
+    
+    public interface OnSessionLoadedListener {
+        void onSessionLoaded(Session session);
+        void onError(String error);
+    }
+    
+    /**
+     * Save session to Firebase Firestore
+     */
+    public void saveSession(Session session, OnSessionSavedListener listener) {
+        Log.d(TAG, "Saving session to Firestore: " + session.getId());
+        
+        db.collection("sessions")
+                .document(session.getId())
+                .set(session)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "Session saved successfully");
+                    if (listener != null) {
+                        listener.onSessionSaved(true);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error saving session", e);
+                    if (listener != null) {
+                        listener.onSessionSaved(false);
+                    }
+                });
+    }
+    
+    /**
+     * Load session by ID from Firebase
+     */
+    public void loadSessionById(String sessionId, OnSessionLoadedListener listener) {
+        Log.d(TAG, "Loading session by ID: " + sessionId);
+        
+        db.collection("sessions")
+                .document(sessionId)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        Session session = documentSnapshot.toObject(Session.class);
+                        Log.d(TAG, "Loaded session by ID: " + session.getId());
+                        if (listener != null) {
+                            listener.onSessionLoaded(session);
+                        }
+                    } else {
+                        Log.d(TAG, "Session not found with ID: " + sessionId);
+                        if (listener != null) {
+                            listener.onSessionLoaded(null);
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error loading session by ID", e);
+                    if (listener != null) {
+                        listener.onError(e.getMessage());
+                    }
+                });
+    }
+
+    /**
+     * Load active session for a specific workout from Firebase
+     */
+    public void loadActiveSession(String workoutId, OnSessionLoadedListener listener) {
+        Log.d(TAG, "Loading active session for workout: " + workoutId);
+        
+        db.collection("sessions")
+                .whereEqualTo("workoutId", workoutId)
+                .whereEqualTo("uid", "uid_1") // TODO: Get from authenticated user
+                .whereEqualTo("endedAt", 0) // Session chưa kết thúc (endedAt = 0)
+                .orderBy("createdAt", Query.Direction.DESCENDING) // Lấy session mới nhất
+                .limit(1)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (queryDocumentSnapshots.isEmpty()) {
+                        Log.d(TAG, "No active session found for workout: " + workoutId);
+                        if (listener != null) {
+                            listener.onSessionLoaded(null);
+                        }
+                    } else {
+                        DocumentSnapshot document = queryDocumentSnapshots.getDocuments().get(0);
+                        Session session = document.toObject(Session.class);
+                        Log.d(TAG, "Loaded active session: " + session.getId());
+                        if (listener != null) {
+                            listener.onSessionLoaded(session);
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error loading active session", e);
+                    if (listener != null) {
+                        listener.onError(e.getMessage());
+                    }
+                });
+    }
+
+    public void loadUserSessions(String uid, AppCompatActivity activity, OnSessionsLoadedListener listener) {
+        Log.d(TAG, "=== FIREBASE LOADING SESSIONS ===");
+        Log.d(TAG, "Loading sessions for user: " + uid);
+        
+        db.collection("sessions")
+                .whereEqualTo("uid", uid)
+                .get()
+                .addOnCompleteListener(activity, task -> {
+                    Log.d(TAG, "Firebase query completed");
+                    if (task.isSuccessful()) {
+                        Log.d(TAG, "Firebase query successful");
+                        Log.d(TAG, "Document count: " + task.getResult().size());
+                        
+                        ArrayList<Session> sessions = new ArrayList<>();
+                        for (DocumentSnapshot document : task.getResult()) {
+                            Log.d(TAG, "Processing document: " + document.getId());
+                            try {
+                                Session session = document.toObject(Session.class);
+                                if (session != null) {
+                                    session.setId(document.getId());
+                                    sessions.add(session);
+                                    Log.d(TAG, "Successfully loaded session: " + session.getId() + " for uid: " + session.getUid());
+                                } else {
+                                    Log.w(TAG, "Session object is null for document: " + document.getId());
+                                }
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error parsing session: " + e.getMessage());
+                            }
+                        }
+                        // Sort by startedAt descending (newest first)
+                        // All sessions now use seconds format
+                        sessions.sort((s1, s2) -> Long.compare(s2.getStartedAt(), s1.getStartedAt()));
+                        
+                        Log.d(TAG, "Total sessions loaded and sorted: " + sessions.size());
+                        listener.onSessionsLoaded(sessions);
+                    } else {
+                        Log.e(TAG, "Firebase query failed: ", task.getException());
+                        listener.onSessionsLoaded(new ArrayList<>());
+                    }
+                    Log.d(TAG, "=== END FIREBASE LOADING SESSIONS ===");
+                });
+    }
+
+    public interface OnSessionsLoadedListener {
+        void onSessionsLoaded(ArrayList<Session> sessions);
+    }
+    
+    public interface OnExerciseLoadedListener {
+        void onExerciseLoaded(Exercise exercise);
+    }
+    
+    public void loadExercisesByIds(ArrayList<String> exerciseIds, AppCompatActivity activity, OnExercisesLoadedListener listener) {
+        Log.d(TAG, "Loading exercises by IDs: " + exerciseIds);
+        
+        if (exerciseIds == null || exerciseIds.isEmpty()) {
+            Log.e(TAG, "No exercise IDs provided");
+            listener.onExercisesLoaded(new ArrayList<>());
+            return;
+        }
+        
+        ArrayList<Exercise> exercises = new ArrayList<>();
+        final int[] loadedItems = {0};
+        final int totalItems = exerciseIds.size();
+        
+        for (String exerciseId : exerciseIds) {
+            db.collection("exercises")
+                    .document(exerciseId)
+                    .get()
+                    .addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            DocumentSnapshot document = task.getResult();
+                            if (document.exists()) {
+                                try {
+                                    Exercise exercise = document.toObject(Exercise.class);
+                                    if (exercise != null) {
+                                        exercise.setId(document.getId());
+                                        exercises.add(exercise);
+                                        Log.d(TAG, "Loaded exercise: " + exercise.getName());
+                                    }
+                                } catch (Exception e) {
+                                    Log.e(TAG, "Error parsing exercise: " + e.getMessage());
+                                }
+                            } else {
+                                Log.e(TAG, "Exercise document not found: " + exerciseId);
+                            }
+                            
+                            loadedItems[0]++;
+                            if (loadedItems[0] == totalItems) {
+                                // All exercises loaded
+                                activity.runOnUiThread(() -> {
+                                    listener.onExercisesLoaded(exercises);
+                                });
+                            }
+                        } else {
+                            Log.e(TAG, "Error loading exercise: " + exerciseId, task.getException());
+                            loadedItems[0]++;
+                            if (loadedItems[0] == totalItems) {
+                                activity.runOnUiThread(() -> {
+                                    listener.onExercisesLoaded(exercises);
+                                });
+                            }
+                        }
+                    });
+        }
+    }
+    
+    public void loadExerciseById(String exerciseId, AppCompatActivity activity, OnExerciseLoadedListener listener) {
+        Log.d(TAG, "Loading exercise by ID: " + exerciseId);
+        
+        db.collection("exercises")
+                .document(exerciseId)
+                .get()
+                .addOnCompleteListener(activity, task -> {
+                    if (task.isSuccessful()) {
+                        DocumentSnapshot document = task.getResult();
+                        if (document.exists()) {
+                            try {
+                                Exercise exercise = document.toObject(Exercise.class);
+                                listener.onExerciseLoaded(exercise);
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error parsing exercise: " + e.getMessage());
+                                listener.onExerciseLoaded(null);
+                            }
+                        } else {
+                            Log.e(TAG, "Exercise not found: " + exerciseId);
+                            listener.onExerciseLoaded(null);
+                        }
+                    } else {
+                        Log.e(TAG, "Error loading exercise", task.getException());
+                        listener.onExerciseLoaded(null);
+                    }
+                });
     }
 }

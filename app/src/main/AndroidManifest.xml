@@ -21,6 +21,9 @@
             android:name=".Activity.WorkoutActivity"
             android:exported="false" />
         <activity
+            android:name=".Activity.SessionActivity"
+            android:exported="false" />
+        <activity
             android:name=".Activity.ExerciseActivity"
             android:exported="false" />
         <activity

@@ -138,12 +138,13 @@ public class PushUpAnalyzer implements ExerciseAnalyzerInterface {
             int kneeAngle = calculateAngle(hip, knee, ankle);
             int earElbowHipAngle = calculateAngle(ear, elbow, hip); // Góc ear-elbow-hip (đỉnh là elbow)
             
-            int s1check = calculateAngleWithUpVertical(ankle, shldr);
+            int positionCheck = calculateAngleWithUpVertical(ankle, shldr);
             
             // State machine
-            currState = getState(elbowAngle, earElbowHipAngle, s1check);
+            currState = getState(elbowAngle, earElbowHipAngle, positionCheck);
             updateStateSequence(currState);
-            
+
+
             // Đếm pushup đúng/sai
             String message = "";
             if ("s1".equals(currState)) {
@@ -156,7 +157,7 @@ public class PushUpAnalyzer implements ExerciseAnalyzerInterface {
                 }
                 stateSequence.clear();
                 incorrectPosture = false;
-            } else { //không còn ở state 1
+            } else if("s2".equals(currState) || "s3".equals(currState)) { //không còn ở state 1
                 // Feedback động tác
                 if (shldrAngle < thresholds.getShldrMin()) {
                     displayText[0] = true;
@@ -276,6 +277,29 @@ public class PushUpAnalyzer implements ExerciseAnalyzerInterface {
         }
     }
     
+    @Override
+    public void reset() {
+        this.correctCount = 0;
+        this.incorrectCount = 0;
+        this.incorrectPosture = false;
+        this.prevState = null;
+        this.currState = null;
+        this.stateSequence.clear();
+        this.feedbackList.clear();
+        this.lowerHips = false;
+        this.inactiveTime = 0.0;
+        this.inactiveTimeFront = 0.0;
+        this.startInactiveTime = System.nanoTime() / 1e9;
+        this.startInactiveTimeFront = System.nanoTime() / 1e9;
+        this.cameraWarning = false;
+        this.offsetAngle = 0;
+        // Reset display text and count frames
+        for (int i = 0; i < displayText.length; i++) {
+            displayText[i] = false;
+            countFrames[i] = 0;
+        }
+    }
+    
     // Helper methods
     private Map<String, Float> getLandmark(List<Map<String, Float>> landmarks, int idx) {
         if (landmarks == null || idx >= landmarks.size()) {
@@ -326,16 +350,21 @@ public class PushUpAnalyzer implements ExerciseAnalyzerInterface {
         return (int) Math.toDegrees(theta);
     }
     
-    private String getState(int elbowAngle, int earElbowHipAngle, int s1check) {
+    private String getState(int elbowAngle, int earElbowHipAngle, int positionCheck) {
         if (elbowAngle > thresholds.getElbowNormal() && 
-            earElbowHipAngle < thresholds.getEarElbowHipNormal() && 
-            s1check > 60) {
+            earElbowHipAngle < thresholds.getEarElbowHipNormal() &&
+                positionCheck > 60) {
+            System.out.println("s1");
             return "s1";
         } else if (earElbowHipAngle >= thresholds.getEarElbowHipTrans()[0] && 
-                   earElbowHipAngle <= thresholds.getEarElbowHipTrans()[1]) {
+                   earElbowHipAngle <= thresholds.getEarElbowHipTrans()[1] &&
+                    positionCheck > 60) {
+            System.out.println("s2");
             return "s2";
         } else if (earElbowHipAngle >= thresholds.getEarElbowHipPass()[0] && 
-                   earElbowHipAngle <= thresholds.getEarElbowHipPass()[1]) {
+                   earElbowHipAngle <= thresholds.getEarElbowHipPass()[1] &&
+                    positionCheck > 60) {
+            System.out.println("s3");
             return "s3";
         }
         return null;

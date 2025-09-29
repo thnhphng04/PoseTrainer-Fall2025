@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="140dp"
+    android:layout_margin="8dp"
+    android:background="@drawable/blue_bg"
+    android:padding="12dp">
+
+    <!-- Exercise Image -->
+    <com.google.android.material.imageview.ShapeableImageView
+        android:id="@+id/exerciseImage"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:src="@drawable/pic_1_1"
+        android:scaleType="centerCrop"
+        style="@style/Style.App.circleImageView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Exercise Info -->
+    <LinearLayout
+        android:id="@+id/exerciseInfo"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginStart="16dp"
+        app:layout_constraintStart_toEndOf="@+id/exerciseImage"
+        app:layout_constraintTop_toTopOf="@+id/exerciseImage"
+        app:layout_constraintEnd_toStartOf="@+id/checkMarkContainer">
+
+        <TextView
+            android:id="@+id/exerciseNameTxt"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Push-Up"
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/exerciseSetsRepsTxt"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="3 sets x 12 reps"
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:layout_marginTop="4dp" />
+
+        <TextView
+            android:id="@+id/exerciseProgressTxt"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0/3 sets completed"
+            android:textColor="@color/white"
+            android:textSize="11sp"
+            android:layout_marginTop="4dp" />
+
+        <TextView
+            android:id="@+id/exerciseSkippedTxt"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0 skipped"
+            android:textColor="@color/white"
+            android:textSize="10sp"
+            android:layout_marginTop="2dp"
+            android:visibility="gone" />
+
+        <!-- Exercise State Indicator -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+
+            <View
+                android:id="@+id/stateIndicator"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:background="@drawable/circle_button"
+                android:layout_marginEnd="6dp" />
+
+            <TextView
+                android:id="@+id/exerciseStateTxt"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Not Started"
+                android:textColor="@color/white"
+                android:textSize="10sp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Check Mark Container -->
+    <LinearLayout
+        android:id="@+id/checkMarkContainer"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:background="@drawable/circle_button"
+        android:gravity="center"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageView
+            android:id="@+id/checkMarkImageView"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:src="@drawable/pic_1_1"
+            android:tint="@color/white" />
+
+    </LinearLayout>
+
+    <!-- Start Exercise Button -->
+    <Button
+        android:id="@+id/startExerciseBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="32dp"
+        android:text="Start"
+        android:textSize="12sp"
+        android:textColor="@color/white"
+        android:background="@drawable/orange_bg"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:visibility="visible"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+    <!-- Resume Exercise Button -->
+    <Button
+        android:id="@+id/resumeExerciseBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="32dp"
+        android:text="Resume"
+        android:textSize="12sp"
+        android:textColor="@color/white"
+        android:background="@drawable/blue_bg"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -6,7 +6,8 @@ import java.util.List;
 public class Session implements Serializable {
     private String id;
     private String uid;
-    private String workoutId;
+    private String title;
+    private String description;
     private long startedAt;
     private long endedAt;
     private SessionSummary summary;
@@ -17,12 +18,13 @@ public class Session implements Serializable {
 
     public Session() {}
 
-    public Session(String id, String uid, String workoutId, long startedAt, long endedAt, 
+    public Session(String id, String uid, String title, String description, long startedAt, long endedAt, 
                    SessionSummary summary, List<PerExercise> perExercise, 
                    SessionFlags flags, DeviceInfo deviceInfo, String appVersion) {
         this.id = id;
         this.uid = uid;
-        this.workoutId = workoutId;
+        this.title = title;
+        this.description = description;
         this.startedAt = startedAt;
         this.endedAt = endedAt;
         this.summary = summary;
@@ -49,12 +51,20 @@ public class Session implements Serializable {
         this.uid = uid;
     }
 
-    public String getWorkoutId() {
-        return workoutId;
+    public String getTitle() {
+        return title;
     }
 
-    public void setWorkoutId(String workoutId) {
-        this.workoutId = workoutId;
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     public long getStartedAt() {
@@ -115,37 +125,14 @@ public class Session implements Serializable {
 
     // Inner class for SessionSummary
     public static class SessionSummary implements Serializable {
-        private int totalReps;
-        private int totalSets;
         private int durationSec;
         private int estKcal;
-        private double avgFormScore;
 
         public SessionSummary() {}
 
-        public SessionSummary(int totalReps, int totalSets, int durationSec, 
-                             int estKcal, double avgFormScore) {
-            this.totalReps = totalReps;
-            this.totalSets = totalSets;
+        public SessionSummary(int durationSec, int estKcal) {
             this.durationSec = durationSec;
             this.estKcal = estKcal;
-            this.avgFormScore = avgFormScore;
-        }
-
-        public int getTotalReps() {
-            return totalReps;
-        }
-
-        public void setTotalReps(int totalReps) {
-            this.totalReps = totalReps;
-        }
-
-        public int getTotalSets() {
-            return totalSets;
-        }
-
-        public void setTotalSets(int totalSets) {
-            this.totalSets = totalSets;
         }
 
         public int getDurationSec() {
@@ -163,33 +150,36 @@ public class Session implements Serializable {
         public void setEstKcal(int estKcal) {
             this.estKcal = estKcal;
         }
-
-        public double getAvgFormScore() {
-            return avgFormScore;
-        }
-
-        public void setAvgFormScore(double avgFormScore) {
-            this.avgFormScore = avgFormScore;
-        }
     }
 
     // Inner class for PerExercise
     public static class PerExercise implements Serializable {
+        private int exerciseNo;
         private String exerciseId;
         private String difficultyUsed;
-        private int cameraIssuesCount;
+        private String state; // "not_started", "doing", "completed"
+
         private List<SetData> sets;
         private ExerciseMedia media;
 
         public PerExercise() {}
 
-        public PerExercise(String exerciseId, String difficultyUsed, int cameraIssuesCount, 
+        public PerExercise(int exerciseNo, String exerciseId, String difficultyUsed, String state,
                           List<SetData> sets, ExerciseMedia media) {
+            this.exerciseNo = exerciseNo;
             this.exerciseId = exerciseId;
             this.difficultyUsed = difficultyUsed;
-            this.cameraIssuesCount = cameraIssuesCount;
+            this.state = state;
             this.sets = sets;
             this.media = media;
+        }
+
+        public int getExerciseNo() {
+            return exerciseNo;
+        }
+
+        public void setExerciseNo(int exerciseNo) {
+            this.exerciseNo = exerciseNo;
         }
 
         public String getExerciseId() {
@@ -208,13 +198,14 @@ public class Session implements Serializable {
             this.difficultyUsed = difficultyUsed;
         }
 
-        public int getCameraIssuesCount() {
-            return cameraIssuesCount;
+        public String getState() {
+            return state;
         }
 
-        public void setCameraIssuesCount(int cameraIssuesCount) {
-            this.cameraIssuesCount = cameraIssuesCount;
+        public void setState(String state) {
+            this.state = state;
         }
+
 
         public List<SetData> getSets() {
             return sets;
@@ -237,16 +228,16 @@ public class Session implements Serializable {
     public static class SetData implements Serializable {
         private int setNo;
         private int targetReps;
-        private int actualReps;
         private int correctReps;
+        private String state; // "incomplete", "completed", "skipped"
 
         public SetData() {}
 
-        public SetData(int setNo, int targetReps, int actualReps, int correctReps) {
+        public SetData(int setNo, int targetReps, int correctReps, String state) {
             this.setNo = setNo;
             this.targetReps = targetReps;
-            this.actualReps = actualReps;
             this.correctReps = correctReps;
+            this.state = state;
         }
 
         public int getSetNo() {
@@ -265,20 +256,21 @@ public class Session implements Serializable {
             this.targetReps = targetReps;
         }
 
-        public int getActualReps() {
-            return actualReps;
-        }
-
-        public void setActualReps(int actualReps) {
-            this.actualReps = actualReps;
-        }
-
-        public int getCorrectRepsReps() {
+        public int getCorrectReps() {
             return correctReps;
         }
 
         public void setCorrectReps(int correctReps) {
             this.correctReps = correctReps;
+        }
+
+
+        public String getState() {
+            return state;
+        }
+
+        public void setState(String state) {
+            this.state = state;
         }
     }
 

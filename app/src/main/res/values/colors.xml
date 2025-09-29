@@ -18,4 +18,8 @@
     <!-- Additional colors for existing layouts -->
     <color name="mainColor">#101322</color>
     <color name="darkBlue">#1c213c</color>
+    
+    <!-- Colors for SessionActivity -->
+    <color name="gray">#FF9E9E9E</color>
+    <color name="primary">#FF2196F3</color>
 </resources>

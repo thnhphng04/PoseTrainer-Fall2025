@@ -79,7 +79,7 @@
         android:orientation="horizontal"
         android:layout_marginEnd="8dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/imageView7"
+        app:layout_constraintEnd_toStartOf="@+id/imageview7"
         app:layout_constraintTop_toTopOf="parent">
 
         <!-- Sets Control -->
@@ -169,11 +169,14 @@
                 android:textColor="@color/white"
                 android:background="@drawable/circle_button"
                 android:layout_marginStart="4dp" />
+
         </LinearLayout>
     </LinearLayout>
 
+
+
     <ImageView
-        android:id="@+id/imageView7"
+        android:id="@+id/imageview7"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginEnd="16dp"

@@ -61,22 +61,31 @@ public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.Viewho
         
         holder.binding.titleTxt.setText(exercise.getName());
         
-        // Initialize sets and reps from default config
-        int defaultSets = 3;
-        int defaultReps = 12;
-        if (exercise.getDefaultConfig() != null) {
-            defaultSets = exercise.getDefaultConfig().getSets();
-            defaultReps = exercise.getDefaultConfig().getReps();
+        // Get configOverride from WorkoutTemplate.WorkoutItem if available
+        WorkoutTemplate.WorkoutItem workoutItem = getWorkoutItemForExercise(exercise.getId());
+        
+        // Initialize sets and reps - prioritize configOverride over default config
+        int initialSets = 3;
+        int initialReps = 12;
+        
+        if (workoutItem != null && workoutItem.getConfigOverride() != null) {
+            // Use configOverride from WorkoutTemplate
+            initialSets = workoutItem.getConfigOverride().getSets();
+            initialReps = workoutItem.getConfigOverride().getReps();
+        } else if (exercise.getDefaultConfig() != null) {
+            // Fallback to default config from Exercise
+            initialSets = exercise.getDefaultConfig().getSets();
+            initialReps = exercise.getDefaultConfig().getReps();
         }
         
         // Set initial values
-        holder.binding.setsTxt.setText(String.valueOf(defaultSets));
-        holder.binding.repsTxt.setText(String.valueOf(defaultReps));
-        holder.binding.durationTxt.setText(defaultSets + " sets x " + defaultReps + " reps");
+        holder.binding.setsTxt.setText(String.valueOf(initialSets));
+        holder.binding.repsTxt.setText(String.valueOf(initialReps));
+        holder.binding.durationTxt.setText(initialSets + " sets x " + initialReps + " reps");
         
         // Store current values
-        holder.currentSets = defaultSets;
-        holder.currentReps = defaultReps;
+        holder.currentSets = initialSets;
+        holder.currentReps = initialReps;
 
         // Load thumbnail image
         if (exercise.getMedia() != null && exercise.getMedia().getThumbnailUrl() != null) {
@@ -167,6 +176,22 @@ public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.Viewho
     @Override
     public int getItemCount() {
         return list.size();
+    }
+
+    /**
+     * Get WorkoutItem for a specific exercise ID
+     */
+    private WorkoutTemplate.WorkoutItem getWorkoutItemForExercise(String exerciseId) {
+        if (workoutTemplate == null || workoutTemplate.getItems() == null) {
+            return null;
+        }
+        
+        for (WorkoutTemplate.WorkoutItem item : workoutTemplate.getItems()) {
+            if (exerciseId.equals(item.getExerciseId())) {
+                return item;
+            }
+        }
+        return null;
     }
 
 
