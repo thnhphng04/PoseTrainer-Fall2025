@@ -15,6 +15,9 @@ import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -72,16 +75,26 @@ public class ProfileActivity extends AppCompatActivity {
     private void setupClickListeners() {
         btnBack.setOnClickListener(v -> finish());
         
-        btnLogout.setOnClickListener(v -> {
-            mAuth.signOut();
-            Toast.makeText(this, "Logged out successfully", Toast.LENGTH_SHORT).show();
-            
-            // Navigate to intro screen
-            Intent intent = new Intent(this, IntroActivity.class);
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            startActivity(intent);
-            finish();
-        });
+		btnLogout.setOnClickListener(v -> {
+			// Sign out from Google to force account chooser next time
+			GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+					.requestIdToken(getString(R.string.default_web_client_id))
+					.requestEmail()
+					.build();
+			GoogleSignInClient googleClient = GoogleSignIn.getClient(this, gso);
+			googleClient.signOut().addOnCompleteListener(task -> {
+				googleClient.revokeAccess().addOnCompleteListener(task2 -> {
+					// Then sign out from Firebase
+					mAuth.signOut();
+					Toast.makeText(this, "Logged out successfully", Toast.LENGTH_SHORT).show();
+					// Navigate to intro screen
+					Intent intent = new Intent(this, IntroActivity.class);
+					intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+					startActivity(intent);
+					finish();
+				});
+			});
+		});
     }
 
     private void loadUserProfile() {
