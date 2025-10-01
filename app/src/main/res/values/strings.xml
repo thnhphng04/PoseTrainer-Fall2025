@@ -1,4 +1,6 @@
 <resources>
     <string name="app_name">project193.2</string>
     <string name="loginTxt">Are you have an account? <font color="#FD511E">Signin</font></string>
+    <string name="default_web_client_id">761757020017-8rufa0bn2fdiv72s8l9pj1i5k06sr486.apps.googleusercontent.com</string>
+
 </resources>

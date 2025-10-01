@@ -19,6 +19,8 @@ public class IntroActivity extends AppCompatActivity {
 
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
         binding.startBtn.setOnClickListener(v -> startActivity(new Intent(IntroActivity.this, MainActivity.class)));
+        binding.btnLogin.setOnClickListener(v -> startActivity(new Intent(IntroActivity.this, LoginActivity.class)));
+        binding.btnRegister.setOnClickListener(v -> startActivity(new Intent(IntroActivity.this, RegisterAccountActivity.class)));
 
     }
 }

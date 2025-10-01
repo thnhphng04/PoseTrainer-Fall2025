@@ -12,7 +12,20 @@
           "package_name": "fpt.fall2025.posetrainer"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "761757020017-fl6jvt9u78u46j75dgbf3l065ooovp4j.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "fpt.fall2025.posetrainer",
+            "certificate_hash": "64ba0354bea1085dcf46429b3b40978ff0fa3689"
+          }
+        },
+        {
+          "client_id": "761757020017-8rufa0bn2fdiv72s8l9pj1i5k06sr486.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyD-tfMXManRNw18o28to-B467-Be6LtspM"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "761757020017-8rufa0bn2fdiv72s8l9pj1i5k06sr486.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
