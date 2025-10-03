@@ -14,11 +14,27 @@
       },
       "oauth_client": [
         {
-          "client_id": "761757020017-fl6jvt9u78u46j75dgbf3l065ooovp4j.apps.googleusercontent.com",
+          "client_id": "761757020017-497gk0bujem43alev07k324larb4408h.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "fpt.fall2025.posetrainer",
             "certificate_hash": "64ba0354bea1085dcf46429b3b40978ff0fa3689"
+          }
+        },
+        {
+          "client_id": "761757020017-k029l8r4tl3dvt0pq0rk0b9re7fpms68.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "fpt.fall2025.posetrainer",
+            "certificate_hash": "fd28926297285db4a5d73edace5f9acf90443a3c"
+          }
+        },
+        {
+          "client_id": "761757020017-rl5rlbifjv2s1gd29r2ijmkmbn8t1j42.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "fpt.fall2025.posetrainer",
+            "certificate_hash": "123bc473d45846dbe29cb55c56247fb3978e94b6"
           }
         },
         {
