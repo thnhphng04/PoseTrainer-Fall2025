@@ -14,7 +14,7 @@ import kotlin.math.min
  * BurpeesOverlayView - Overlay view for Burpees exercise
  * Dựa trên logic từ project Burpees nghiên cứu
  */
-class BurpeesOverlayView @JvmOverloads constructor(
+class BurpeeOverlayView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0

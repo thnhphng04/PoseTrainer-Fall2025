@@ -12,24 +12,26 @@ import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
 import fpt.fall2025.posetrainer.Analyzer.ExerciseAnalyzerInterface
 import fpt.fall2025.posetrainer.Analyzer.ExerciseFeedback
 import fpt.fall2025.posetrainer.Analyzer.JumpingJackAnalyzer
 import fpt.fall2025.posetrainer.Analyzer.PushUpAnalyzer
 import fpt.fall2025.posetrainer.Analyzer.SquatAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.BurpeeAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.HighKneeAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.MountainClimberAnalyzer
 import fpt.fall2025.posetrainer.Domain.Exercise
 import fpt.fall2025.posetrainer.MediaPipe.LandmarkConverter
 import fpt.fall2025.posetrainer.MediaPipe.PoseLandmarkerHelper
-import fpt.fall2025.posetrainer.R
 import fpt.fall2025.posetrainer.Activity.ExerciseActivity
 import fpt.fall2025.posetrainer.View.JumpingJackOverlayView
 import fpt.fall2025.posetrainer.View.PushUpOverlayView
 import fpt.fall2025.posetrainer.View.SquatOverlayView
+import fpt.fall2025.posetrainer.View.BurpeeOverlayView
+import fpt.fall2025.posetrainer.View.HighKneeOverlayView
+import fpt.fall2025.posetrainer.View.MountainClimberOverlayView
 import fpt.fall2025.posetrainer.databinding.FragmentUnifiedCameraBinding
 import com.google.mediapipe.tasks.vision.core.RunningMode
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -83,6 +85,9 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
     private var squatOverlayView: SquatOverlayView? = null
     private var pushUpOverlayView: PushUpOverlayView? = null
     private var jumpingJackOverlayView: JumpingJackOverlayView? = null
+    private var burpeesOverlayView: BurpeeOverlayView? = null
+    private var highKneeOverlayView: HighKneeOverlayView? = null
+    private var mountainClimberOverlayView: MountainClimberOverlayView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -176,6 +181,9 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
             "ex_squat" -> SquatAnalyzer()
             "ex_pushup" -> PushUpAnalyzer()
             "ex_jumping_jack" -> JumpingJackAnalyzer()
+            "ex_burpee" -> BurpeeAnalyzer()
+            "ex_high_knee" -> HighKneeAnalyzer()
+            "ex_mountain_climber" -> MountainClimberAnalyzer()
             else -> SquatAnalyzer() // Default
         }
     }
@@ -196,6 +204,18 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
             "ex_jumping_jack" -> {
                 jumpingJackOverlayView = JumpingJackOverlayView(requireContext(), null)
                 jumpingJackOverlayView
+            }
+            "ex_burpee" -> {
+                burpeesOverlayView = BurpeeOverlayView(requireContext(), null)
+                burpeesOverlayView
+            }
+            "ex_high_knee" -> {
+                highKneeOverlayView = HighKneeOverlayView(requireContext(), null)
+                highKneeOverlayView
+            }
+            "ex_mountain_climber" -> {
+                mountainClimberOverlayView = MountainClimberOverlayView(requireContext(), null)
+                mountainClimberOverlayView
             }
             else -> {
                 squatOverlayView = SquatOverlayView(requireContext(), null)
@@ -828,6 +848,18 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
             "ex_jumping_jack" -> {
                 // Log.d(TAG, "Updating JumpingJackOverlayView")
                 jumpingJackOverlayView?.setResults(poseResult, imageHeight, imageWidth, com.google.mediapipe.tasks.vision.core.RunningMode.LIVE_STREAM, feedback)
+            }
+            "ex_burpee" -> {
+                // Log.d(TAG, "Updating BurpeesOverlayView")
+                burpeesOverlayView?.setResults(poseResult, imageHeight, imageWidth, com.google.mediapipe.tasks.vision.core.RunningMode.LIVE_STREAM, feedback)
+            }
+            "ex_high_knee" -> {
+                // Log.d(TAG, "Updating HighKneeOverlayView")
+                highKneeOverlayView?.setResults(poseResult, imageHeight, imageWidth, com.google.mediapipe.tasks.vision.core.RunningMode.LIVE_STREAM, feedback)
+            }
+            "ex_mountain_climber" -> {
+                // Log.d(TAG, "Updating MountainClimberOverlayView")
+                mountainClimberOverlayView?.setResults(poseResult, imageHeight, imageWidth, com.google.mediapipe.tasks.vision.core.RunningMode.LIVE_STREAM, feedback)
             }
         }
     }

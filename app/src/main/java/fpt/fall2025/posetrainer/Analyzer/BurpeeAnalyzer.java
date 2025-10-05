@@ -10,7 +10,7 @@ import java.util.Map;
  * PushUp Analyzer - Phân tích bài tập Push-Up
  * Implement ExerciseAnalyzerInterface để có thể sử dụng chung CameraFragment
  */
-public class BurpeesAnalyzer implements ExerciseAnalyzerInterface {
+public class BurpeeAnalyzer implements ExerciseAnalyzerInterface {
 
     private BurpeesThresholds thresholds;
     private List<String> stateSequence;
@@ -30,7 +30,7 @@ public class BurpeesAnalyzer implements ExerciseAnalyzerInterface {
     private int offsetAngle;
     private List<String> feedbackList;
 
-    public BurpeesAnalyzer() {
+    public BurpeeAnalyzer() {
         this.thresholds = BurpeesThresholds.defaultBeginner();
         this.stateSequence = new ArrayList<>();
         this.correctCount = 0;
@@ -50,7 +50,7 @@ public class BurpeesAnalyzer implements ExerciseAnalyzerInterface {
         this.feedbackList = new ArrayList<>();
     }
 
-    public BurpeesAnalyzer(BurpeesThresholds thresholds) {
+    public BurpeeAnalyzer(BurpeesThresholds thresholds) {
         this();
         this.thresholds = thresholds;
     }

@@ -145,6 +145,9 @@ class ExerciseActivity : AppCompatActivity() {
                 "ex_jumping_jack" -> "Jumping Jack"
                 "ex_pushup" -> "Push-Up"
                 "ex_squat" -> "Bodyweight Squat"
+                "ex_burpee" -> "Burpee"
+                "ex_high_knee" -> "High Knee"
+                "ex_mountain_climber" -> "Mountain Climber"
                 else -> "Exercise ${targetPerExercise.exerciseNo}"
             }
             // Set default config from PerExercise sets data
