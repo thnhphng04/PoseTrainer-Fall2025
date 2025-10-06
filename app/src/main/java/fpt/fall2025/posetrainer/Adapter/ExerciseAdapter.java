@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import fpt.fall2025.posetrainer.Activity.ExerciseActivity;
+import fpt.fall2025.posetrainer.Activity.ExerciseDetailActivity;
 import fpt.fall2025.posetrainer.Domain.Exercise;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
 import fpt.fall2025.posetrainer.R;
@@ -170,7 +171,11 @@ public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.Viewho
             }
         });
 
-        // Remove individual start button - exercises will be started via "Start Workout" button
+        // Add click listener to open ExerciseDetailDialog
+        holder.binding.getRoot().setOnClickListener(v -> {
+            // Use Dialog instead of Activity
+            ExerciseDetailActivity.show(context, exercise);
+        });
     }
 
     @Override

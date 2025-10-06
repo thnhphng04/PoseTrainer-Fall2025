@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -5,7 +6,9 @@
     android:layout_width="match_parent"
     android:layout_height="130dp"
     android:layout_margin="8dp"
-    android:background="@drawable/blue_bg">
+    android:background="@drawable/blue_bg"
+    android:clickable="true"
+    android:focusable="true">
 
     <!-- Hình ảnh bài tập -->
     <com.google.android.material.imageview.ShapeableImageView
@@ -47,13 +50,11 @@
         app:layout_constraintTop_toBottomOf="@id/titleTxt" />
 
     <!-- Difficulty Button -->
-
-    <!-- Nhóm Sets & Reps -->
     <TextView
         android:id="@+id/difficultyBtn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="84dp"
+        android:layout_marginEnd="8dp"
         android:background="@drawable/orange_bg"
         android:padding="4dp"
         android:text="Beginner"
@@ -64,6 +65,7 @@
         app:layout_constraintTop_toTopOf="@id/titleTxt"
         app:layout_constraintVertical_bias="0.0" />
 
+    <!-- Sets & Reps Display (Read-only) -->
     <LinearLayout
         android:id="@+id/setsRepsLayout"
         android:layout_width="wrap_content"
@@ -83,16 +85,6 @@
             android:textSize="12sp"
             android:layout_gravity="center_vertical"/>
 
-        <Button
-            android:id="@+id/setsMinusBtn"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:text="-"
-            android:background="@drawable/circle_button"
-            android:textColor="@color/white"
-            android:textSize="12sp"
-            android:layout_marginStart="4dp"/>
-
         <TextView
             android:id="@+id/setsTxt"
             android:layout_width="30dp"
@@ -102,16 +94,6 @@
             android:textSize="16sp"
             android:textStyle="bold"
             android:gravity="center"
-            android:layout_marginStart="4dp"/>
-
-        <Button
-            android:id="@+id/setsPlusBtn"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:text="+"
-            android:background="@drawable/circle_button"
-            android:textColor="@color/white"
-            android:textSize="12sp"
             android:layout_marginStart="4dp"/>
 
         <!-- Reps -->
@@ -125,16 +107,6 @@
             android:layout_marginStart="16dp"
             android:layout_gravity="center_vertical"/>
 
-        <Button
-            android:id="@+id/repsMinusBtn"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:text="-"
-            android:background="@drawable/circle_button"
-            android:textColor="@color/white"
-            android:textSize="12sp"
-            android:layout_marginStart="4dp"/>
-
         <TextView
             android:id="@+id/repsTxt"
             android:layout_width="30dp"
@@ -145,28 +117,19 @@
             android:textStyle="bold"
             android:gravity="center"
             android:layout_marginStart="4dp"/>
-
-        <Button
-            android:id="@+id/repsPlusBtn"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:text="+"
-            android:background="@drawable/circle_button"
-            android:textColor="@color/white"
-            android:textSize="12sp"
-            android:layout_marginStart="4dp"/>
     </LinearLayout>
 
-    <!-- Play Button -->
-    <ImageView
-        android:id="@+id/playBtn"
+    <!-- Category Display -->
+    <TextView
+        android:id="@+id/categoryTxt"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.505"
-        app:srcCompat="@drawable/play" />
+        android:text="Category"
+        android:textColor="@color/orange"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="@id/setsRepsLayout"
+        app:layout_constraintTop_toBottomOf="@id/setsRepsLayout"
+        android:layout_marginTop="4dp" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

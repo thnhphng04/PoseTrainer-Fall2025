@@ -38,6 +38,12 @@
             android:name=".Activity.ExerciseActivity"
             android:exported="false" />
         <activity
+            android:name=".Activity.EditWorkoutActivity"
+            android:exported="false" />
+        <activity
+            android:name=".Activity.ExerciseSelectionActivity"
+            android:exported="false" />
+        <activity
             android:name=".Activity.MainActivity"
             android:exported="false" />
         <activity
