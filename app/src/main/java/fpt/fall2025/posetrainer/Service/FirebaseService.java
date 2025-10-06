@@ -360,6 +360,11 @@ public class FirebaseService {
         void onExerciseLoaded(Exercise exercise);
     }
     
+    public interface OnWorkoutTemplateSavedListener {
+        void onWorkoutTemplateSaved(boolean success);
+    }
+    
+    
     public void loadExercisesByIds(ArrayList<String> exerciseIds, AppCompatActivity activity, OnExercisesLoadedListener listener) {
         Log.d(TAG, "Loading exercises by IDs: " + exerciseIds);
         
@@ -439,6 +444,111 @@ public class FirebaseService {
                     } else {
                         Log.e(TAG, "Error loading exercise", task.getException());
                         listener.onExerciseLoaded(null);
+                    }
+                });
+    }
+    
+    /**
+     * Save user workout template to Firebase
+     */
+    public void saveUserWorkoutTemplate(String userId, WorkoutTemplate workout, OnWorkoutTemplateSavedListener listener) {
+        Log.d(TAG, "Saving user workout template: " + workout.getTitle());
+        
+        db.collection("user_workouts")
+                .document(userId)
+                .collection("workouts")
+                .document(workout.getId())
+                .set(workout)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "User workout template saved successfully");
+                    if (listener != null) {
+                        listener.onWorkoutTemplateSaved(true);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error saving user workout template", e);
+                    if (listener != null) {
+                        listener.onWorkoutTemplateSaved(false);
+                    }
+                });
+    }
+    
+    /**
+     * Load all exercises from Firebase
+     */
+    public void loadAllExercises(AppCompatActivity activity, OnExercisesLoadedListener listener) {
+        Log.d(TAG, "Loading all exercises from Firebase");
+        
+        db.collection("exercises")
+                .get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        Log.d(TAG, "Firebase query successful, found " + task.getResult().size() + " exercises");
+                        ArrayList<Exercise> exercises = new ArrayList<>();
+                        for (QueryDocumentSnapshot document : task.getResult()) {
+                            try {
+                                Exercise exercise = document.toObject(Exercise.class);
+                                if (exercise != null) {
+                                    exercise.setId(document.getId());
+                                    exercises.add(exercise);
+                                    Log.d(TAG, "Loaded exercise: " + exercise.getName() + " (ID: " + document.getId() + ")");
+                                }
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error parsing exercise: " + e.getMessage());
+                            }
+                        }
+                        
+                        Log.d(TAG, "Total exercises loaded: " + exercises.size());
+                        activity.runOnUiThread(() -> {
+                            listener.onExercisesLoaded(exercises);
+                        });
+                    } else {
+                        Log.e(TAG, "Error getting exercises: ", task.getException());
+                        activity.runOnUiThread(() -> {
+                            Toast.makeText(activity, "Error loading exercises", Toast.LENGTH_SHORT).show();
+                            listener.onExercisesLoaded(new ArrayList<>());
+                        });
+                    }
+                });
+    }
+
+    /**
+     * Load user workout templates
+     */
+    public void loadUserWorkoutTemplates(String userId, AppCompatActivity activity, OnWorkoutTemplatesLoadedListener listener) {
+        Log.d(TAG, "Loading user workout templates for user: " + userId);
+        
+        db.collection("user_workouts")
+                .document(userId)
+                .collection("workouts")
+                .get()
+                .addOnCompleteListener(task -> {
+                    Log.d(TAG, "Firebase query completed for user: " + userId);
+                    if (task.isSuccessful()) {
+                        Log.d(TAG, "Firebase query successful, found " + task.getResult().size() + " documents");
+                        ArrayList<WorkoutTemplate> workoutTemplates = new ArrayList<>();
+                        for (QueryDocumentSnapshot document : task.getResult()) {
+                            try {
+                                WorkoutTemplate workoutTemplate = document.toObject(WorkoutTemplate.class);
+                                if (workoutTemplate != null) {
+                                    workoutTemplate.setId(document.getId());
+                                    workoutTemplates.add(workoutTemplate);
+                                    Log.d(TAG, "Loaded user template: " + workoutTemplate.getTitle() + " (ID: " + document.getId() + ")");
+                                }
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error parsing user template: " + e.getMessage());
+                            }
+                        }
+                        
+                        Log.d(TAG, "Total user workout templates loaded: " + workoutTemplates.size());
+                        activity.runOnUiThread(() -> {
+                            listener.onWorkoutTemplatesLoaded(workoutTemplates);
+                        });
+                    } else {
+                        Log.e(TAG, "Error getting user workout templates: ", task.getException());
+                        activity.runOnUiThread(() -> {
+                            Toast.makeText(activity, "Error loading user workout templates", Toast.LENGTH_SHORT).show();
+                        });
                     }
                 });
     }
