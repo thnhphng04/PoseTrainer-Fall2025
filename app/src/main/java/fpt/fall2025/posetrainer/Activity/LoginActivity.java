@@ -149,12 +149,18 @@ public class LoginActivity extends AppCompatActivity {
                         boolean isNewUser = result != null && result.getAdditionalUserInfo() != null && result.getAdditionalUserInfo().isNewUser();
                         FirebaseUser firebaseUser = mAuth.getCurrentUser();
                         if (firebaseUser != null) {
+                            Log.d("GOOGLE_AUTH", "Firebase user authenticated: " + firebaseUser.getUid());
+                            Log.d("GOOGLE_AUTH", "Is new user: " + isNewUser);
+                            
                             if (isNewUser) {
+                                Log.d("GOOGLE_AUTH", "Creating new user document");
                                 createUserDocumentForGoogle(firebaseUser);
                             } else {
+                                Log.d("GOOGLE_AUTH", "Updating existing user login time");
                                 updateLastLoginAndProceed(firebaseUser);
                             }
                         } else {
+                            Log.e("GOOGLE_AUTH", "Firebase user is null after authentication");
                             Toast.makeText(LoginActivity.this, "Authentication failed", Toast.LENGTH_SHORT).show();
                         }
                     } else {
@@ -171,6 +177,11 @@ public class LoginActivity extends AppCompatActivity {
         String displayName = firebaseUser.getDisplayName() != null ? firebaseUser.getDisplayName() : "";
         String photoUrl = firebaseUser.getPhotoUrl() != null ? firebaseUser.getPhotoUrl().toString() : "";
 
+        Log.d("GOOGLE_AUTH", "Creating user document for UID: " + uid);
+        Log.d("GOOGLE_AUTH", "Email: " + email);
+        Log.d("GOOGLE_AUTH", "Display Name: " + displayName);
+        Log.d("GOOGLE_AUTH", "Photo URL: " + photoUrl);
+
         long now = System.currentTimeMillis() / 1000;
         User.NotificationSettings notification = new User.NotificationSettings(null, true);
         User newUser = new User(
@@ -186,8 +197,10 @@ public class LoginActivity extends AppCompatActivity {
         );
 
         FirebaseFirestore db = FirebaseFirestore.getInstance();
+        Log.d("FIRESTORE", "Attempting to save user to Firestore...");
         db.collection("users").document(uid).set(newUser)
                 .addOnSuccessListener(unused -> {
+                    Log.d("FIRESTORE", "User document saved successfully");
                     Toast.makeText(LoginActivity.this, "Đăng ký Google thành công", Toast.LENGTH_SHORT).show();
                     startActivity(new Intent(getApplicationContext(), MainActivity.class));
                     finish();
@@ -195,18 +208,42 @@ public class LoginActivity extends AppCompatActivity {
                 .addOnFailureListener(e -> {
                     Log.e("FIRESTORE", "Failed to save user", e);
                     Toast.makeText(LoginActivity.this, "Lưu thông tin người dùng thất bại: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    // Still proceed to MainActivity even if save fails
+                    startActivity(new Intent(getApplicationContext(), MainActivity.class));
+                    finish();
                 });
     }
 
     private void updateLastLoginAndProceed(FirebaseUser firebaseUser) {
         long now = System.currentTimeMillis() / 1000;
         FirebaseFirestore db = FirebaseFirestore.getInstance();
-        db.collection("users").document(firebaseUser.getUid())
-                .update("lastLoginAt", now)
-                .addOnCompleteListener(unused -> {
-                    // Dù update thất bại hay thành công vẫn vào app
-                    startActivity(new Intent(getApplicationContext(), MainActivity.class));
-                    finish();
+        String uid = firebaseUser.getUid();
+        
+        Log.d("GOOGLE_AUTH", "Checking if user document exists for UID: " + uid);
+        
+        // First check if user document exists
+        db.collection("users").document(uid).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        Log.d("GOOGLE_AUTH", "User document exists, updating lastLoginAt");
+                        // Update last login time
+                        db.collection("users").document(uid)
+                                .update("lastLoginAt", now)
+                                .addOnCompleteListener(unused -> {
+                                    Log.d("GOOGLE_AUTH", "Last login time updated successfully");
+                                    startActivity(new Intent(getApplicationContext(), MainActivity.class));
+                                    finish();
+                                });
+                    } else {
+                        Log.w("GOOGLE_AUTH", "User document not found, creating new one");
+                        // Create user document if it doesn't exist
+                        createUserDocumentForGoogle(firebaseUser);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e("GOOGLE_AUTH", "Failed to check user document", e);
+                    // If check fails, try to create user document
+                    createUserDocumentForGoogle(firebaseUser);
                 });
     }
 
