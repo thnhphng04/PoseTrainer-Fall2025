@@ -80,21 +80,29 @@ public class HomeFragment extends Fragment {
         }
 
         String uid = currentUser.getUid();
+        Log.d(TAG, "Loading user info for UID: " + uid);
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         
         db.collection("users").document(uid).get()
                 .addOnSuccessListener(documentSnapshot -> {
+                    Log.d(TAG, "HomeFragment: Firestore query completed");
                     if (documentSnapshot.exists()) {
+                        Log.d(TAG, "HomeFragment: User document exists");
                         User user = documentSnapshot.toObject(User.class);
                         if (user != null) {
+                            Log.d(TAG, "HomeFragment: User object created successfully");
                             updateUserUI(user);
+                        } else {
+                            Log.e(TAG, "HomeFragment: Failed to convert document to User object");
                         }
                     } else {
-                        Log.w(TAG, "User document not found in Firestore");
+                        Log.w(TAG, "HomeFragment: User document not found in Firestore for UID: " + uid);
+                        // Fallback: use Firebase Auth user data directly
+                        updateUserUIFromFirebaseAuth(currentUser);
                     }
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Failed to load user info", e);
+                    Log.e(TAG, "HomeFragment: Failed to load user info", e);
                 });
     }
 
@@ -118,6 +126,31 @@ public class HomeFragment extends Fragment {
                     .into(binding.imageView2);
         } else {
             // Keep default profile image
+            binding.imageView2.setImageResource(R.drawable.profile);
+        }
+    }
+
+    /**
+     * Fallback method to update UI with Firebase Auth user data when Firestore document is not found
+     */
+    private void updateUserUIFromFirebaseAuth(FirebaseUser firebaseUser) {
+        Log.d(TAG, "HomeFragment: Using Firebase Auth data as fallback");
+        
+        // Update display name
+        if (firebaseUser.getDisplayName() != null && !firebaseUser.getDisplayName().isEmpty()) {
+            binding.textView5.setText(firebaseUser.getDisplayName());
+        } else {
+            binding.textView5.setText("User");
+        }
+
+        // Update profile image
+        if (firebaseUser.getPhotoUrl() != null) {
+            Glide.with(this)
+                    .load(firebaseUser.getPhotoUrl())
+                    .placeholder(R.drawable.profile)
+                    .error(R.drawable.profile)
+                    .into(binding.imageView2);
+        } else {
             binding.imageView2.setImageResource(R.drawable.profile);
         }
     }

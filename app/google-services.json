@@ -38,6 +38,14 @@
           }
         },
         {
+          "client_id": "761757020017-37d3a1241be6645092e4f4bf19daecb4e1e37d06.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "fpt.fall2025.posetrainer",
+            "certificate_hash": "37d3a1241be6645092e4f4bf19daecb4e1e37d06"
+          }
+        },
+        {
           "client_id": "761757020017-8rufa0bn2fdiv72s8l9pj1i5k06sr486.apps.googleusercontent.com",
           "client_type": 3
         }

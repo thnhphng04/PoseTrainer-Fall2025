@@ -107,17 +107,26 @@ public class ProfileActivity extends AppCompatActivity {
         }
 
         String uid = currentUser.getUid();
+        Log.d(TAG, "Loading profile for UID: " + uid);
+        Log.d(TAG, "Current user email: " + currentUser.getEmail());
+        Log.d(TAG, "Current user display name: " + currentUser.getDisplayName());
         
         db.collection("users").document(uid).get()
                 .addOnSuccessListener(documentSnapshot -> {
+                    Log.d(TAG, "Firestore query completed");
                     if (documentSnapshot.exists()) {
+                        Log.d(TAG, "User document exists in Firestore");
                         User user = documentSnapshot.toObject(User.class);
                         if (user != null) {
+                            Log.d(TAG, "User object created successfully");
                             updateProfileUI(user);
+                        } else {
+                            Log.e(TAG, "Failed to convert document to User object");
                         }
                     } else {
-                        Log.w(TAG, "User document not found in Firestore");
-                        Toast.makeText(this, "User profile not found", Toast.LENGTH_SHORT).show();
+                        Log.w(TAG, "User document not found in Firestore for UID: " + uid);
+                        // Fallback: use Firebase Auth user data directly
+                        updateProfileUIFromFirebaseAuth(currentUser);
                     }
                 })
                 .addOnFailureListener(e -> {
@@ -195,5 +204,83 @@ public class ProfileActivity extends AppCompatActivity {
             Log.e(TAG, "Error formatting timestamp", e);
             return "Invalid date";
         }
+    }
+
+    /**
+     * Fallback method to update UI with Firebase Auth user data when Firestore document is not found
+     */
+    private void updateProfileUIFromFirebaseAuth(FirebaseUser firebaseUser) {
+        Log.d(TAG, "Using Firebase Auth data as fallback");
+        
+        // Update header profile info
+        if (firebaseUser.getDisplayName() != null && !firebaseUser.getDisplayName().isEmpty()) {
+            profileName.setText(firebaseUser.getDisplayName());
+            tvDisplayName.setText(firebaseUser.getDisplayName());
+        } else {
+            profileName.setText("User");
+            tvDisplayName.setText("Not set");
+        }
+
+        if (firebaseUser.getEmail() != null && !firebaseUser.getEmail().isEmpty()) {
+            profileEmail.setText(firebaseUser.getEmail());
+            tvEmail.setText(firebaseUser.getEmail());
+        } else {
+            profileEmail.setText("No email");
+            tvEmail.setText("Not set");
+        }
+
+        // Update profile image
+        if (firebaseUser.getPhotoUrl() != null) {
+            Glide.with(this)
+                    .load(firebaseUser.getPhotoUrl())
+                    .placeholder(R.drawable.profile)
+                    .error(R.drawable.profile)
+                    .into(profileImage);
+            tvPhotoUrl.setText(firebaseUser.getPhotoUrl().toString());
+        } else {
+            profileImage.setImageResource(R.drawable.profile);
+            tvPhotoUrl.setText("Not set");
+        }
+
+        // Set default values for other fields
+        tvCreatedAt.setText("Unknown");
+        tvLastLogin.setText("Unknown");
+        tvRoles.setText("No roles assigned");
+        
+        // Try to create user document in background
+        createUserDocumentInBackground(firebaseUser);
+    }
+
+    /**
+     * Create user document in background if it doesn't exist
+     */
+    private void createUserDocumentInBackground(FirebaseUser firebaseUser) {
+        String uid = firebaseUser.getUid();
+        String email = firebaseUser.getEmail() != null ? firebaseUser.getEmail() : "";
+        String displayName = firebaseUser.getDisplayName() != null ? firebaseUser.getDisplayName() : "";
+        String photoUrl = firebaseUser.getPhotoUrl() != null ? firebaseUser.getPhotoUrl().toString() : "";
+
+        long now = System.currentTimeMillis() / 1000;
+        User.NotificationSettings notification = new User.NotificationSettings(null, true);
+        User newUser = new User(
+                uid,
+                email,
+                displayName,
+                photoUrl,
+                java.util.Arrays.asList("google.com"),
+                now,
+                now,
+                notification,
+                java.util.Arrays.asList("user")
+        );
+
+        Log.d(TAG, "Creating user document in background for UID: " + uid);
+        db.collection("users").document(uid).set(newUser)
+                .addOnSuccessListener(unused -> {
+                    Log.d(TAG, "User document created successfully in background");
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to create user document in background", e);
+                });
     }
 }
