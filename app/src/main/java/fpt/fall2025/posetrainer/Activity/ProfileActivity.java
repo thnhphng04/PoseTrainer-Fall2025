@@ -1,20 +1,33 @@
 package fpt.fall2025.posetrainer.Activity;
 
+import android.app.Activity;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+
 import com.bumptech.glide.Glide;
+import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.auth.UserProfileChangeRequest;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
@@ -32,11 +45,38 @@ public class ProfileActivity extends AppCompatActivity {
     
     private ImageView profileImage, btnBack;
     private TextView profileName, profileEmail;
-    private TextView tvDisplayName, tvEmail, tvPhotoUrl, tvCreatedAt, tvLastLogin, tvRoles;
-    private Button btnLogout;
+    private TextView tvDisplayName, tvEmail, tvPhotoUrl, tvCreatedAt, tvLastLogin;
+    private TextInputEditText etDisplayName;
+    private Button btnEditProfile, btnSave, btnCancel, btnLogout;
+    private LinearLayout layoutSaveCancel;
+    private ProgressBar progressBar;
     
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
+    private FirebaseStorage storage;
+    private StorageReference storageRef;
+    
+    private boolean isEditMode = false;
+    private Uri selectedImageUri;
+    private String currentPhotoUrl;
+
+    // Activity result launcher for image picker
+    private final ActivityResultLauncher<Intent> imagePickerLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                    selectedImageUri = result.getData().getData();
+                    if (selectedImageUri != null) {
+                        // Update profile image preview
+                        Glide.with(this)
+                                .load(selectedImageUri)
+                                .placeholder(R.drawable.profile)
+                                .error(R.drawable.profile)
+                                .into(profileImage);
+                    }
+                }
+            }
+    );
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,6 +85,8 @@ public class ProfileActivity extends AppCompatActivity {
 
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
+        storage = FirebaseStorage.getInstance();
+        storageRef = storage.getReference();
 
         // Initialize views
         initViews();
@@ -53,6 +95,13 @@ public class ProfileActivity extends AppCompatActivity {
         setupClickListeners();
         
         // Load user profile
+        loadUserProfile();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Refresh profile data when returning from EditProfileActivity
         loadUserProfile();
     }
 
@@ -67,13 +116,32 @@ public class ProfileActivity extends AppCompatActivity {
         tvPhotoUrl = findViewById(R.id.tv_photo_url);
         tvCreatedAt = findViewById(R.id.tv_created_at);
         tvLastLogin = findViewById(R.id.tv_last_login);
-        tvRoles = findViewById(R.id.tv_roles);
         
+        etDisplayName = findViewById(R.id.et_display_name);
+        
+        btnEditProfile = findViewById(R.id.btn_edit_profile);
+        btnSave = findViewById(R.id.btn_save);
+        btnCancel = findViewById(R.id.btn_cancel);
         btnLogout = findViewById(R.id.btn_logout);
+        
+        layoutSaveCancel = findViewById(R.id.layout_save_cancel);
+        progressBar = findViewById(R.id.progress_bar);
     }
 
     private void setupClickListeners() {
         btnBack.setOnClickListener(v -> finish());
+        
+        btnEditProfile.setOnClickListener(v -> enterEditMode());
+        
+        btnSave.setOnClickListener(v -> saveProfile());
+        
+        btnCancel.setOnClickListener(v -> exitEditMode());
+        
+        profileImage.setOnClickListener(v -> {
+            if (isEditMode) {
+                openImagePicker();
+            }
+        });
         
 		btnLogout.setOnClickListener(v -> {
 			// Sign out from Google to force account chooser next time
@@ -155,6 +223,7 @@ public class ProfileActivity extends AppCompatActivity {
 
         // Update profile image
         if (user.getPhotoURL() != null && !user.getPhotoURL().isEmpty()) {
+            currentPhotoUrl = user.getPhotoURL();
             Glide.with(this)
                     .load(user.getPhotoURL())
                     .placeholder(R.drawable.profile)
@@ -162,6 +231,7 @@ public class ProfileActivity extends AppCompatActivity {
                     .into(profileImage);
             tvPhotoUrl.setText(user.getPhotoURL());
         } else {
+            currentPhotoUrl = null;
             profileImage.setImageResource(R.drawable.profile);
             tvPhotoUrl.setText("Not set");
         }
@@ -181,13 +251,149 @@ public class ProfileActivity extends AppCompatActivity {
             tvLastLogin.setText("Unknown");
         }
 
-        // Update roles
-        List<String> roles = user.getRoles();
-        if (roles != null && !roles.isEmpty()) {
-            tvRoles.setText(String.join(", ", roles));
-        } else {
-            tvRoles.setText("No roles assigned");
+        // Roles field removed as requested
+    }
+
+    private void enterEditMode() {
+        isEditMode = true;
+        
+        // Show edit fields
+        tvDisplayName.setVisibility(View.GONE);
+        etDisplayName.setVisibility(View.VISIBLE);
+        etDisplayName.setText(tvDisplayName.getText().toString());
+        
+        // Show save/cancel buttons
+        btnEditProfile.setVisibility(View.GONE);
+        layoutSaveCancel.setVisibility(View.VISIBLE);
+        
+        // Make profile image clickable
+        profileImage.setClickable(true);
+        profileImage.setFocusable(true);
+    }
+
+    private void exitEditMode() {
+        isEditMode = false;
+        
+        // Hide edit fields
+        tvDisplayName.setVisibility(View.VISIBLE);
+        etDisplayName.setVisibility(View.GONE);
+        
+        // Hide save/cancel buttons
+        btnEditProfile.setVisibility(View.VISIBLE);
+        layoutSaveCancel.setVisibility(View.GONE);
+        
+        // Make profile image non-clickable
+        profileImage.setClickable(false);
+        profileImage.setFocusable(false);
+        
+        // Reset selected image
+        selectedImageUri = null;
+    }
+
+    private void openImagePicker() {
+        Intent intent = new Intent(Intent.ACTION_PICK);
+        intent.setType("image/*");
+        imagePickerLauncher.launch(intent);
+    }
+
+    private void saveProfile() {
+        String displayName = etDisplayName.getText().toString().trim();
+        
+        if (TextUtils.isEmpty(displayName)) {
+            Toast.makeText(this, "Please enter a display name", Toast.LENGTH_SHORT).show();
+            return;
         }
+
+        progressBar.setVisibility(View.VISIBLE);
+        btnSave.setEnabled(false);
+
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser == null) {
+            Toast.makeText(this, "No user logged in", Toast.LENGTH_SHORT).show();
+            progressBar.setVisibility(View.GONE);
+            btnSave.setEnabled(true);
+            return;
+        }
+
+        // If new image is selected, upload it first
+        if (selectedImageUri != null) {
+            uploadImageAndUpdateProfile(currentUser, displayName);
+        } else {
+            // Just update display name
+            updateProfile(currentUser, displayName, currentPhotoUrl);
+        }
+    }
+
+    private void uploadImageAndUpdateProfile(FirebaseUser currentUser, String displayName) {
+        String uid = currentUser.getUid();
+        StorageReference imageRef = storageRef.child("profile_images/" + uid + ".jpg");
+
+        UploadTask uploadTask = imageRef.putFile(selectedImageUri);
+        uploadTask.addOnSuccessListener(taskSnapshot -> {
+            // Get download URL
+            imageRef.getDownloadUrl().addOnSuccessListener(uri -> {
+                String photoUrl = uri.toString();
+                updateProfile(currentUser, displayName, photoUrl);
+            }).addOnFailureListener(e -> {
+                Log.e(TAG, "Failed to get download URL", e);
+                Toast.makeText(this, "Failed to upload image", Toast.LENGTH_SHORT).show();
+                progressBar.setVisibility(View.GONE);
+                btnSave.setEnabled(true);
+            });
+        }).addOnFailureListener(e -> {
+            Log.e(TAG, "Failed to upload image", e);
+            Toast.makeText(this, "Failed to upload image", Toast.LENGTH_SHORT).show();
+            progressBar.setVisibility(View.GONE);
+            btnSave.setEnabled(true);
+        });
+    }
+
+    private void updateProfile(FirebaseUser currentUser, String displayName, String photoUrl) {
+        // Update Firebase Auth profile
+        UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest.Builder()
+                .setDisplayName(displayName)
+                .setPhotoUri(photoUrl != null ? Uri.parse(photoUrl) : null)
+                .build();
+
+        currentUser.updateProfile(profileUpdates)
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        Log.d(TAG, "Firebase Auth profile updated successfully");
+                        // Update Firestore document
+                        updateFirestoreUser(currentUser, displayName, photoUrl);
+                    } else {
+                        Log.e(TAG, "Failed to update Firebase Auth profile", task.getException());
+                        Toast.makeText(this, "Failed to update profile", Toast.LENGTH_SHORT).show();
+                        progressBar.setVisibility(View.GONE);
+                        btnSave.setEnabled(true);
+                    }
+                });
+    }
+
+    private void updateFirestoreUser(FirebaseUser currentUser, String displayName, String photoUrl) {
+        String uid = currentUser.getUid();
+        
+        // Update Firestore document
+        db.collection("users").document(uid)
+                .update("displayName", displayName, "photoURL", photoUrl)
+                .addOnSuccessListener(unused -> {
+                    Log.d(TAG, "Firestore user document updated successfully");
+                    Toast.makeText(this, "Profile updated successfully", Toast.LENGTH_SHORT).show();
+                    progressBar.setVisibility(View.GONE);
+                    btnSave.setEnabled(true);
+                    exitEditMode();
+                    // Refresh profile data
+                    loadUserProfile();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to update Firestore user document", e);
+                    Toast.makeText(this, "Profile updated but failed to sync with server", Toast.LENGTH_LONG).show();
+                    progressBar.setVisibility(View.GONE);
+                    btnSave.setEnabled(true);
+                    exitEditMode();
+                    // Refresh profile data
+                    loadUserProfile();
+                });
     }
 
     private String formatTimestamp(long timestamp) {
@@ -231,6 +437,7 @@ public class ProfileActivity extends AppCompatActivity {
 
         // Update profile image
         if (firebaseUser.getPhotoUrl() != null) {
+            currentPhotoUrl = firebaseUser.getPhotoUrl().toString();
             Glide.with(this)
                     .load(firebaseUser.getPhotoUrl())
                     .placeholder(R.drawable.profile)
@@ -238,6 +445,7 @@ public class ProfileActivity extends AppCompatActivity {
                     .into(profileImage);
             tvPhotoUrl.setText(firebaseUser.getPhotoUrl().toString());
         } else {
+            currentPhotoUrl = null;
             profileImage.setImageResource(R.drawable.profile);
             tvPhotoUrl.setText("Not set");
         }
@@ -245,7 +453,6 @@ public class ProfileActivity extends AppCompatActivity {
         // Set default values for other fields
         tvCreatedAt.setText("Unknown");
         tvLastLogin.setText("Unknown");
-        tvRoles.setText("No roles assigned");
         
         // Try to create user document in background
         createUserDocumentInBackground(firebaseUser);

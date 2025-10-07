@@ -64,7 +64,19 @@
                     android:src="@drawable/profile"
                     android:background="@drawable/circle_background"
                     android:scaleType="centerCrop"
-                    android:layout_marginBottom="16dp" />
+                    android:layout_marginBottom="8dp"
+                    android:clickable="false"
+                    android:focusable="false" />
+
+                <TextView
+                    android:id="@+id/tv_click_to_change"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Tap to change photo"
+                    android:textColor="@color/white"
+                    android:textSize="12sp"
+                    android:visibility="gone"
+                    android:layout_marginBottom="8dp" />
 
                 <TextView
                     android:id="@+id/profile_name"
@@ -115,6 +127,20 @@
                         android:layout_height="wrap_content"
                         android:text="N/A"
                         android:textColor="@color/white"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:visibility="visible" />
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_display_name"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:textColor="@color/white"
+                        android:textColorHint="@color/white"
+                        android:inputType="textPersonName"
+                        android:visibility="gone"
+                        android:background="@android:color/transparent"
                         android:textSize="16sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -231,32 +257,51 @@
                         android:textStyle="bold" />
                 </LinearLayout>
 
-                <!-- Roles -->
+                <!-- Edit Profile Button -->
+                <Button
+                    android:id="@+id/btn_edit_profile"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Edit Profile"
+                    android:textColor="@color/white"
+                    android:background="@drawable/orange_bg"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="16dp"
+                    android:visibility="visible" />
+
+                <!-- Save and Cancel Buttons (hidden by default) -->
                 <LinearLayout
+                    android:id="@+id/layout_save_cancel"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:padding="16dp"
-                    android:background="@drawable/profile_item_background"
-                    android:layout_marginBottom="32dp">
+                    android:visibility="gone"
+                    android:layout_marginBottom="16dp">
 
-                    <TextView
+                    <Button
+                        android:id="@+id/btn_save"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Roles"
+                        android:text="Save"
                         android:textColor="@color/white"
-                        android:textSize="16sp" />
-
-                    <TextView
-                        android:id="@+id/tv_roles"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="N/A"
-                        android:textColor="@color/white"
+                        android:background="@drawable/orange_bg"
                         android:textSize="16sp"
-                        android:textStyle="bold" />
+                        android:textStyle="bold"
+                        android:layout_marginEnd="8dp" />
+
+                    <Button
+                        android:id="@+id/btn_cancel"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Cancel"
+                        android:textColor="@color/white"
+                        android:background="@android:color/transparent"
+                        android:textSize="16sp"
+                        android:layout_marginStart="8dp" />
+
                 </LinearLayout>
 
                 <!-- Logout Button -->
@@ -274,5 +319,16 @@
 
         </LinearLayout>
     </ScrollView>
+
+    <!-- Progress Bar -->
+    <ProgressBar
+        android:id="@+id/progress_bar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
