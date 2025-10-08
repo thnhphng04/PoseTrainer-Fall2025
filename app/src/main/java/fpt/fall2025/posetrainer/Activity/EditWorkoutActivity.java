@@ -7,6 +7,9 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Toast;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.ItemTouchHelper;
@@ -15,12 +18,14 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import fpt.fall2025.posetrainer.Adapter.EditWorkoutAdapter;
 import fpt.fall2025.posetrainer.Adapter.ExerciseItemTouchHelper;
 import fpt.fall2025.posetrainer.Activity.ExerciseSelectionActivity;
 import fpt.fall2025.posetrainer.Domain.Exercise;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
+import fpt.fall2025.posetrainer.Domain.UserWorkout;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.databinding.ActivityEditWorkoutBinding;
 
@@ -36,7 +41,7 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
     private ArrayList<Exercise> exercises;
     private EditWorkoutAdapter adapter;
     private String workoutTemplateId;
-    private String userId = "uid_1"; // TODO: Get from authenticated user
+    private String userId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,9 +59,27 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
             return;
         }
 
+        // Get current user UID
+        getCurrentUserId();
+
         initializeData();
         setupUI();
         loadWorkoutTemplate();
+    }
+
+    /**
+     * Get current user UID from Firebase Authentication
+     */
+    private void getCurrentUserId() {
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser != null) {
+            userId = currentUser.getUid();
+            Log.d(TAG, "Current user UID: " + userId);
+        } else {
+            Log.e(TAG, "No user logged in");
+            Toast.makeText(this, "No user logged in", Toast.LENGTH_SHORT).show();
+            finish();
+        }
     }
 
     /**
@@ -288,7 +311,7 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
     }
 
     /**
-     * Save workout template to Firebase
+     * Save user workout to Firebase in new format
      */
     private void saveWorkout() {
         if (exercises == null || exercises.isEmpty()) {
@@ -296,23 +319,23 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
             return;
         }
 
-        Log.d(TAG, "Saving workout with " + exercises.size() + " exercises for userId: " + userId);
+        Log.d(TAG, "Saving user workout with " + exercises.size() + " exercises for userId: " + userId);
         
-        // Create updated workout template
-        WorkoutTemplate updatedTemplate = createUpdatedWorkoutTemplate();
+        // Create user workout in new format
+        UserWorkout userWorkout = createUserWorkout();
         
-        Log.d(TAG, "Created workout template: " + updatedTemplate.getTitle() + " (ID: " + updatedTemplate.getId() + ", CreatedBy: " + updatedTemplate.getCreatedBy() + ")");
+        Log.d(TAG, "Created user workout: " + userWorkout.getTitle() + " (ID: " + userWorkout.getId() + ", UID: " + userWorkout.getUid() + ")");
         
         // Save to Firebase
-        FirebaseService.getInstance().saveUserWorkoutTemplate(userId, updatedTemplate, new FirebaseService.OnWorkoutTemplateSavedListener() {
+        FirebaseService.getInstance().saveUserWorkout(userWorkout, new FirebaseService.OnUserWorkoutSavedListener() {
             @Override
-            public void onWorkoutTemplateSaved(boolean success) {
+            public void onUserWorkoutSaved(boolean success) {
                 if (success) {
-                    Log.d(TAG, "Workout saved successfully: " + updatedTemplate.toString());
+                    Log.d(TAG, "User workout saved successfully: " + userWorkout.toString());
                     Toast.makeText(EditWorkoutActivity.this, "Workout saved successfully!", Toast.LENGTH_SHORT).show();
                     finish();
                 } else {
-                    Log.e(TAG, "Failed to save workout");
+                    Log.e(TAG, "Failed to save user workout");
                     Toast.makeText(EditWorkoutActivity.this, "Failed to save workout", Toast.LENGTH_SHORT).show();
                 }
             }
@@ -320,49 +343,57 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
     }
 
     /**
-     * Create updated workout template with current exercises
+     * Generate unique ID for user workout with user ID
+     * Format: uw_[userId]_[random]
      */
-    private WorkoutTemplate createUpdatedWorkoutTemplate() {
-        WorkoutTemplate updatedTemplate = new WorkoutTemplate();
+    private String generateUserWorkoutId() {
+        String randomPart = UUID.randomUUID().toString().replace("-", "").substring(0, 10);
+        return "uw_" + userId + "_" + randomPart;
+    }
+
+    /**
+     * Create UserWorkout from current exercises in new format
+     */
+    private UserWorkout createUserWorkout() {
+        UserWorkout userWorkout = new UserWorkout();
         
-        // Copy basic info from original template
-        updatedTemplate.setId(originalWorkoutTemplate.getId());
-        updatedTemplate.setTitle(originalWorkoutTemplate.getTitle());
-        updatedTemplate.setDescription(originalWorkoutTemplate.getDescription());
-        updatedTemplate.setLevel(originalWorkoutTemplate.getLevel());
-        updatedTemplate.setFocus(originalWorkoutTemplate.getFocus());
-        updatedTemplate.setGoalFit(originalWorkoutTemplate.getGoalFit());
-        updatedTemplate.setEstDurationMin(originalWorkoutTemplate.getEstDurationMin());
-        updatedTemplate.setPublic(false); // User's custom workout
-        updatedTemplate.setCreatedBy("user_" + userId);
-        updatedTemplate.setVersion(originalWorkoutTemplate.getVersion() + 1);
-        updatedTemplate.setUpdatedAt(System.currentTimeMillis());
+        // Generate unique ID for user workout
+        userWorkout.setId(generateUserWorkoutId());
+        userWorkout.setUid(userId);
+        userWorkout.setTitle(originalWorkoutTemplate.getTitle());
+        userWorkout.setDescription(originalWorkoutTemplate.getDescription());
+        userWorkout.setSource("custom");
+        
+        // Set timestamps in seconds
+        long currentTime = System.currentTimeMillis() / 1000;
+        userWorkout.setCreatedAt(currentTime);
+        userWorkout.setUpdatedAt(currentTime);
 
         // Create new workout items based on current exercises
-        List<WorkoutTemplate.WorkoutItem> newItems = new ArrayList<>();
+        List<UserWorkout.UserWorkoutItem> newItems = new ArrayList<>();
         for (int i = 0; i < exercises.size(); i++) {
             Exercise exercise = exercises.get(i);
             
-            WorkoutTemplate.WorkoutItem item = new WorkoutTemplate.WorkoutItem();
+            UserWorkout.UserWorkoutItem item = new UserWorkout.UserWorkoutItem();
             item.setOrder(i + 1);
             item.setExerciseId(exercise.getId());
             
             // Use default config from exercise
             if (exercise.getDefaultConfig() != null) {
-                WorkoutTemplate.ExerciseConfig config = new WorkoutTemplate.ExerciseConfig();
+                UserWorkout.ExerciseConfig config = new UserWorkout.ExerciseConfig();
                 config.setSets(exercise.getDefaultConfig().getSets());
                 config.setReps(exercise.getDefaultConfig().getReps());
                 config.setRestSec(exercise.getDefaultConfig().getRestSec());
                 config.setDifficulty(exercise.getDefaultConfig().getDifficulty());
-                item.setConfigOverride(config);
+                item.setConfig(config);
             }
             
             newItems.add(item);
         }
         
-        updatedTemplate.setItems(newItems);
+        userWorkout.setItems(newItems);
         
-        return updatedTemplate;
+        return userWorkout;
     }
 
     @Override

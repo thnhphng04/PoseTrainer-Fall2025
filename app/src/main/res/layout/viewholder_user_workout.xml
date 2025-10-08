@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?attr/selectableItemBackground"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="4dp"
+    app:cardBackgroundColor="@color/white">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+
+        <!-- Workout Image -->
+        <ImageView
+            android:id="@+id/pic"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:scaleType="centerCrop"
+            android:background="@drawable/blue_bg"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:srcCompat="@tools:sample/backgrounds/scenic" />
+
+        <!-- Delete Button -->
+        <ImageView
+            android:id="@+id/deleteBtn"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_margin="4dp"
+            android:background="@drawable/delete_button_bg"
+            android:padding="6dp"
+            android:src="@drawable/ic_close"
+            android:tint="@color/white"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="@id/pic"
+            app:layout_constraintTop_toTopOf="@id/pic" />
+
+        <!-- Workout Title -->
+        <TextView
+            android:id="@+id/titleTxt"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="8dp"
+            android:text="Workout Title"
+            android:textColor="@color/mainColor"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:maxLines="2"
+            android:ellipsize="end"
+            app:layout_constraintStart_toEndOf="@id/pic"
+            app:layout_constraintTop_toTopOf="@id/pic"
+            app:layout_constraintEnd_toStartOf="@+id/sourceBadge"
+            app:layout_constraintHorizontal_bias="0" />
+
+        <!-- Source Badge -->
+        <TextView
+            android:id="@+id/sourceBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/source_badge_bg"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="4dp"
+            android:text="Custom"
+            android:textColor="@color/white"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/pic" />
+
+        <!-- Exercise Count -->
+        <LinearLayout
+            android:id="@+id/exerciseLayout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            app:layout_constraintStart_toStartOf="@id/titleTxt"
+            app:layout_constraintTop_toBottomOf="@id/titleTxt">
+
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/btn_3"
+                android:tint="@color/orange" />
+
+            <TextView
+                android:id="@+id/excerciseTxt"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="5 Exercises"
+                android:textColor="@color/mainColor"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- Duration / Date Info -->
+        <LinearLayout
+            android:id="@+id/durationLayout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            app:layout_constraintStart_toStartOf="@id/titleTxt"
+            app:layout_constraintTop_toBottomOf="@id/exerciseLayout">
+
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/btn_4"
+                android:tint="@color/orange" />
+
+            <TextView
+                android:id="@+id/durationTxt"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="Created 2 days ago"
+                android:textColor="@color/mainColor"
+                android:textSize="12sp"
+                android:alpha="0.7" />
+        </LinearLayout>
+
+        <!-- Bottom spacing to ensure clean layout -->
+        <View
+            android:layout_width="0dp"
+            android:layout_height="8dp"
+            app:layout_constraintTop_toBottomOf="@id/durationLayout"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.cardview.widget.CardView>
