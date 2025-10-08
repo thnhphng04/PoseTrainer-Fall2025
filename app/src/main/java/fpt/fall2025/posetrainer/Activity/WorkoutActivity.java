@@ -14,6 +14,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.bumptech.glide.Glide;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import fpt.fall2025.posetrainer.Adapter.ExerciseAdapter;
 import fpt.fall2025.posetrainer.Domain.Exercise;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
@@ -246,7 +248,14 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
         // Create session object
         currentSession = new Session();
         currentSession.setId(sessionId);
-        currentSession.setUid("uid_1"); // TODO: Get from authenticated user
+        // Get current user ID
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser != null) {
+            currentSession.setUid(currentUser.getUid());
+        } else {
+            Log.w(TAG, "No user logged in, using default UID");
+            currentSession.setUid("uid_1"); // Fallback
+        }
         currentSession.setTitle(workoutTemplate.getTitle());
         currentSession.setDescription(workoutTemplate.getDescription());
         currentSession.setStartedAt(System.currentTimeMillis() / 1000); // Convert to seconds
