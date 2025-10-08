@@ -23,22 +23,20 @@ android {
         }
     }
 
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
-    }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+
     kotlinOptions {
         jvmTarget = '1.8'
     }
+
     buildFeatures {
         viewBinding true
     }
+
+    // --- Dùng keystore từ gradle.properties ---
     signingConfigs {
         release {
             storeFile file(RELEASE_STORE_FILE)
@@ -47,9 +45,15 @@ android {
             keyPassword RELEASE_KEY_PASSWORD
         }
         debug {
-            // Use default debug keystore for development
+            // Dùng cùng keystore với release để có 1 SHA duy nhất
+            storeFile file(RELEASE_STORE_FILE)
+            storePassword RELEASE_STORE_PASSWORD
+            keyAlias RELEASE_KEY_ALIAS
+            keyPassword RELEASE_KEY_PASSWORD
         }
     }
+
+    // --- Chỉ còn 1 khối buildTypes ---
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
@@ -61,6 +65,8 @@ android {
             minifyEnabled false
             shrinkResources false
             debuggable false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
+                    'proguard-rules.pro'
         }
     }
 }
