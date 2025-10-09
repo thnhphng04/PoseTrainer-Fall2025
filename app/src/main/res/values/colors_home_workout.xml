@@ -33,4 +33,6 @@
     <color name="hw_overlay_dark">#80000000</color>
     <color name="hw_overlay_light">#4dffffff</color>
     <color name="hw_ripple">#1a004aff</color>
+
+
 </resources>
