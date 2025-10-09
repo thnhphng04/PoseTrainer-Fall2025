@@ -22,4 +22,6 @@
     <!-- Colors for SessionActivity -->
     <color name="gray">#FF9E9E9E</color>
     <color name="primary">#FF2196F3</color>
+
+
 </resources>
