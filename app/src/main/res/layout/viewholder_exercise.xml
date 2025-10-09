@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -7,181 +7,166 @@
     android:layout_margin="8dp"
     android:background="@drawable/blue_bg">
 
+    <!-- Hình ảnh bài tập -->
     <com.google.android.material.imageview.ShapeableImageView
         android:id="@+id/pic"
+        style="@style/Style.App.circleImageView"
         android:layout_width="70dp"
         android:layout_height="65dp"
         android:layout_margin="8dp"
-        style="@style/Style.App.circleImageView"
         android:scaleType="centerCrop"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.4"
         tools:srcCompat="@tools:sample/backgrounds/scenic" />
 
+    <!-- Title -->
     <TextView
         android:id="@+id/titleTxt"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="8dp"
-        android:text="title"
+        android:text="Title"
         android:textColor="@color/white"
         android:textStyle="bold"
-        app:layout_constraintStart_toEndOf="@+id/pic"
-        app:layout_constraintTop_toTopOf="@+id/pic" />
+        android:textSize="16sp"
+        android:layout_marginStart="16dp"
+        app:layout_constraintStart_toEndOf="@id/pic"
+        app:layout_constraintTop_toTopOf="@id/pic"
+        app:layout_constraintEnd_toStartOf="@id/difficultyBtn"
+        app:layout_constraintHorizontal_bias="0" />
 
+    <!-- Duration -->
     <TextView
         android:id="@+id/durationTxt"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="00:00"
         android:textColor="@color/white"
-        app:layout_constraintBottom_toBottomOf="@+id/pic"
-        app:layout_constraintStart_toStartOf="@+id/titleTxt"
-        app:layout_constraintTop_toBottomOf="@+id/titleTxt" />
+        app:layout_constraintStart_toStartOf="@id/titleTxt"
+        app:layout_constraintTop_toBottomOf="@id/titleTxt" />
 
-    <!-- Difficulty Selector -->
+    <!-- Difficulty Button -->
+
+    <!-- Nhóm Sets & Reps -->
+    <TextView
+        android:id="@+id/difficultyBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="84dp"
+        android:background="@drawable/orange_bg"
+        android:padding="4dp"
+        android:text="Beginner"
+        android:textColor="@color/white"
+        android:textSize="10sp"
+        app:layout_constraintBottom_toBottomOf="@id/titleTxt"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/titleTxt"
+        app:layout_constraintVertical_bias="0.0" />
+
     <LinearLayout
-        android:id="@+id/difficultySelector"
+        android:id="@+id/setsRepsLayout"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginStart="16dp"
         android:layout_marginTop="8dp"
-        app:layout_constraintStart_toEndOf="@+id/pic"
-        app:layout_constraintTop_toBottomOf="@+id/durationTxt">
+        app:layout_constraintStart_toStartOf="@id/titleTxt"
+        app:layout_constraintTop_toBottomOf="@id/durationTxt">
 
+        <!-- Sets -->
         <TextView
+            android:id="@+id/setsLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Level: "
+            android:text="Sets:"
             android:textColor="@color/white"
-            android:textSize="12sp" />
+            android:textSize="12sp"
+            android:layout_gravity="center_vertical"/>
 
         <Button
-            android:id="@+id/difficultyBtn"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Beginner"
-            android:textSize="10sp"
+            android:id="@+id/setsMinusBtn"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:text="-"
+            android:background="@drawable/circle_button"
             android:textColor="@color/white"
-            android:background="@drawable/orange_bg"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp" />
-    </LinearLayout>
+            android:textSize="12sp"
+            android:layout_marginStart="4dp"/>
 
-    <!-- Sets and Reps Controls -->
-    <LinearLayout
-        android:id="@+id/setsRepsControls"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginEnd="8dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/imageview7"
-        app:layout_constraintTop_toTopOf="parent">
+        <TextView
+            android:id="@+id/setsTxt"
+            android:layout_width="30dp"
+            android:layout_height="wrap_content"
+            android:text="3"
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:layout_marginStart="4dp"/>
 
-        <!-- Sets Control -->
-        <LinearLayout
+        <Button
+            android:id="@+id/setsPlusBtn"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:text="+"
+            android:background="@drawable/circle_button"
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:layout_marginStart="4dp"/>
+
+        <!-- Reps -->
+        <TextView
+            android:id="@+id/repsLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginEnd="16dp">
+            android:text="Reps:"
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:layout_marginStart="16dp"
+            android:layout_gravity="center_vertical"/>
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Sets: "
-                android:textColor="@color/white"
-                android:textSize="12sp" />
+        <Button
+            android:id="@+id/repsMinusBtn"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:text="-"
+            android:background="@drawable/circle_button"
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:layout_marginStart="4dp"/>
 
-            <Button
-                android:id="@+id/setsMinusBtn"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:text="-"
-                android:textSize="12sp"
-                android:textColor="@color/white"
-                android:background="@drawable/circle_button"
-                android:layout_marginEnd="4dp" />
-
-            <TextView
-                android:id="@+id/setsTxt"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="3"
-                android:textColor="@color/white"
-                android:textSize="12sp"
-                android:minWidth="20dp"
-                android:gravity="center" />
-
-            <Button
-                android:id="@+id/setsPlusBtn"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:text="+"
-                android:textSize="12sp"
-                android:textColor="@color/white"
-                android:background="@drawable/circle_button"
-                android:layout_marginStart="4dp" />
-        </LinearLayout>
-
-        <!-- Reps Control -->
-        <LinearLayout
-            android:layout_width="wrap_content"
+        <TextView
+            android:id="@+id/repsTxt"
+            android:layout_width="30dp"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:text="12"
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:layout_marginStart="4dp"/>
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Reps: "
-                android:textColor="@color/white"
-                android:textSize="12sp" />
-
-            <Button
-                android:id="@+id/repsMinusBtn"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:text="-"
-                android:textSize="12sp"
-                android:textColor="@color/white"
-                android:background="@drawable/circle_button"
-                android:layout_marginEnd="4dp" />
-
-            <TextView
-                android:id="@+id/repsTxt"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="12"
-                android:textColor="@color/white"
-                android:textSize="12sp"
-                android:minWidth="20dp"
-                android:gravity="center" />
-
-            <Button
-                android:id="@+id/repsPlusBtn"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:text="+"
-                android:textSize="12sp"
-                android:textColor="@color/white"
-                android:background="@drawable/circle_button"
-                android:layout_marginStart="4dp" />
-
-        </LinearLayout>
+        <Button
+            android:id="@+id/repsPlusBtn"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:text="+"
+            android:background="@drawable/circle_button"
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:layout_marginStart="4dp"/>
     </LinearLayout>
 
-
-
+    <!-- Play Button -->
     <ImageView
-        android:id="@+id/imageview7"
+        android:id="@+id/playBtn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="16dp"
+        android:layout_marginEnd="8dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.505"
         app:srcCompat="@drawable/play" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

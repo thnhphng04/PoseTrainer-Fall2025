@@ -3,18 +3,24 @@ package fpt.fall2025.posetrainer.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.PopupMenu;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.bumptech.glide.Glide;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import fpt.fall2025.posetrainer.Adapter.ExerciseAdapter;
 import fpt.fall2025.posetrainer.Domain.Exercise;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
 import fpt.fall2025.posetrainer.Domain.Session;
+import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.databinding.ActivityWorkoutBinding;
 
@@ -82,6 +88,51 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
                 startWorkout();
             }
         });
+        
+        // More options button
+        binding.moreOptionsBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showMoreOptionsMenu(v);
+            }
+        });
+    }
+    
+    /**
+     * Show more options popup menu
+     */
+    private void showMoreOptionsMenu(View anchor) {
+        PopupMenu popupMenu = new PopupMenu(this, anchor);
+        popupMenu.getMenuInflater().inflate(R.menu.menu_workout, popupMenu.getMenu());
+        
+        popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                if (item.getItemId() == R.id.action_edit_workout) {
+                    openEditWorkoutActivity();
+                    return true;
+                }
+                return false;
+            }
+        });
+        
+        // Set gravity to ensure menu appears on the left side of the button
+        popupMenu.setGravity(Gravity.END);
+        popupMenu.show();
+    }
+    
+    /**
+     * Open EditWorkoutActivity
+     */
+    private void openEditWorkoutActivity() {
+        if (workoutTemplate == null) {
+            Toast.makeText(this, "Workout template not loaded", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        Intent intent = new Intent(this, EditWorkoutActivity.class);
+        intent.putExtra("workoutTemplateId", workoutTemplate.getId());
+        startActivity(intent);
     }
     
     private void startWorkout() {
@@ -197,7 +248,14 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
         // Create session object
         currentSession = new Session();
         currentSession.setId(sessionId);
-        currentSession.setUid("uid_1"); // TODO: Get from authenticated user
+        // Get current user ID
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser != null) {
+            currentSession.setUid(currentUser.getUid());
+        } else {
+            Log.w(TAG, "No user logged in, using default UID");
+            currentSession.setUid("uid_1"); // Fallback
+        }
         currentSession.setTitle(workoutTemplate.getTitle());
         currentSession.setDescription(workoutTemplate.getDescription());
         currentSession.setStartedAt(System.currentTimeMillis() / 1000); // Convert to seconds

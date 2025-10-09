@@ -1,5 +1,6 @@
 package fpt.fall2025.posetrainer.Activity;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.WindowManager;
 
@@ -8,6 +9,7 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 
 import fpt.fall2025.posetrainer.Fragment.HomeFragment;
+import fpt.fall2025.posetrainer.Fragment.FavoriteFragment;
 import fpt.fall2025.posetrainer.Fragment.ProfileFragment;
 import fpt.fall2025.posetrainer.databinding.ActivityMainBinding;
 
@@ -25,7 +27,6 @@ public class MainActivity extends AppCompatActivity {
 
         // Setup bottom navigation
         setupBottomNavigation();
-        
         // Load default fragment (Home)
         loadFragment(new HomeFragment());
     }
@@ -33,14 +34,16 @@ public class MainActivity extends AppCompatActivity {
     private void setupBottomNavigation() {
         binding.homeBtn.setOnClickListener(v -> loadFragment(new HomeFragment()));
         binding.favoriteBtn.setOnClickListener(v -> {
-            // TODO: Tạo FavoriteFragment sau
-            loadFragment(new HomeFragment()); // Tạm thời dùng HomeFragment
+            loadFragment(new FavoriteFragment());
         });
         binding.cartBtn.setOnClickListener(v -> {
             // TODO: Tạo CartFragment sau  
             loadFragment(new ProfileFragment()); // Tạm thời dùng ProfileFragment
         });
-        binding.profileBtn.setOnClickListener(v -> loadFragment(new ProfileFragment()));
+        binding.profileBtn.setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, ProfileActivity.class);
+            startActivity(intent);
+        });
     }
 
     private void loadFragment(Fragment fragment) {

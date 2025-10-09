@@ -31,7 +31,6 @@
         android:text="title"
         android:textColor="@color/white"
         android:textSize="12sp"
-
         app:layout_constraintStart_toStartOf="@+id/pic"
         app:layout_constraintTop_toBottomOf="@+id/pic" />
 

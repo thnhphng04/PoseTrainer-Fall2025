@@ -14,9 +14,14 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 
 import fpt.fall2025.posetrainer.Adapter.WorkoutTemplateAdapter;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
+import fpt.fall2025.posetrainer.Domain.User;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.databinding.FragmentHomeBinding;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.bumptech.glide.Glide;
 
 import java.util.ArrayList;
 
@@ -41,6 +46,9 @@ public class HomeFragment extends Fragment {
         // Setup RecyclerView
         binding.view1.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
         
+        // Load current user info
+        loadCurrentUserInfo();
+        
         // Load workout templates from Firestore
         loadWorkoutTemplates();
     }
@@ -59,5 +67,91 @@ public class HomeFragment extends Fragment {
                 Log.d(TAG, "Loaded " + workoutTemplates.size() + " workout templates");
             }
         });
+    }
+
+    /**
+     * Load current user information from Firestore
+     */
+    private void loadCurrentUserInfo() {
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            Log.w(TAG, "No current user found");
+            return;
+        }
+
+        String uid = currentUser.getUid();
+        Log.d(TAG, "Loading user info for UID: " + uid);
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        
+        db.collection("users").document(uid).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    Log.d(TAG, "HomeFragment: Firestore query completed");
+                    if (documentSnapshot.exists()) {
+                        Log.d(TAG, "HomeFragment: User document exists");
+                        User user = documentSnapshot.toObject(User.class);
+                        if (user != null) {
+                            Log.d(TAG, "HomeFragment: User object created successfully");
+                            updateUserUI(user);
+                        } else {
+                            Log.e(TAG, "HomeFragment: Failed to convert document to User object");
+                        }
+                    } else {
+                        Log.w(TAG, "HomeFragment: User document not found in Firestore for UID: " + uid);
+                        // Fallback: use Firebase Auth user data directly
+                        updateUserUIFromFirebaseAuth(currentUser);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "HomeFragment: Failed to load user info", e);
+                });
+    }
+
+    /**
+     * Update UI with user information
+     */
+    private void updateUserUI(User user) {
+        // Update display name
+        if (user.getDisplayName() != null && !user.getDisplayName().isEmpty()) {
+            binding.textView5.setText(user.getDisplayName());
+        } else {
+            binding.textView5.setText("User");
+        }
+
+        // Update profile image
+        if (user.getPhotoURL() != null && !user.getPhotoURL().isEmpty()) {
+            Glide.with(this)
+                    .load(user.getPhotoURL())
+                    .placeholder(R.drawable.profile)
+                    .error(R.drawable.profile)
+                    .into(binding.imageView2);
+        } else {
+            // Keep default profile image
+            binding.imageView2.setImageResource(R.drawable.profile);
+        }
+    }
+
+    /**
+     * Fallback method to update UI with Firebase Auth user data when Firestore document is not found
+     */
+    private void updateUserUIFromFirebaseAuth(FirebaseUser firebaseUser) {
+        Log.d(TAG, "HomeFragment: Using Firebase Auth data as fallback");
+        
+        // Update display name
+        if (firebaseUser.getDisplayName() != null && !firebaseUser.getDisplayName().isEmpty()) {
+            binding.textView5.setText(firebaseUser.getDisplayName());
+        } else {
+            binding.textView5.setText("User");
+        }
+
+        // Update profile image
+        if (firebaseUser.getPhotoUrl() != null) {
+            Glide.with(this)
+                    .load(firebaseUser.getPhotoUrl())
+                    .placeholder(R.drawable.profile)
+                    .error(R.drawable.profile)
+                    .into(binding.imageView2);
+        } else {
+            binding.imageView2.setImageResource(R.drawable.profile);
+        }
     }
 }

@@ -14,6 +14,7 @@ import java.util.ArrayList;
 
 import fpt.fall2025.posetrainer.Domain.Exercise;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
+import fpt.fall2025.posetrainer.Domain.UserWorkout;
 import fpt.fall2025.posetrainer.Domain.Session;
 
 /**
@@ -360,6 +361,23 @@ public class FirebaseService {
         void onExerciseLoaded(Exercise exercise);
     }
     
+    public interface OnWorkoutTemplateSavedListener {
+        void onWorkoutTemplateSaved(boolean success);
+    }
+    
+    public interface OnUserWorkoutSavedListener {
+        void onUserWorkoutSaved(boolean success);
+    }
+    
+    public interface OnUserWorkoutsLoadedListener {
+        void onUserWorkoutsLoaded(ArrayList<UserWorkout> userWorkouts);
+    }
+    
+    public interface OnUserWorkoutDeletedListener {
+        void onUserWorkoutDeleted(boolean success);
+    }
+    
+    
     public void loadExercisesByIds(ArrayList<String> exerciseIds, AppCompatActivity activity, OnExercisesLoadedListener listener) {
         Log.d(TAG, "Loading exercises by IDs: " + exerciseIds);
         
@@ -439,6 +457,245 @@ public class FirebaseService {
                     } else {
                         Log.e(TAG, "Error loading exercise", task.getException());
                         listener.onExerciseLoaded(null);
+                    }
+                });
+    }
+    
+    /**
+     * Save user workout template to Firebase
+     */
+    public void saveUserWorkoutTemplate(String userId, WorkoutTemplate workout, OnWorkoutTemplateSavedListener listener) {
+        Log.d(TAG, "Saving user workout template: " + workout.getTitle());
+        
+        db.collection("user_workouts")
+                .document(userId)
+                .collection("workouts")
+                .document(workout.getId())
+                .set(workout)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "User workout template saved successfully");
+                    if (listener != null) {
+                        listener.onWorkoutTemplateSaved(true);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error saving user workout template", e);
+                    if (listener != null) {
+                        listener.onWorkoutTemplateSaved(false);
+                    }
+                });
+    }
+    
+    /**
+     * Save user workout to Firebase in new format
+     */
+    public void saveUserWorkout(UserWorkout userWorkout, OnUserWorkoutSavedListener listener) {
+        Log.d(TAG, "Saving user workout: " + userWorkout.getTitle());
+        
+        db.collection("user_workouts")
+                .document(userWorkout.getId())
+                .set(userWorkout)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "User workout saved successfully");
+                    if (listener != null) {
+                        listener.onUserWorkoutSaved(true);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error saving user workout", e);
+                    if (listener != null) {
+                        listener.onUserWorkoutSaved(false);
+                    }
+                });
+    }
+    
+    /**
+     * Load all exercises from Firebase
+     */
+    public void loadAllExercises(AppCompatActivity activity, OnExercisesLoadedListener listener) {
+        Log.d(TAG, "Loading all exercises from Firebase");
+        
+        db.collection("exercises")
+                .get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        Log.d(TAG, "Firebase query successful, found " + task.getResult().size() + " exercises");
+                        ArrayList<Exercise> exercises = new ArrayList<>();
+                        for (QueryDocumentSnapshot document : task.getResult()) {
+                            try {
+                                Exercise exercise = document.toObject(Exercise.class);
+                                if (exercise != null) {
+                                    exercise.setId(document.getId());
+                                    exercises.add(exercise);
+                                    Log.d(TAG, "Loaded exercise: " + exercise.getName() + " (ID: " + document.getId() + ")");
+                                }
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error parsing exercise: " + e.getMessage());
+                            }
+                        }
+                        
+                        Log.d(TAG, "Total exercises loaded: " + exercises.size());
+                        activity.runOnUiThread(() -> {
+                            listener.onExercisesLoaded(exercises);
+                        });
+                    } else {
+                        Log.e(TAG, "Error getting exercises: ", task.getException());
+                        activity.runOnUiThread(() -> {
+                            Toast.makeText(activity, "Error loading exercises", Toast.LENGTH_SHORT).show();
+                            listener.onExercisesLoaded(new ArrayList<>());
+                        });
+                    }
+                });
+    }
+
+    /**
+     * Load user workout templates
+     */
+    public void loadUserWorkoutTemplates(String userId, AppCompatActivity activity, OnWorkoutTemplatesLoadedListener listener) {
+        Log.d(TAG, "Loading user workout templates for user: " + userId);
+        
+        db.collection("user_workouts")
+                .document(userId)
+                .collection("workouts")
+                .get()
+                .addOnCompleteListener(task -> {
+                    Log.d(TAG, "Firebase query completed for user: " + userId);
+                    if (task.isSuccessful()) {
+                        Log.d(TAG, "Firebase query successful, found " + task.getResult().size() + " documents");
+                        ArrayList<WorkoutTemplate> workoutTemplates = new ArrayList<>();
+                        for (QueryDocumentSnapshot document : task.getResult()) {
+                            try {
+                                WorkoutTemplate workoutTemplate = document.toObject(WorkoutTemplate.class);
+                                if (workoutTemplate != null) {
+                                    workoutTemplate.setId(document.getId());
+                                    workoutTemplates.add(workoutTemplate);
+                                    Log.d(TAG, "Loaded user template: " + workoutTemplate.getTitle() + " (ID: " + document.getId() + ")");
+                                }
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error parsing user template: " + e.getMessage());
+                            }
+                        }
+                        
+                        Log.d(TAG, "Total user workout templates loaded: " + workoutTemplates.size());
+                        activity.runOnUiThread(() -> {
+                            listener.onWorkoutTemplatesLoaded(workoutTemplates);
+                        });
+                    } else {
+                        Log.e(TAG, "Error getting user workout templates: ", task.getException());
+                        activity.runOnUiThread(() -> {
+                            Toast.makeText(activity, "Error loading user workout templates", Toast.LENGTH_SHORT).show();
+                        });
+                    }
+                });
+    }
+    
+    /**
+     * Load user workouts for a specific user
+     */
+    public void loadUserWorkouts(String userId, AppCompatActivity activity, OnUserWorkoutsLoadedListener listener) {
+        Log.d(TAG, "=== LOADING USER WORKOUTS ===");
+        Log.d(TAG, "Loading user workouts for user: " + userId);
+        
+        // First try without orderBy to avoid index issues
+        db.collection("user_workouts")
+                .whereEqualTo("uid", userId)
+                .get()
+                .addOnCompleteListener(task -> {
+                    Log.d(TAG, "Firebase query completed for user: " + userId);
+                    if (task.isSuccessful()) {
+                        Log.d(TAG, "Firebase query successful, found " + task.getResult().size() + " documents");
+                        ArrayList<UserWorkout> userWorkouts = new ArrayList<>();
+                        
+                        for (QueryDocumentSnapshot document : task.getResult()) {
+                            Log.d(TAG, "Processing document: " + document.getId());
+                            try {
+                                UserWorkout userWorkout = document.toObject(UserWorkout.class);
+                                if (userWorkout != null) {
+                                    userWorkout.setId(document.getId());
+                                    userWorkouts.add(userWorkout);
+                                    Log.d(TAG, "Successfully loaded user workout: " + userWorkout.getTitle() + " (ID: " + document.getId() + ", UID: " + userWorkout.getUid() + ")");
+                                } else {
+                                    Log.w(TAG, "UserWorkout object is null for document: " + document.getId());
+                                }
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error parsing user workout: " + e.getMessage());
+                            }
+                        }
+                        
+                        // Sort by updatedAt descending (newest first)
+                        userWorkouts.sort((w1, w2) -> Long.compare(w2.getUpdatedAt(), w1.getUpdatedAt()));
+                        
+                        Log.d(TAG, "Total user workouts loaded and sorted: " + userWorkouts.size());
+                        activity.runOnUiThread(() -> {
+                            listener.onUserWorkoutsLoaded(userWorkouts);
+                        });
+                    } else {
+                        Log.e(TAG, "Firebase query failed: ", task.getException());
+                        activity.runOnUiThread(() -> {
+                            Toast.makeText(activity, "Error loading user workouts: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
+                        });
+                    }
+                    Log.d(TAG, "=== END LOADING USER WORKOUTS ===");
+                });
+    }
+    
+    /**
+     * Delete user workout
+     */
+    public void deleteUserWorkout(String userWorkoutId, OnUserWorkoutDeletedListener listener) {
+        Log.d(TAG, "Deleting user workout: " + userWorkoutId);
+        
+        db.collection("user_workouts")
+                .document(userWorkoutId)
+                .delete()
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "User workout deleted successfully");
+                    if (listener != null) {
+                        listener.onUserWorkoutDeleted(true);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error deleting user workout", e);
+                    if (listener != null) {
+                        listener.onUserWorkoutDeleted(false);
+                    }
+                });
+    }
+    
+    /**
+     * Debug method to load all user workouts (for debugging purposes)
+     */
+    public void debugLoadAllUserWorkouts(AppCompatActivity activity, OnUserWorkoutsLoadedListener listener) {
+        Log.d(TAG, "=== DEBUG: LOADING ALL USER WORKOUTS ===");
+        
+        db.collection("user_workouts")
+                .get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        Log.d(TAG, "DEBUG: Found " + task.getResult().size() + " total user workouts in database");
+                        ArrayList<UserWorkout> userWorkouts = new ArrayList<>();
+                        
+                        for (QueryDocumentSnapshot document : task.getResult()) {
+                            Log.d(TAG, "DEBUG: Document ID: " + document.getId() + ", Data: " + document.getData());
+                            try {
+                                UserWorkout userWorkout = document.toObject(UserWorkout.class);
+                                if (userWorkout != null) {
+                                    userWorkout.setId(document.getId());
+                                    userWorkouts.add(userWorkout);
+                                }
+                            } catch (Exception e) {
+                                Log.e(TAG, "DEBUG: Error parsing document: " + e.getMessage());
+                            }
+                        }
+                        
+                        activity.runOnUiThread(() -> {
+                            listener.onUserWorkoutsLoaded(userWorkouts);
+                        });
+                    } else {
+                        Log.e(TAG, "DEBUG: Error loading all user workouts: ", task.getException());
+                        activity.runOnUiThread(() -> {
+                            listener.onUserWorkoutsLoaded(new ArrayList<>());
+                        });
                     }
                 });
     }

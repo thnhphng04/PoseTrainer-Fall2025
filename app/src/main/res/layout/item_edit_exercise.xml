@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="130dp"
+    android:layout_margin="8dp"
+    android:background="@drawable/blue_bg">
+
+    <!-- Order Number (Drag Handle) -->
+    <TextView
+        android:id="@+id/orderNumberTxt"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginStart="8dp"
+        android:background="@drawable/popup_background"
+        android:gravity="center"
+        android:text="1"
+        android:textColor="@color/white"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:contentDescription="Drag to reorder"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.5" />
+
+    <!-- Hình ảnh bài tập -->
+    <com.google.android.material.imageview.ShapeableImageView
+        android:id="@+id/pic"
+        style="@style/Style.App.circleImageView"
+        android:layout_width="70dp"
+        android:layout_height="65dp"
+        android:layout_marginStart="8dp"
+        android:scaleType="centerCrop"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@id/orderNumberTxt"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.4"
+        tools:srcCompat="@tools:sample/backgrounds/scenic" />
+
+    <!-- Title -->
+    <TextView
+        android:id="@+id/titleTxt"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Title"
+        android:textColor="@color/white"
+        android:textStyle="bold"
+        android:textSize="16sp"
+        android:layout_marginStart="16dp"
+        app:layout_constraintStart_toEndOf="@id/pic"
+        app:layout_constraintTop_toTopOf="@id/pic"
+        app:layout_constraintEnd_toStartOf="@id/difficultyBtn"
+        app:layout_constraintHorizontal_bias="0" />
+
+    <!-- Duration -->
+    <TextView
+        android:id="@+id/durationTxt"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="00:00"
+        android:textColor="@color/white"
+        app:layout_constraintStart_toStartOf="@id/titleTxt"
+        app:layout_constraintTop_toBottomOf="@id/titleTxt" />
+
+    <!-- Difficulty Button -->
+    <TextView
+        android:id="@+id/difficultyBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="84dp"
+        android:background="@drawable/orange_bg"
+        android:padding="4dp"
+        android:text="Beginner"
+        android:textColor="@color/white"
+        android:textSize="10sp"
+        app:layout_constraintBottom_toBottomOf="@id/titleTxt"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/titleTxt"
+        app:layout_constraintVertical_bias="0.0" />
+
+    <!-- Sets & Reps Display (Read-only) -->
+    <LinearLayout
+        android:id="@+id/setsRepsLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp"
+        app:layout_constraintStart_toStartOf="@id/titleTxt"
+        app:layout_constraintTop_toBottomOf="@id/durationTxt">
+
+        <!-- Sets -->
+        <TextView
+            android:id="@+id/setsLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sets:"
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:layout_gravity="center_vertical"/>
+
+        <TextView
+            android:id="@+id/setsTxt"
+            android:layout_width="30dp"
+            android:layout_height="wrap_content"
+            android:text="3"
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:layout_marginStart="4dp"/>
+
+        <!-- Reps -->
+        <TextView
+            android:id="@+id/repsLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Reps:"
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:layout_marginStart="16dp"
+            android:layout_gravity="center_vertical"/>
+
+        <TextView
+            android:id="@+id/repsTxt"
+            android:layout_width="30dp"
+            android:layout_height="wrap_content"
+            android:text="12"
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:layout_marginStart="4dp"/>
+    </LinearLayout>
+
+
+    <!-- Remove Button -->
+    <ImageButton
+        android:id="@+id/removeBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Remove exercise"
+        android:src="@drawable/ic_close"
+        android:tint="@color/white"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.5" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+

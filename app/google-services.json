@@ -12,7 +12,44 @@
           "package_name": "fpt.fall2025.posetrainer"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "761757020017-497gk0bujem43alev07k324larb4408h.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "fpt.fall2025.posetrainer",
+            "certificate_hash": "64ba0354bea1085dcf46429b3b40978ff0fa3689"
+          }
+        },
+        {
+          "client_id": "761757020017-k029l8r4tl3dvt0pq0rk0b9re7fpms68.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "fpt.fall2025.posetrainer",
+            "certificate_hash": "fd28926297285db4a5d73edace5f9acf90443a3c"
+          }
+        },
+        {
+          "client_id": "761757020017-rl5rlbifjv2s1gd29r2ijmkmbn8t1j42.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "fpt.fall2025.posetrainer",
+            "certificate_hash": "123bc473d45846dbe29cb55c56247fb3978e94b6"
+          }
+        },
+        {
+          "client_id": "761757020017-37d3a1241be6645092e4f4bf19daecb4e1e37d06.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "fpt.fall2025.posetrainer",
+            "certificate_hash": "37d3a1241be6645092e4f4bf19daecb4e1e37d06"
+          }
+        },
+        {
+          "client_id": "761757020017-8rufa0bn2fdiv72s8l9pj1i5k06sr486.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyD-tfMXManRNw18o28to-B467-Be6LtspM"
@@ -20,7 +57,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "761757020017-8rufa0bn2fdiv72s8l9pj1i5k06sr486.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
