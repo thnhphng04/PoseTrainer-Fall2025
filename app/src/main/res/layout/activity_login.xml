@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/mainColor"
     tools:context=".Activity.Login"
     android:fillViewport="true">
 
@@ -16,14 +17,22 @@
         android:minHeight="600dp"
         android:padding="24dp">
 
+        <ImageView
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:layout_marginBottom="24dp"
+            android:src="@drawable/intro_pic"
+            android:scaleType="centerCrop" />
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Đăng nhập"
-            android:textSize="26sp"
+            android:text="ĐĂNG NHẬP"
+            android:textSize="28sp"
             android:textStyle="bold"
+            android:textColor="@color/white"
             android:gravity="center"
-            android:paddingBottom="24dp" />
+            android:paddingBottom="32dp" />
 
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
@@ -35,6 +44,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="Địa chỉ email..."
+                android:textColor="@color/white"
+                android:textColorHint="@color/white"
                 android:inputType="textEmailAddress" />
         </com.google.android.material.textfield.TextInputLayout>
 
@@ -48,7 +59,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="textPassword"
-                android:hint="Mật khẩu " />
+                android:hint="Mật khẩu"
+                android:textColor="@color/white"
+                android:textColorHint="@color/white" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <ProgressBar
@@ -61,13 +74,15 @@
         <Button
             android:id="@+id/btn_login"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Đăng nhập"
-            android:textColor="@android:color/white"
-            android:backgroundTint="@color/blue"
+            android:layout_height="50dp"
+            android:text="ĐĂNG NHẬP"
+            android:textColor="@color/white"
+            android:backgroundTint="@color/mainColor"
+            android:textSize="18sp"
+            android:textStyle="bold"
             android:elevation="4dp"
-            android:layout_marginTop="12dp"
-            android:layout_marginBottom="12dp" />
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp" />
 
         <com.google.android.gms.common.SignInButton
             android:id="@+id/btn_google_signin"
@@ -80,7 +95,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Quên mật khẩu?"
-            android:textColor="@color/blue"
+            android:textColor="@color/white"
             android:textStyle="bold"
             android:textSize="16sp"
             android:layout_marginTop="8dp" />
@@ -90,7 +105,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Chưa có tài khoản? Đăng ký ngay"
-            android:textColor="@color/blue"
+            android:textColor="@color/white"
             android:textStyle="bold"
             android:textSize="16sp"
             android:layout_marginTop="16dp" />

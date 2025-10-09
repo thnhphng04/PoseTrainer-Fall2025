@@ -30,9 +30,9 @@ import java.util.Objects;
 
 public class RegisterAccountActivity extends AppCompatActivity {
 
-    TextInputEditText editTextEmail, editTextPassword;
+    TextInputEditText editTextEmail, editTextPassword, editTextConfirmPassword;
     TextInputEditText editTextDisplayName, editTextPhotoUrl, editTextFcmToken;
-    TextInputLayout layoutDisplayName, layoutPhotoUrl, layoutFcmToken;
+    TextInputLayout layoutDisplayName, layoutPhotoUrl, layoutFcmToken, layoutConfirmPassword;
     Button buttonReg;
     FirebaseAuth mAuth;
     ProgressBar progressBar;
@@ -49,12 +49,13 @@ public class RegisterAccountActivity extends AppCompatActivity {
         // Gán view
         editTextEmail = findViewById(R.id.email);
         editTextPassword = findViewById(R.id.password);
+        editTextConfirmPassword = findViewById(R.id.confirmPassword);
         editTextDisplayName = findViewById(R.id.editTextDisplayName);
         editTextPhotoUrl = findViewById(R.id.editTextPhotoUrl);
 
-
         layoutDisplayName = findViewById(R.id.layoutDisplayName);
         layoutPhotoUrl = findViewById(R.id.layoutPhotoUrl);
+        layoutConfirmPassword = findViewById(R.id.layoutConfirmPassword);
 
 
 
@@ -76,15 +77,24 @@ public class RegisterAccountActivity extends AppCompatActivity {
 
             String email = Objects.requireNonNull(editTextEmail.getText()).toString().trim();
             String password = Objects.requireNonNull(editTextPassword.getText()).toString().trim();
+            String confirmPassword = Objects.requireNonNull(editTextConfirmPassword.getText()).toString().trim();
 
             if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-                showToast("Invalid email format");
+                showToast("Định dạng email không hợp lệ");
                 return;
             }
 
             if (password.length() < 6) {
-                showToast("Password must be at least 6 characters");
+                showToast("Mật khẩu phải có ít nhất 6 ký tự");
                 return;
+            }
+
+            if (!password.equals(confirmPassword)) {
+                showToast("Mật khẩu xác nhận không khớp");
+                layoutConfirmPassword.setError("Mật khẩu xác nhận không khớp");
+                return;
+            } else {
+                layoutConfirmPassword.setError(null);
             }
 
             String displayName = Objects.requireNonNull(editTextDisplayName.getText()).toString().trim();
@@ -93,7 +103,7 @@ public class RegisterAccountActivity extends AppCompatActivity {
             String fcmToken = null;
 
             if (TextUtils.isEmpty(displayName)) {
-                showToast("Enter display name");
+                showToast("Vui lòng nhập tên hiển thị");
                 return;
             }
 
@@ -123,22 +133,22 @@ public class RegisterAccountActivity extends AppCompatActivity {
 
                                 db.collection("users").document(uid).set(newUser)
                                         .addOnSuccessListener(unused -> {
-                                            Toast.makeText(RegisterAccountActivity.this, "Account created", Toast.LENGTH_SHORT).show();
+                                            Toast.makeText(RegisterAccountActivity.this, "Tạo tài khoản thành công", Toast.LENGTH_SHORT).show();
                                             startActivity(new Intent(getApplicationContext(), MainActivity.class));
                                             finish();
                                         })
                                         .addOnFailureListener(e -> {
                                             android.util.Log.e("FIRESTORE", "Failed to save user", e);
-                                            showToast("Failed to save user: " + e.getMessage());
+                                            showToast("Lỗi khi lưu thông tin người dùng: " + e.getMessage());
                                         });
                             }
                         } else {
                             Exception e = task.getException();
                             if (e != null) {
                                 Log.e("RegisterActivity", "Auth failed", e);
-                                showToast("Authentication failed: " + e.getMessage());
+                                showToast("Lỗi xác thực: " + e.getMessage());
                             } else {
-                                showToast("Authentication failed: unknown error");
+                                showToast("Lỗi xác thực: lỗi không xác định");
                             }
                         }
                     });
