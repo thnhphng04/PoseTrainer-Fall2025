@@ -25,21 +25,20 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.firestore.FirebaseFirestore;
- 
+
 import com.google.android.material.textfield.TextInputEditText;
 import fpt.fall2025.posetrainer.Domain.User;
 
 public class LoginActivity extends AppCompatActivity {
 
     TextInputEditText editTextEmail, editTextPassword;
-    Button buttonLogin;
-    ProgressBar progressBar;
-    TextView textView, forgetPassword;
+    Button buttonLogin, buttonGoogleSignIn;
+    TextView textViewRegister, textViewForgotPassword;
 
     private FirebaseAuth mAuth;
     private GoogleSignInClient googleSignInClient;
     private static final int RC_SIGN_IN = 9001;
- 
+
 
     @Override
     public void onStart() {
@@ -59,60 +58,59 @@ public class LoginActivity extends AppCompatActivity {
                 .build();
         googleSignInClient = GoogleSignIn.getClient(this, gso);
 
-        // Ánh xạ view
-        editTextEmail = findViewById(R.id.email);
-        editTextPassword = findViewById(R.id.password);
+        editTextEmail = findViewById(R.id.et_email);
+        editTextPassword = findViewById(R.id.et_password);
         buttonLogin = findViewById(R.id.btn_login);
-        progressBar = findViewById(R.id.progessBar);
-        textView = findViewById(R.id.registerNow);
-        forgetPassword = findViewById(R.id.forgetPassword);
+        buttonGoogleSignIn = findViewById(R.id.btn_google_signin);
+        textViewForgotPassword = findViewById(R.id.tv_forgot_password);
+        textViewRegister = findViewById(R.id.tv_register_link);
 
-//        // ===== Quên mật khẩu =====
-//        forgetPassword.setOnClickListener(v -> startActivity(new Intent(LoginActivity.this, ForgotPassword.class)));
+        textViewForgotPassword.setOnClickListener(v -> {
+            // TODO: Implement forgot password functionality
+            Toast.makeText(LoginActivity.this, "Chức năng quên mật khẩu đang được phát triển", Toast.LENGTH_SHORT).show();
+            // startActivity(new Intent(LoginActivity.this, ForgotPasswordActivity.class));
+        });
 
-        // ===== Chuyển sang đăng ký =====
-        textView.setOnClickListener(v -> {
+        textViewRegister.setOnClickListener(v -> {
             startActivity(new Intent(getApplicationContext(), RegisterAccountActivity.class));
             finish();
         });
 
-        // ===== Đăng nhập bằng Email/Password =====
         buttonLogin.setOnClickListener(v -> {
             String email = editTextEmail.getText().toString().trim();
             String password = editTextPassword.getText().toString().trim();
 
             if (TextUtils.isEmpty(email)) {
-                Toast.makeText(LoginActivity.this, "Enter email", Toast.LENGTH_SHORT).show();
+                Toast.makeText(LoginActivity.this, "Vui lòng nhập email", Toast.LENGTH_SHORT).show();
                 return;
             }
 
             if (TextUtils.isEmpty(password)) {
-                Toast.makeText(LoginActivity.this, "Enter password", Toast.LENGTH_SHORT).show();
+                Toast.makeText(LoginActivity.this, "Vui lòng nhập mật khẩu", Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            progressBar.setVisibility(View.VISIBLE);
+            buttonLogin.setEnabled(false);
 
             mAuth.signInWithEmailAndPassword(email, password)
                     .addOnCompleteListener(task -> {
-                        progressBar.setVisibility(View.GONE);
+                        buttonLogin.setEnabled(true);
                         if (task.isSuccessful()) {
-                            Toast.makeText(LoginActivity.this, "Login successful", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(LoginActivity.this, "Đăng nhập thành công", Toast.LENGTH_SHORT).show();
                             startActivity(new Intent(getApplicationContext(), MainActivity.class));
                             finish();
                         } else {
                             String errorMessage = task.getException() != null
                                     ? task.getException().getMessage()
-                                    : "Authentication failed";
-                            Toast.makeText(LoginActivity.this, "Login failed: " + errorMessage, Toast.LENGTH_LONG).show();
+                                    : "Xác thực thất bại";
+                            Toast.makeText(LoginActivity.this, "Đăng nhập thất bại: " + errorMessage, Toast.LENGTH_LONG).show();
                             Log.e("FIREBASE_AUTH", "Sign-in error: " + errorMessage);
                         }
                     });
         });
 
-        // ===== Đăng nhập bằng Google =====
-        findViewById(R.id.btn_google_signin).setOnClickListener(v -> {
-            progressBar.setVisibility(View.VISIBLE);
+        buttonGoogleSignIn.setOnClickListener(v -> {
+            buttonGoogleSignIn.setEnabled(false);
             Intent signInIntent = googleSignInClient.getSignInIntent();
             startActivityForResult(signInIntent, RC_SIGN_IN);
         });
@@ -128,13 +126,13 @@ public class LoginActivity extends AppCompatActivity {
                 if (account != null) {
                     firebaseAuthWithGoogle(account.getIdToken());
                 } else {
-                    progressBar.setVisibility(View.GONE);
-                    Toast.makeText(this, "Google sign-in failed", Toast.LENGTH_SHORT).show();
+                    buttonGoogleSignIn.setEnabled(true);
+                    Toast.makeText(this, "Đăng nhập Google thất bại", Toast.LENGTH_SHORT).show();
                 }
             } catch (ApiException e) {
-                progressBar.setVisibility(View.GONE);
+                buttonGoogleSignIn.setEnabled(true);
                 Log.e("GOOGLE_SIGN_IN", "SignIn failed", e);
-                Toast.makeText(this, "Google sign-in failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Đăng nhập Google thất bại: " + e.getMessage(), Toast.LENGTH_LONG).show();
             }
         }
     }
@@ -143,7 +141,7 @@ public class LoginActivity extends AppCompatActivity {
         AuthCredential credential = GoogleAuthProvider.getCredential(idToken, null);
         mAuth.signInWithCredential(credential)
                 .addOnCompleteListener(this, task -> {
-                    progressBar.setVisibility(View.GONE);
+                    buttonGoogleSignIn.setEnabled(true);
                     if (task.isSuccessful()) {
                         AuthResult result = task.getResult();
                         boolean isNewUser = result != null && result.getAdditionalUserInfo() != null && result.getAdditionalUserInfo().isNewUser();
@@ -151,7 +149,7 @@ public class LoginActivity extends AppCompatActivity {
                         if (firebaseUser != null) {
                             Log.d("GOOGLE_AUTH", "Firebase user authenticated: " + firebaseUser.getUid());
                             Log.d("GOOGLE_AUTH", "Is new user: " + isNewUser);
-                            
+
                             if (isNewUser) {
                                 Log.d("GOOGLE_AUTH", "Creating new user document");
                                 createUserDocumentForGoogle(firebaseUser);
@@ -161,12 +159,12 @@ public class LoginActivity extends AppCompatActivity {
                             }
                         } else {
                             Log.e("GOOGLE_AUTH", "Firebase user is null after authentication");
-                            Toast.makeText(LoginActivity.this, "Authentication failed", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(LoginActivity.this, "Xác thực thất bại", Toast.LENGTH_SHORT).show();
                         }
                     } else {
                         Exception e = task.getException();
                         Log.e("FIREBASE_AUTH", "Google credential sign-in error", e);
-                        Toast.makeText(LoginActivity.this, "Authentication failed: " + (e != null ? e.getMessage() : "unknown"), Toast.LENGTH_LONG).show();
+                        Toast.makeText(LoginActivity.this, "Xác thực thất bại: " + (e != null ? e.getMessage() : "unknown"), Toast.LENGTH_LONG).show();
                     }
                 });
     }
@@ -218,10 +216,9 @@ public class LoginActivity extends AppCompatActivity {
         long now = System.currentTimeMillis() / 1000;
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         String uid = firebaseUser.getUid();
-        
+
         Log.d("GOOGLE_AUTH", "Checking if user document exists for UID: " + uid);
-        
-        // First check if user document exists
+
         db.collection("users").document(uid).get()
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {
@@ -246,6 +243,4 @@ public class LoginActivity extends AppCompatActivity {
                     createUserDocumentForGoogle(firebaseUser);
                 });
     }
-
-
 }
