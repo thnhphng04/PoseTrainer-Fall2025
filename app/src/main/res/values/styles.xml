@@ -203,4 +203,35 @@
     <style name="TrophyIconInactive" parent="TrophyIcon">
         <item name="android:tint">#8a000000</item>
     </style>
+
+    <!-- Category and Duration Chip Styles -->
+    <style name="CategoryChip">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:paddingLeft">16dp</item>
+        <item name="android:paddingRight">16dp</item>
+        <item name="android:paddingTop">8dp</item>
+        <item name="android:paddingBottom">8dp</item>
+        <item name="android:layout_marginEnd">8dp</item>
+        <item name="android:background">@drawable/chip_bg</item>
+        <item name="android:textColor">#ffffff</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:foreground">?android:attr/selectableItemBackground</item>
+    </style>
+
+    <style name="CategoryChipSelected" parent="CategoryChip">
+        <item name="android:background">@drawable/chip_selected_bg</item>
+    </style>
+
+    <style name="DurationChip" parent="CategoryChip">
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <style name="BottomNavItem">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:gravity">center</item>
+        <item name="android:background">?android:attr/selectableItemBackgroundBorderless</item>
+    </style>
 </resources>
