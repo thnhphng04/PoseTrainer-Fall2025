@@ -1,5 +1,6 @@
 package fpt.fall2025.posetrainer.Fragment;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -12,6 +13,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import fpt.fall2025.posetrainer.Activity.SearchActivity;
 import fpt.fall2025.posetrainer.Adapter.WorkoutTemplateAdapter;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
 import fpt.fall2025.posetrainer.Domain.User;
@@ -45,12 +47,40 @@ public class HomeFragment extends Fragment {
 
         // Setup RecyclerView
         binding.view1.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
-        
+
+        // Setup search listeners
+        setupSearchListeners();
+
         // Load current user info
         loadCurrentUserInfo();
-        
+
         // Load workout templates from Firestore
         loadWorkoutTemplates();
+    }
+
+    /**
+     * Setup search bar and search option buttons
+     */
+    private void setupSearchListeners() {
+        // Main search bar
+        binding.searchBar.setOnClickListener(v -> {
+            Intent intent = new Intent(getActivity(), SearchActivity.class);
+            startActivity(intent);
+        });
+
+        // Search by muscle group
+        binding.btnSearchByMuscle.setOnClickListener(v -> {
+            Intent intent = new Intent(getActivity(), SearchActivity.class);
+            intent.putExtra("search_type", "muscle");
+            startActivity(intent);
+        });
+
+        // Search by time/duration
+        binding.btnSearchByTime.setOnClickListener(v -> {
+            Intent intent = new Intent(getActivity(), SearchActivity.class);
+            intent.putExtra("search_type", "time");
+            startActivity(intent);
+        });
     }
 
     /**
@@ -58,7 +88,7 @@ public class HomeFragment extends Fragment {
      */
     private void loadWorkoutTemplates() {
         Log.d(TAG, "Loading workout templates from Firestore...");
-        
+
         FirebaseService.getInstance().loadWorkoutTemplates((androidx.appcompat.app.AppCompatActivity) getActivity(), new FirebaseService.OnWorkoutTemplatesLoadedListener() {
             @Override
             public void onWorkoutTemplatesLoaded(ArrayList<WorkoutTemplate> templates) {
@@ -82,7 +112,7 @@ public class HomeFragment extends Fragment {
         String uid = currentUser.getUid();
         Log.d(TAG, "Loading user info for UID: " + uid);
         FirebaseFirestore db = FirebaseFirestore.getInstance();
-        
+
         db.collection("users").document(uid).get()
                 .addOnSuccessListener(documentSnapshot -> {
                     Log.d(TAG, "HomeFragment: Firestore query completed");
@@ -110,23 +140,20 @@ public class HomeFragment extends Fragment {
      * Update UI with user information
      */
     private void updateUserUI(User user) {
-        // Update display name
         if (user.getDisplayName() != null && !user.getDisplayName().isEmpty()) {
-            binding.textView5.setText(user.getDisplayName());
+            binding.tvUserName.setText(user.getDisplayName());
         } else {
-            binding.textView5.setText("User");
+            binding.tvUserName.setText("User");
         }
 
-        // Update profile image
         if (user.getPhotoURL() != null && !user.getPhotoURL().isEmpty()) {
             Glide.with(this)
                     .load(user.getPhotoURL())
                     .placeholder(R.drawable.profile)
                     .error(R.drawable.profile)
-                    .into(binding.imageView2);
+                    .into(binding.ivUserAvatar);
         } else {
-            // Keep default profile image
-            binding.imageView2.setImageResource(R.drawable.profile);
+            binding.ivUserAvatar.setImageResource(R.drawable.profile);
         }
     }
 
@@ -135,23 +162,27 @@ public class HomeFragment extends Fragment {
      */
     private void updateUserUIFromFirebaseAuth(FirebaseUser firebaseUser) {
         Log.d(TAG, "HomeFragment: Using Firebase Auth data as fallback");
-        
-        // Update display name
+
         if (firebaseUser.getDisplayName() != null && !firebaseUser.getDisplayName().isEmpty()) {
-            binding.textView5.setText(firebaseUser.getDisplayName());
+            binding.tvUserName.setText(firebaseUser.getDisplayName());
         } else {
-            binding.textView5.setText("User");
+            binding.tvUserName.setText("User");
         }
 
-        // Update profile image
         if (firebaseUser.getPhotoUrl() != null) {
             Glide.with(this)
                     .load(firebaseUser.getPhotoUrl())
                     .placeholder(R.drawable.profile)
                     .error(R.drawable.profile)
-                    .into(binding.imageView2);
+                    .into(binding.ivUserAvatar);
         } else {
-            binding.imageView2.setImageResource(R.drawable.profile);
+            binding.ivUserAvatar.setImageResource(R.drawable.profile);
         }
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        binding = null;
     }
 }

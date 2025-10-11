@@ -33,10 +33,10 @@ public class MainActivity extends AppCompatActivity {
 
     private void setupBottomNavigation() {
         binding.homeBtn.setOnClickListener(v -> loadFragment(new HomeFragment()));
-        binding.favoriteBtn.setOnClickListener(v -> {
+        binding.personalBtn.setOnClickListener(v -> {
             loadFragment(new FavoriteFragment());
         });
-        binding.cartBtn.setOnClickListener(v -> {
+        binding.dailyBtn.setOnClickListener(v -> {
             // TODO: Tạo CartFragment sau  
             loadFragment(new ProfileFragment()); // Tạm thời dùng ProfileFragment
         });
