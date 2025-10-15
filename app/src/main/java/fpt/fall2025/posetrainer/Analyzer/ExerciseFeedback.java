@@ -16,16 +16,16 @@ public class ExerciseFeedback {
     private boolean cameraWarning;
     private int offsetAngle;
     private List<String> feedbackList;
-    
+
     // Góc đo cho squat
     private int hipAngle;
     private int kneeAngle;
     private int ankleAngle;
-    
+
     // Góc đo cho pushup
     private int shoulderAngle;
     private int earElbowHipAngle;
-    
+
     // Góc đo cho jumping jack
     private int leftArmAngle;
     private int leftLegAngle;
@@ -43,15 +43,6 @@ public class ExerciseFeedback {
         this.message = "";
         this.cameraWarning = false;
         this.offsetAngle = 0;
-        this.hipAngle = 0;
-        this.kneeAngle = 0;
-        this.ankleAngle = 0;
-        this.shoulderAngle = 0;
-        this.earElbowHipAngle = 0;
-        this.leftArmAngle = 0;
-        this.leftLegAngle = 0;
-        this.rightArmAngle = 0;
-        this.rightLegAngle = 0;
         this.lowerHips = false;
         this.currentState = "";
     }
@@ -117,81 +108,6 @@ public class ExerciseFeedback {
         this.feedbackList = feedbackList;
     }
     
-    // Squat angles
-    public int getHipAngle() {
-        return hipAngle;
-    }
-    
-    public void setHipAngle(int hipAngle) {
-        this.hipAngle = hipAngle;
-    }
-    
-    public int getKneeAngle() {
-        return kneeAngle;
-    }
-    
-    public void setKneeAngle(int kneeAngle) {
-        this.kneeAngle = kneeAngle;
-    }
-    
-    public int getAnkleAngle() {
-        return ankleAngle;
-    }
-    
-    public void setAnkleAngle(int ankleAngle) {
-        this.ankleAngle = ankleAngle;
-    }
-    
-    // PushUp angles
-    public int getShoulderAngle() {
-        return shoulderAngle;
-    }
-    
-    public void setShoulderAngle(int shoulderAngle) {
-        this.shoulderAngle = shoulderAngle;
-    }
-    
-    public int getEarElbowHipAngle() {
-        return earElbowHipAngle;
-    }
-    
-    public void setEarElbowHipAngle(int earElbowHipAngle) {
-        this.earElbowHipAngle = earElbowHipAngle;
-    }
-    
-    // Jumping Jack angles
-    public int getLeftArmAngle() {
-        return leftArmAngle;
-    }
-    
-    public void setLeftArmAngle(int leftArmAngle) {
-        this.leftArmAngle = leftArmAngle;
-    }
-    
-    public int getLeftLegAngle() {
-        return leftLegAngle;
-    }
-    
-    public void setLeftLegAngle(int leftLegAngle) {
-        this.leftLegAngle = leftLegAngle;
-    }
-    
-    public int getRightArmAngle() {
-        return rightArmAngle;
-    }
-    
-    public void setRightArmAngle(int rightArmAngle) {
-        this.rightArmAngle = rightArmAngle;
-    }
-    
-    public int getRightLegAngle() {
-        return rightLegAngle;
-    }
-    
-    public void setRightLegAngle(int rightLegAngle) {
-        this.rightLegAngle = rightLegAngle;
-    }
-    
     // Other states
     public boolean isLowerHips() {
         return lowerHips;
@@ -208,7 +124,79 @@ public class ExerciseFeedback {
     public void setCurrentState(String currentState) {
         this.currentState = currentState;
     }
-    
+
+    public int getHipAngle() {
+        return hipAngle;
+    }
+
+    public void setHipAngle(int hipAngle) {
+        this.hipAngle = hipAngle;
+    }
+
+    public int getKneeAngle() {
+        return kneeAngle;
+    }
+
+    public void setKneeAngle(int kneeAngle) {
+        this.kneeAngle = kneeAngle;
+    }
+
+    public int getAnkleAngle() {
+        return ankleAngle;
+    }
+
+    public void setAnkleAngle(int ankleAngle) {
+        this.ankleAngle = ankleAngle;
+    }
+
+    public int getShoulderAngle() {
+        return shoulderAngle;
+    }
+
+    public void setShoulderAngle(int shoulderAngle) {
+        this.shoulderAngle = shoulderAngle;
+    }
+
+    public int getEarElbowHipAngle() {
+        return earElbowHipAngle;
+    }
+
+    public void setEarElbowHipAngle(int earElbowHipAngle) {
+        this.earElbowHipAngle = earElbowHipAngle;
+    }
+
+    public int getLeftArmAngle() {
+        return leftArmAngle;
+    }
+
+    public void setLeftArmAngle(int leftArmAngle) {
+        this.leftArmAngle = leftArmAngle;
+    }
+
+    public int getLeftLegAngle() {
+        return leftLegAngle;
+    }
+
+    public void setLeftLegAngle(int leftLegAngle) {
+        this.leftLegAngle = leftLegAngle;
+    }
+
+    public int getRightArmAngle() {
+        return rightArmAngle;
+    }
+
+    public void setRightArmAngle(int rightArmAngle) {
+        this.rightArmAngle = rightArmAngle;
+    }
+
+    public int getRightLegAngle() {
+        return rightLegAngle;
+    }
+
+    public void setRightLegAngle(int rightLegAngle) {
+        this.rightLegAngle = rightLegAngle;
+    }
+
     /**
      * Tạo ExerciseFeedback từ SquatAnalyzer.Feedback
      */

@@ -113,19 +113,31 @@ public class HighKneeAnalyzer implements ExerciseAnalyzerInterface {
             inactiveTimeFront = 0.0;
             startInactiveTimeFront = now;
 
-            // Chọn bên chân trụ (dựa vào khoảng cách vai-bàn chân)
-            float distL = Math.abs(leftFoot.get("y") - leftShoulder.get("y"));
-            float distR = Math.abs(rightFoot.get("y") - rightShoulder.get("y"));
+            // Chọn bên để phân tích dựa trên visibility score
+            // Tính average visibility cho mỗi bên
+            float leftAvgVis = (
+                    leftShoulder.getOrDefault("visibility", 0f) +
+                            leftElbow.getOrDefault("visibility", 0f) +
+                            leftHip.getOrDefault("visibility", 0f) +
+                            leftKnee.getOrDefault("visibility", 0f)
+            ) / 4.0f;
+
+            float rightAvgVis = (
+                    rightShoulder.getOrDefault("visibility", 0f) +
+                            rightElbow.getOrDefault("visibility", 0f) +
+                            rightHip.getOrDefault("visibility", 0f) +
+                            rightKnee.getOrDefault("visibility", 0f)
+            ) / 4.0f;
 
             List<Map<String, Float>> points;
-            if (distL > distR) {
-                // Sử dụng bên trái
+            if (leftAvgVis > rightAvgVis) {
+                // Bên trái nhìn rõ hơn
                 points = Arrays.asList(
                         leftEar, leftShoulder, leftElbow, leftWrist,
                         leftHip, leftKnee, leftAnkle, rightHip, rightKnee, rightAnkle
                 );
             } else {
-                // Sử dụng bên phải
+                // Bên phải nhìn rõ hơn
                 points = Arrays.asList(
                         rightEar, rightShoulder, rightElbow, rightWrist,
                         rightHip, rightKnee, rightAnkle, leftHip, leftKnee, leftAnkle
@@ -256,9 +268,9 @@ public class HighKneeAnalyzer implements ExerciseAnalyzerInterface {
              */
 
             // Inactivity logic - kiểm tra nếu cả hai chân đều không thay đổi
-            boolean bothStatesUnchanged = (nearCurrState != null && nearCurrState.equals(prevState)) && 
-                                        (farCurrState != null && farCurrState.equals(prevState));
-            
+            boolean bothStatesUnchanged = (nearCurrState != null && nearCurrState.equals(prevState)) &&
+                    (farCurrState != null && farCurrState.equals(prevState));
+
             if (bothStatesUnchanged) {
                 inactiveTime += now - startInactiveTime;
                 startInactiveTime = now;
@@ -288,7 +300,7 @@ public class HighKneeAnalyzer implements ExerciseAnalyzerInterface {
 
             // Tạo state string kết hợp cho cả hai chân
             String combinedState = "Near:" + (nearCurrState != null ? nearCurrState : "null") +
-                                 " Far:" + (farCurrState != null ? farCurrState : "null");
+                    " Far:" + (farCurrState != null ? farCurrState : "null");
             System.out.println(combinedState);
             feedback.setCurrentState(combinedState);
 
@@ -458,10 +470,10 @@ public class HighKneeAnalyzer implements ExerciseAnalyzerInterface {
 
     private String getState(int hipAngle, int positionCheck) {
         if (hipAngle > thresholds.getHipNormal() &&
-            positionCheck < 30) {
+                positionCheck < 30) {
             return "s1";
         } else if ((hipAngle <= thresholds.getHipTrans()[0] && hipAngle >= thresholds.getHipTrans()[1]) &&
-                    positionCheck < 30) {
+                positionCheck < 30) {
             return "s2";
         } else if (hipAngle <= thresholds.getHipPass() &&
                 positionCheck < 30) {
@@ -511,8 +523,8 @@ public class HighKneeAnalyzer implements ExerciseAnalyzerInterface {
         public HighKneeThresholds() {}
 
         public HighKneeThresholds(int kneeThreshold, int hipNormal, int[] hipTrans,
-                                int hipPass,
-                                int offsetThresh, double inactiveThresh, int cntFrameThresh) {
+                                  int hipPass,
+                                  int offsetThresh, double inactiveThresh, int cntFrameThresh) {
             this.kneeThreshold = kneeThreshold;
             this.hipNormal = hipNormal;
             this.hipTrans = hipTrans;
