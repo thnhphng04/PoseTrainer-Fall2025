@@ -45,11 +45,15 @@
         <activity
             android:name=".Activity.ExerciseSelectionActivity"
             android:exported="false" />
+        <activity android:name=".Activity.ChallengeDetailActivity"
+            android:exported="false"
+            />
+
+        <!--        <activity-->
+<!--            android:name=".Activity.MainActivity"-->
+<!--            android:exported="false" />-->
         <activity
             android:name=".Activity.MainActivity"
-            android:exported="false" />
-        <activity
-            android:name=".Activity.IntroActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

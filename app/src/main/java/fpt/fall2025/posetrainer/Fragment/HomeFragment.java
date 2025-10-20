@@ -41,6 +41,7 @@ public class HomeFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        initBodyPartsListeners();
 
         // Initialize data
         workoutTemplates = new ArrayList<>();
@@ -57,6 +58,7 @@ public class HomeFragment extends Fragment {
         // Load workout templates from Firestore
         loadWorkoutTemplates();
     }
+
 
     /**
      * Setup search bar and search option buttons
@@ -179,6 +181,56 @@ public class HomeFragment extends Fragment {
             binding.ivUserAvatar.setImageResource(R.drawable.profile);
         }
     }
+    private void initBodyPartsListeners() {
+        // Full Body
+        binding.bodyPartFullBody.setOnClickListener(v -> {
+            handleBodyPartClick("Full Body");
+        });
+
+        // Core
+        binding.bodyPartCore.setOnClickListener(v -> {
+            handleBodyPartClick("Core");
+        });
+
+        // Arm
+        binding.bodyPartArm.setOnClickListener(v -> {
+            handleBodyPartClick("Arm");
+        });
+
+        // Chest
+        binding.bodyPartChest.setOnClickListener(v -> {
+            handleBodyPartClick("Chest");
+        });
+
+        // Butt & Leg
+        binding.bodyPartButtLeg.setOnClickListener(v -> {
+            handleBodyPartClick("Butt & Leg");
+        });
+
+        // Back
+        binding.bodyPartBack.setOnClickListener(v -> {
+            handleBodyPartClick("Back");
+        });
+
+        // Shoulder
+        binding.bodyPartShoulder.setOnClickListener(v -> {
+            handleBodyPartClick("Shoulder");
+        });
+
+        // Custom
+        binding.bodyPartCustom.setOnClickListener(v -> {
+            handleBodyPartClick("Custom");
+        });
+    }
+
+    private void handleBodyPartClick(String bodyPart) {
+        Toast.makeText(getActivity(), "Selected: " + bodyPart, Toast.LENGTH_SHORT).show();
+        Toast.makeText(getActivity(), "Selected: " + bodyPart, Toast.LENGTH_SHORT).show();
+
+        Intent intent = new Intent(getActivity(), fpt.fall2025.posetrainer.Activity.ChallengeDetailActivity.class);
+        intent.putExtra("body_part", bodyPart);
+        startActivity(intent);
+    }
 
     @Override
     public void onDestroyView() {
@@ -186,3 +238,4 @@ public class HomeFragment extends Fragment {
         binding = null;
     }
 }
+
