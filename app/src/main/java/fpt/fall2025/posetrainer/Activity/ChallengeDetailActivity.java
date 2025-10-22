@@ -4,7 +4,11 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.PopupMenu;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
@@ -28,5 +32,31 @@ public class ChallengeDetailActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
+        ImageView btnBack = findViewById(R.id.btn_back);
+        btnBack.setOnClickListener(v -> {
+            finish();
+        });
+
+
+        ImageView btnMenu = findViewById(R.id.btn_menu);
+        btnMenu.setOnClickListener(v -> {
+            PopupMenu popupMenu = new PopupMenu(this, v);
+            popupMenu.getMenuInflater().inflate(R.menu.menu_settings_exercise, popupMenu.getMenu());
+
+            popupMenu.setOnMenuItemClickListener(item -> {
+                int id = item.getItemId();
+                if (id == R.id.menu_restart_plan) {
+                    Toast.makeText(this, "Restart plan clicked", Toast.LENGTH_SHORT).show();
+                    return true;
+                } else if (id == R.id.menu_adjust_plan) {
+                    Toast.makeText(this, "Adjust plan clicked", Toast.LENGTH_SHORT).show();
+                    return true;
+                }
+                return false;
+            });
+
+
+            popupMenu.show();
+        });
     }
 }

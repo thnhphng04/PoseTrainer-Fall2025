@@ -37,8 +37,7 @@ public class MainActivity extends AppCompatActivity {
             loadFragment(new FavoriteFragment());
         });
         binding.dailyBtn.setOnClickListener(v -> {
-            // TODO: Tạo CartFragment sau  
-            loadFragment(new ProfileFragment()); // Tạm thời dùng ProfileFragment
+            loadFragment(new ProfileFragment());
         });
         binding.profileBtn.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, ProfileActivity.class);

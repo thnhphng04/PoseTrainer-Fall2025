@@ -49,7 +49,7 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
         binding = ActivityEditWorkoutBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
+//        getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
 
         // Get workout template ID from intent
         workoutTemplateId = getIntent().getStringExtra("workoutTemplateId");
@@ -58,7 +58,12 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
             finish();
             return;
         }
-
+        binding.backBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                finish();
+            }
+        });
         // Get current user UID
         getCurrentUserId();
 
@@ -88,6 +93,7 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
     private void initializeData() {
         exercises = new ArrayList<>();
     }
+
 
     /**
      * Setup UI components

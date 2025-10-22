@@ -1,172 +1,216 @@
-<androidx.constraintlayout.widget.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="130dp"
-    android:layout_margin="8dp"
-    android:background="@drawable/blue_bg">
+    android:layout_height="wrap_content"
+    android:layout_marginStart="-7dp"
+    android:layout_marginEnd="-7dp"
+    android:layout_marginBottom="12dp"
+    app:cardBackgroundColor="@color/darkBlue"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="4dp">
 
-    <!-- Hình ảnh bài tập -->
-    <com.google.android.material.imageview.ShapeableImageView
-        android:id="@+id/pic"
-        style="@style/Style.App.circleImageView"
-        android:layout_width="70dp"
-        android:layout_height="65dp"
-        android:layout_margin="8dp"
-        android:scaleType="centerCrop"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.4"
-        tools:srcCompat="@tools:sample/backgrounds/scenic" />
-
-    <!-- Title -->
-    <TextView
-        android:id="@+id/titleTxt"
-        android:layout_width="0dp"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Title"
-        android:textColor="@color/white"
-        android:textStyle="bold"
-        android:textSize="16sp"
-        android:layout_marginStart="16dp"
-        app:layout_constraintStart_toEndOf="@id/pic"
-        app:layout_constraintTop_toTopOf="@id/pic"
-        app:layout_constraintEnd_toStartOf="@id/difficultyBtn"
-        app:layout_constraintHorizontal_bias="0" />
+        android:padding="16dp">
 
-    <!-- Duration -->
-    <TextView
-        android:id="@+id/durationTxt"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="00:00"
-        android:textColor="@color/white"
-        app:layout_constraintStart_toStartOf="@id/titleTxt"
-        app:layout_constraintTop_toBottomOf="@id/titleTxt" />
+        <!-- Exercise Image -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/imageCard"
+            android:layout_width="90dp"
+            android:layout_height="90dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent">
 
-    <!-- Difficulty Button -->
+            <ImageView
+                android:id="@+id/pic"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                tools:srcCompat="@tools:sample/avatars" />
+        </androidx.cardview.widget.CardView>
 
-    <!-- Nhóm Sets & Reps -->
-    <TextView
-        android:id="@+id/difficultyBtn"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="84dp"
-        android:background="@drawable/orange_bg"
-        android:padding="4dp"
-        android:text="Beginner"
-        android:textColor="@color/white"
-        android:textSize="10sp"
-        app:layout_constraintBottom_toBottomOf="@id/titleTxt"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/titleTxt"
-        app:layout_constraintVertical_bias="0.0" />
-
-    <LinearLayout
-        android:id="@+id/setsRepsLayout"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="8dp"
-        app:layout_constraintStart_toStartOf="@id/titleTxt"
-        app:layout_constraintTop_toBottomOf="@id/durationTxt">
-
-        <!-- Sets -->
-        <TextView
-            android:id="@+id/setsLabel"
-            android:layout_width="wrap_content"
+        <!-- Content Container -->
+        <LinearLayout
+            android:id="@+id/contentContainer"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="Sets:"
-            android:textColor="@color/white"
-            android:textSize="12sp"
-            android:layout_gravity="center_vertical"/>
-
-        <Button
-            android:id="@+id/setsMinusBtn"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:text="-"
-            android:background="@drawable/circle_button"
-            android:textColor="@color/white"
-            android:textSize="12sp"
-            android:layout_marginStart="4dp"/>
-
-        <TextView
-            android:id="@+id/setsTxt"
-            android:layout_width="30dp"
-            android:layout_height="wrap_content"
-            android:text="3"
-            android:textColor="@color/white"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:layout_marginStart="4dp"/>
-
-        <Button
-            android:id="@+id/setsPlusBtn"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:text="+"
-            android:background="@drawable/circle_button"
-            android:textColor="@color/white"
-            android:textSize="12sp"
-            android:layout_marginStart="4dp"/>
-
-        <!-- Reps -->
-        <TextView
-            android:id="@+id/repsLabel"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Reps:"
-            android:textColor="@color/white"
-            android:textSize="12sp"
             android:layout_marginStart="16dp"
-            android:layout_gravity="center_vertical"/>
+            android:orientation="vertical"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/imageCard"
+            app:layout_constraintTop_toTopOf="parent">
 
-        <Button
-            android:id="@+id/repsMinusBtn"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:text="-"
-            android:background="@drawable/circle_button"
-            android:textColor="@color/white"
-            android:textSize="12sp"
-            android:layout_marginStart="4dp"/>
+            <!-- Title -->
+            <TextView
+                android:id="@+id/titleTxt"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Sit-Up"
+                android:textColor="@color/white"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end" />
 
-        <TextView
-            android:id="@+id/repsTxt"
-            android:layout_width="30dp"
-            android:layout_height="wrap_content"
-            android:text="12"
-            android:textColor="@color/white"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:layout_marginStart="4dp"/>
+            <!-- Duration Text -->
+            <TextView
+                android:id="@+id/durationTxt"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="4 sets x 20 reps"
+                android:textColor="#99FFFFFF"
+                android:textSize="13sp" />
 
-        <Button
-            android:id="@+id/repsPlusBtn"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:text="+"
-            android:background="@drawable/circle_button"
-            android:textColor="@color/white"
-            android:textSize="12sp"
-            android:layout_marginStart="4dp"/>
-    </LinearLayout>
+            <!-- Difficulty Badge -->
+            <TextView
+                android:id="@+id/difficultyBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/orange_bg"
+                android:paddingStart="12dp"
+                android:paddingTop="4dp"
+                android:paddingEnd="12dp"
+                android:paddingBottom="4dp"
+                android:text="Beginner"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="11sp"
+                android:textStyle="bold" />
 
-    <!-- Play Button -->
-    <ImageView
-        android:id="@+id/playBtn"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.505"
-        app:srcCompat="@drawable/play" />
+            <!-- Controls Container -->
+            <LinearLayout
+                android:id="@+id/controlsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal">
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+                <!-- Sets Control -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:background="@drawable/control_bg"
+                    android:gravity="center"
+                    android:orientation="horizontal"
+                    android:paddingStart="6dp"
+                    android:paddingEnd="6dp"
+                    android:paddingTop="10dp"
+                    android:paddingBottom="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Sets:"
+                        android:textColor="#99FFFFFF"
+                        android:textSize="11sp"
+                        android:layout_marginEnd="2dp" />
+
+                    <ImageButton
+                        android:id="@+id/setsMinusBtn"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_marginStart="2dp"
+                        android:background="@drawable/round_button_bg"
+                        android:contentDescription="Decrease sets"
+                        android:padding="5dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_minus"
+                        app:tint="@color/white" />
+
+                    <TextView
+                        android:id="@+id/setsTxt"
+                        android:layout_width="28dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="3"
+                        android:textColor="@color/white"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:layout_marginStart="2dp"
+                        android:layout_marginEnd="2dp" />
+
+                    <ImageButton
+                        android:id="@+id/setsPlusBtn"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:background="@drawable/round_button_bg"
+                        android:contentDescription="Increase sets"
+                        android:padding="5dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_plus"
+                        app:tint="@color/white" />
+                </LinearLayout>
+
+                <!-- Reps Control -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:background="@drawable/control_bg"
+                    android:gravity="center"
+                    android:orientation="horizontal"
+                    android:paddingStart="6dp"
+                    android:paddingEnd="6dp"
+                    android:paddingTop="10dp"
+                    android:paddingBottom="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Reps:"
+                        android:textColor="#99FFFFFF"
+                        android:textSize="11sp"
+                        android:layout_marginEnd="2dp" />
+
+                    <ImageButton
+                        android:id="@+id/repsMinusBtn"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_marginStart="2dp"
+                        android:background="@drawable/round_button_bg"
+                        android:contentDescription="Decrease reps"
+                        android:padding="5dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_minus"
+                        app:tint="@color/white" />
+
+                    <TextView
+                        android:id="@+id/repsTxt"
+                        android:layout_width="28dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="12"
+                        android:textColor="@color/white"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:layout_marginStart="2dp"
+                        android:layout_marginEnd="2dp" />
+
+                    <ImageButton
+                        android:id="@+id/repsPlusBtn"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:background="@drawable/round_button_bg"
+                        android:contentDescription="Increase reps"
+                        android:padding="5dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_plus"
+                        app:tint="@color/white" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.cardview.widget.CardView>

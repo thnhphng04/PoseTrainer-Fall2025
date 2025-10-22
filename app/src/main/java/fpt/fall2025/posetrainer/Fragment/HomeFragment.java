@@ -70,19 +70,6 @@ public class HomeFragment extends Fragment {
             startActivity(intent);
         });
 
-        // Search by muscle group
-        binding.btnSearchByMuscle.setOnClickListener(v -> {
-            Intent intent = new Intent(getActivity(), SearchActivity.class);
-            intent.putExtra("search_type", "muscle");
-            startActivity(intent);
-        });
-
-        // Search by time/duration
-        binding.btnSearchByTime.setOnClickListener(v -> {
-            Intent intent = new Intent(getActivity(), SearchActivity.class);
-            intent.putExtra("search_type", "time");
-            startActivity(intent);
-        });
     }
 
     /**
