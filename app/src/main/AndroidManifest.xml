@@ -25,8 +25,8 @@
             android:name=".Activity.RegisterAccountActivity"
             android:exported="false" />
         <activity
-            android:name=".Activity.LoginActivity"
-            android:exported="true" />
+            android:name=".Activity.MainActivity"
+            android:exported="false" />
         <activity
             android:name=".Activity.ProfileActivity"
             android:exported="false" />
@@ -53,7 +53,7 @@
 <!--            android:name=".Activity.MainActivity"-->
 <!--            android:exported="false" />-->
         <activity
-            android:name=".Activity.MainActivity"
+            android:name=".Activity.LoginActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
