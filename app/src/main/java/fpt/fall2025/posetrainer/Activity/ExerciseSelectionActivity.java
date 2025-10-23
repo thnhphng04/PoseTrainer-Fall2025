@@ -39,7 +39,7 @@ public class ExerciseSelectionActivity extends AppCompatActivity implements Exer
         binding = ActivityExerciseSelectionBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
+//        getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
 
         // Get current workout exercise IDs from intent
         currentWorkoutExerciseIds = getIntent().getStringArrayListExtra("currentWorkoutExerciseIds");

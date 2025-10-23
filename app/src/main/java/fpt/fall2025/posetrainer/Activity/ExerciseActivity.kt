@@ -63,10 +63,10 @@ class ExerciseActivity : AppCompatActivity() {
         setContentView(R.layout.activity_exercise)
         
         // Full screen
-        getWindow().setFlags(
-            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-        )
+//        getWindow().setFlags(
+//            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+//            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+//        )
         
         // Xử lý nút Back - không thay đổi state, chỉ finish activity
         setupBackButton()
