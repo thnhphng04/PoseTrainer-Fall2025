@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="24dp"
+    android:fillViewport="true"
+    tools:context=".Activity.EditProfileActivity">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <!-- Ảnh đại diện người dùng -->
+        <ImageView
+            android:id="@+id/imgProfile"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:layout_marginBottom="16dp"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_person"
+            android:background="@drawable/circle_background"
+            android:padding="4dp"
+            android:contentDescription="Ảnh hồ sơ"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <!-- Tên hiển thị (cho phép chỉnh sửa) -->
+        <EditText
+            android:id="@+id/etName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Nhập tên hiển thị"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:layout_marginBottom="8dp"
+            android:inputType="textPersonName"
+            android:importantForAutofill="no"
+            android:autofillHints="" />
+
+        <!-- Email (chỉ hiển thị, không chỉnh sửa) -->
+        <TextView
+            android:id="@+id/tvEmail"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Email người dùng"
+            android:textSize="16sp"
+            android:layout_marginBottom="24dp"
+            android:gravity="center" />
+
+        <!-- Nút lưu thay đổi -->
+        <Button
+            android:id="@+id/btnEditProfile"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Lưu thay đổi"
+            android:textAllCaps="false"
+            android:backgroundTint="@color/teal_700"
+            android:paddingHorizontal="24dp"
+            android:paddingVertical="12dp" />
+
+    </LinearLayout>
+</ScrollView>

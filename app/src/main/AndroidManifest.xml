@@ -28,9 +28,6 @@
             android:name=".Activity.MainActivity"
             android:exported="false" />
         <activity
-            android:name=".Activity.ProfileActivity"
-            android:exported="false" />
-        <activity
             android:name=".Activity.WorkoutActivity"
             android:exported="false" />
         <activity
@@ -50,6 +47,9 @@
             />
         <activity
             android:name=".Activity.ForgotPasswordActivity"
+            android:exported="false"/>
+        <activity
+            android:name=".Activity.EditProfileActivity"
             android:exported="false"/>
 
         <!--        <activity-->
