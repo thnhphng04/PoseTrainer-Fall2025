@@ -77,8 +77,8 @@ public class ForgotPasswordActivity extends AppCompatActivity {
                     if (onlySocialNoPassword) {
                         setLoading(false);
                         Toast.makeText(this,
-                                "Email này đăng nhập bằng Google/nhà cung cấp khác, không có mật khẩu để đặt lại.\n"
-                                        + "Hãy đăng nhập Google hoặc tạo mật khẩu trong phần cài đặt tài khoản.",
+                                "Email này đăng nhập bằng Google\n"
+                                        + "Hãy đăng nhập Google.",
                                 Toast.LENGTH_LONG).show();
                     } else {
                         sendResetEmail(email);
