@@ -48,6 +48,9 @@
         <activity android:name=".Activity.ChallengeDetailActivity"
             android:exported="false"
             />
+        <activity
+            android:name=".Activity.ForgotPasswordActivity"
+            android:exported="false"/>
 
         <!--        <activity-->
 <!--            android:name=".Activity.MainActivity"-->
