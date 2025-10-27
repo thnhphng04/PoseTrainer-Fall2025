@@ -20,16 +20,15 @@ import fpt.fall2025.posetrainer.Analyzer.SquatAnalyzer
 import fpt.fall2025.posetrainer.Analyzer.BurpeeAnalyzer
 import fpt.fall2025.posetrainer.Analyzer.HighKneeAnalyzer
 import fpt.fall2025.posetrainer.Analyzer.MountainClimberAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.LegRaiseAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.RussianTwistAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.SitUpAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.SitUpTwistAnalyzer
 import fpt.fall2025.posetrainer.Domain.Exercise
 import fpt.fall2025.posetrainer.MediaPipe.LandmarkConverter
 import fpt.fall2025.posetrainer.MediaPipe.PoseLandmarkerHelper
 import fpt.fall2025.posetrainer.Activity.ExerciseActivity
-import fpt.fall2025.posetrainer.View.JumpingJackOverlayView
-import fpt.fall2025.posetrainer.View.PushUpOverlayView
-import fpt.fall2025.posetrainer.View.SquatOverlayView
-import fpt.fall2025.posetrainer.View.BurpeeOverlayView
-import fpt.fall2025.posetrainer.View.HighKneeOverlayView
-import fpt.fall2025.posetrainer.View.MountainClimberOverlayView
+import fpt.fall2025.posetrainer.View.UnifiedOverlayView
 import fpt.fall2025.posetrainer.databinding.FragmentUnifiedCameraBinding
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import java.util.concurrent.ExecutorService
@@ -78,16 +77,8 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
 
     // Analyzer and overlay
     private var currentAnalyzer: ExerciseAnalyzerInterface? = null
-    private var currentOverlayView: View? = null
+    private var unifiedOverlayView: UnifiedOverlayView? = null
     private var lastFeedback: ExerciseFeedback? = null
-
-    // Specialized overlay views
-    private var squatOverlayView: SquatOverlayView? = null
-    private var pushUpOverlayView: PushUpOverlayView? = null
-    private var jumpingJackOverlayView: JumpingJackOverlayView? = null
-    private var burpeesOverlayView: BurpeeOverlayView? = null
-    private var highKneeOverlayView: HighKneeOverlayView? = null
-    private var mountainClimberOverlayView: MountainClimberOverlayView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -97,12 +88,20 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
             exercise = args.getSerializable("exercise") as Exercise
             sets = args.getInt("sets", 3)
             reps = args.getInt("reps", 12)
-            exerciseType = exercise.id.lowercase()
+            
+            // Null check cho exercise.id
+            exerciseType = exercise.id?.lowercase() ?: "ex_squat"
+            
+            if (exercise.id == null) {
+                Log.e(TAG, "Exercise ID is null! Using default squat")
+            }
             
             // Nhận currentSetNumber để tiếp tục từ set đúng
             currentSet = args.getInt("currentSetNumber", 1)
             Log.d(TAG, "=== UNIFIED CAMERA FRAGMENT ===")
             Log.d(TAG, "Received currentSetNumber: $currentSet")
+            Log.d(TAG, "Exercise ID: ${exercise.id}")
+            Log.d(TAG, "Exercise Type: $exerciseType")
             
             // Nhận session để biết trạng thái các set
             session = args.getSerializable("session") as? fpt.fall2025.posetrainer.Domain.Session
@@ -184,6 +183,10 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
             "ex_burpee" -> BurpeeAnalyzer()
             "ex_high_knee" -> HighKneeAnalyzer()
             "ex_mountain_climber" -> MountainClimberAnalyzer()
+            "ex_leg_raise" -> LegRaiseAnalyzer()
+            "ex_russian_twist" -> RussianTwistAnalyzer()
+            "ex_sit_up" -> SitUpAnalyzer()
+            "ex_sit_up_twist" -> SitUpTwistAnalyzer()
             else -> SquatAnalyzer() // Default
         }
     }
@@ -192,51 +195,18 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         // Remove existing overlay view
         binding.overlayContainer.removeAllViews()
 
-        currentOverlayView = when (exerciseType) {
-            "ex_squat" -> {
-                squatOverlayView = SquatOverlayView(requireContext(), null)
-                squatOverlayView
-            }
-            "ex_pushup" -> {
-                pushUpOverlayView = PushUpOverlayView(requireContext(), null)
-                pushUpOverlayView
-            }
-            "ex_jumping_jack" -> {
-                jumpingJackOverlayView = JumpingJackOverlayView(requireContext(), null)
-                jumpingJackOverlayView
-            }
-            "ex_burpee" -> {
-                burpeesOverlayView = BurpeeOverlayView(requireContext(), null)
-                burpeesOverlayView
-            }
-            "ex_high_knee" -> {
-                highKneeOverlayView = HighKneeOverlayView(requireContext(), null)
-                highKneeOverlayView
-            }
-            "ex_mountain_climber" -> {
-                mountainClimberOverlayView = MountainClimberOverlayView(requireContext(), null)
-                mountainClimberOverlayView
-            }
-            else -> {
-                squatOverlayView = SquatOverlayView(requireContext(), null)
-                squatOverlayView
-            }
-        }
+        // Tạo unified overlay view chung cho tất cả bài tập
+        unifiedOverlayView = UnifiedOverlayView(requireContext(), null)
 
         // Add overlay view to the layout
-        currentOverlayView?.let { overlayView ->
+        unifiedOverlayView?.let { overlayView ->
             if (overlayView.parent == null) {
                 binding.overlayContainer.addView(overlayView)
-                // Log.d(TAG, "Added overlay view to container: ${overlayView.javaClass.simpleName}")
-            } else {
-                // Log.d(TAG, "Overlay view already has parent: ${overlayView.javaClass.simpleName}")
+                Log.d(TAG, "Added unified overlay view to container")
             }
         }
 
-        // Log.d(TAG, "Set overlay view for exercise: $exerciseType")
-        // Log.d(TAG, "Current overlay view: ${currentOverlayView?.javaClass?.simpleName}")
-        // Log.d(TAG, "Overlay container child count: ${binding.overlayContainer.childCount}")
-        // Log.d(TAG, "Overlay container size: ${binding.overlayContainer.width}x${binding.overlayContainer.height}")
+        Log.d(TAG, "Set unified overlay view for exercise: $exerciseType")
     }
     
     private fun setupUI() {
@@ -832,36 +802,14 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         imageWidth: Int,
         feedback: ExerciseFeedback?
     ) {
-        // Log.d(TAG, "Updating overlay view for exercise: $exerciseType")
-        // Log.d(TAG, "Image size: ${imageWidth}x$imageHeight")
-        // Log.d(TAG, "Pose landmarks count: ${poseResult.landmarks().firstOrNull()?.size ?: 0}")
-
-        when (exerciseType) {
-            "ex_squat" -> {
-                // Log.d(TAG, "Updating SquatOverlayView")
-                squatOverlayView?.setResults(poseResult, imageHeight, imageWidth, com.google.mediapipe.tasks.vision.core.RunningMode.LIVE_STREAM, feedback)
-            }
-            "ex_pushup" -> {
-                // Log.d(TAG, "Updating PushUpOverlayView")
-                pushUpOverlayView?.setResults(poseResult, imageHeight, imageWidth, com.google.mediapipe.tasks.vision.core.RunningMode.LIVE_STREAM, feedback)
-            }
-            "ex_jumping_jack" -> {
-                // Log.d(TAG, "Updating JumpingJackOverlayView")
-                jumpingJackOverlayView?.setResults(poseResult, imageHeight, imageWidth, com.google.mediapipe.tasks.vision.core.RunningMode.LIVE_STREAM, feedback)
-            }
-            "ex_burpee" -> {
-                // Log.d(TAG, "Updating BurpeesOverlayView")
-                burpeesOverlayView?.setResults(poseResult, imageHeight, imageWidth, com.google.mediapipe.tasks.vision.core.RunningMode.LIVE_STREAM, feedback)
-            }
-            "ex_high_knee" -> {
-                // Log.d(TAG, "Updating HighKneeOverlayView")
-                highKneeOverlayView?.setResults(poseResult, imageHeight, imageWidth, com.google.mediapipe.tasks.vision.core.RunningMode.LIVE_STREAM, feedback)
-            }
-            "ex_mountain_climber" -> {
-                // Log.d(TAG, "Updating MountainClimberOverlayView")
-                mountainClimberOverlayView?.setResults(poseResult, imageHeight, imageWidth, com.google.mediapipe.tasks.vision.core.RunningMode.LIVE_STREAM, feedback)
-            }
-        }
+        // Cập nhật unified overlay view chung cho tất cả bài tập
+        unifiedOverlayView?.setResults(
+            poseResult, 
+            imageHeight, 
+            imageWidth, 
+            com.google.mediapipe.tasks.vision.core.RunningMode.LIVE_STREAM, 
+            feedback
+        )
     }
 
     override fun onError(error: String, errorCode: Int) {

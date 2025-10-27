@@ -66,9 +66,8 @@ public class LoginActivity extends AppCompatActivity {
         textViewRegister = findViewById(R.id.tv_register_link);
 
         textViewForgotPassword.setOnClickListener(v -> {
-            // TODO: Implement forgot password functionality
-            Toast.makeText(LoginActivity.this, "Chức năng quên mật khẩu đang được phát triển", Toast.LENGTH_SHORT).show();
-            // startActivity(new Intent(LoginActivity.this, ForgotPasswordActivity.class));
+            Intent intent = new Intent(LoginActivity.this, ForgotPasswordActivity.class);
+            startActivity(intent);
         });
 
         textViewRegister.setOnClickListener(v -> {

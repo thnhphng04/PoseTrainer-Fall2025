@@ -138,30 +138,63 @@ class ExerciseActivity : AppCompatActivity() {
         
         Log.d("ExerciseActivity", "Found PerExercise: ${targetPerExercise.exerciseId}")
         
-        // Create a mock Exercise from PerExercise data
-        val exercise = Exercise().apply {
-            id = targetPerExercise.exerciseId
-            name = when (targetPerExercise.exerciseId) {
-                "ex_jumping_jack" -> "Jumping Jack"
-                "ex_pushup" -> "Push-Up"
-                "ex_squat" -> "Bodyweight Squat"
-                "ex_burpee" -> "Burpee"
-                "ex_high_knee" -> "High Knee"
-                "ex_mountain_climber" -> "Mountain Climber"
-                else -> "Exercise ${targetPerExercise.exerciseNo}"
+        // Load exercise thực sự từ Firebase thay vì tạo mock
+        loadExerciseFromFirebase(targetPerExercise)
+    }
+    
+    private fun loadExerciseFromFirebase(perExercise: Session.PerExercise) {
+        Log.d("ExerciseActivity", "Loading exercise from Firebase: ${perExercise.exerciseId}")
+        
+        FirebaseService.getInstance().loadExerciseById(perExercise.exerciseId, this, object : FirebaseService.OnExerciseLoadedListener {
+            override fun onExerciseLoaded(exercise: Exercise?) {
+                if (exercise != null) {
+                    Log.d("ExerciseActivity", "Exercise loaded from Firebase: ${exercise.name}")
+                    
+                    // Override defaultConfig với config từ session nếu có
+                    val sets = perExercise.sets?.size ?: exercise.defaultConfig?.sets ?: 3
+                    val reps = perExercise.sets?.firstOrNull()?.targetReps ?: exercise.defaultConfig?.reps ?: 12
+                    val restSec = exercise.defaultConfig?.restSec ?: 90
+                    val difficulty = perExercise.difficultyUsed ?: exercise.defaultConfig?.difficulty ?: "beginner"
+                    
+                    exercise.defaultConfig = Exercise.DefaultConfig(sets, reps, restSec, difficulty)
+                    
+                    allExercises = arrayListOf(exercise)
+                    currentExercise = exercise
+                    
+                    // Initialize exercise
+                    initializeExercise(exercise)
+                } else { //nếu không lấy được dữ liệu từ firebase
+                    Log.e("ExerciseActivity", "Failed to load exercise from Firebase, creating fallback")
+                    val fallbackName = when (perExercise.exerciseId) {
+                        "ex_jumping_jack" -> "Jumping Jack"
+                        "ex_pushup" -> "Push-Up"
+                        "ex_squat" -> "Bodyweight Squat"
+                        "ex_burpee" -> "Burpee"
+                        "ex_high_knee" -> "High Knee"
+                        "ex_mountain_climber" -> "Mountain Climber"
+                        "ex_leg_raise" -> "Leg Raise"
+                        "ex_russian_twist" -> "Russian Twist"
+                        "ex_sit_up" -> "Sit-Up"
+                        "ex_sit_up_twist" -> "Sit-Up Twist"
+                        else -> "Exercise ${perExercise.exerciseNo}"
+                    }
+                    
+                    val fallbackExercise = Exercise().apply {
+                        id = perExercise.exerciseId
+                        name = fallbackName
+                        val sets = perExercise.sets?.size ?: 3
+                        val reps = perExercise.sets?.firstOrNull()?.targetReps ?: 12
+                        defaultConfig = Exercise.DefaultConfig(sets, reps, 90, perExercise.difficultyUsed ?: "beginner")
+                    }
+                    
+                    Log.d("ExerciseActivity", "Created fallback exercise: ${fallbackExercise.name} (ID: ${fallbackExercise.id})")
+                    
+                    allExercises = arrayListOf(fallbackExercise)
+                    currentExercise = fallbackExercise
+                    initializeExercise(fallbackExercise)
+                }
             }
-            // Set default config from PerExercise sets data
-            val sets = targetPerExercise.sets?.size ?: 3
-            val reps = targetPerExercise.sets?.firstOrNull()?.targetReps ?: 12
-            defaultConfig = Exercise.DefaultConfig(sets, reps, 90, targetPerExercise.difficultyUsed ?: "beginner")
-        }
-        
-        Log.d("ExerciseActivity", "Created exercise: ${exercise.name}")
-        allExercises = arrayListOf(exercise)
-        currentExercise = exercise
-        
-        // Initialize exercise
-        initializeExercise(exercise)
+        })
     }
     
     

@@ -73,7 +73,7 @@ public class JumpingJackAnalyzer implements ExerciseAnalyzerInterface {
         
         // Tính offset angle để phát hiện lệch camera
         offsetAngle = calculateOffsetAngle(leftShoulder, nose, rightShoulder);
-        cameraWarning = offsetAngle > 90; // Jumping jack có threshold khác
+        cameraWarning = offsetAngle < 80;
         feedbackList.clear();
         
         double now = System.nanoTime() / 1e9;

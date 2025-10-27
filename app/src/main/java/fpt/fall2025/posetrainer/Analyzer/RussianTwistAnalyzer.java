@@ -7,12 +7,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * PushUp Analyzer - Phân tích bài tập Push-Up
+ * RussianTwist Analyzer - Phân tích bài tập Push-Up
  * Implement ExerciseAnalyzerInterface để có thể sử dụng chung CameraFragment
  */
-public class BurpeeAnalyzer implements ExerciseAnalyzerInterface {
+public class RussianTwistAnalyzer implements ExerciseAnalyzerInterface {
 
-    private BurpeesThresholds thresholds;
+    private RussianTwistThresholds thresholds;
     private List<String> stateSequence;
     private int correctCount;
     private int incorrectCount;
@@ -30,16 +30,16 @@ public class BurpeeAnalyzer implements ExerciseAnalyzerInterface {
     private int offsetAngle;
     private List<String> feedbackList;
 
-    public BurpeeAnalyzer() {
-        this.thresholds = BurpeesThresholds.defaultBeginner();
+    public RussianTwistAnalyzer() {
+        this.thresholds = RussianTwistThresholds.defaultBeginner();
         this.stateSequence = new ArrayList<>();
         this.correctCount = 0;
         this.incorrectCount = 0;
         this.incorrectPosture = false;
         this.prevState = null;
         this.currState = null;
-        this.displayText = new boolean[3];
-        this.countFrames = new int[3];
+        this.displayText = new boolean[4];
+        this.countFrames = new int[4];
         this.lowerHips = false;
         this.inactiveTime = 0.0;
         this.inactiveTimeFront = 0.0;
@@ -50,7 +50,7 @@ public class BurpeeAnalyzer implements ExerciseAnalyzerInterface {
         this.feedbackList = new ArrayList<>();
     }
 
-    public BurpeeAnalyzer(BurpeesThresholds thresholds) {
+    public RussianTwistAnalyzer(RussianTwistThresholds thresholds) {
         this();
         this.thresholds = thresholds;
     }
@@ -83,7 +83,9 @@ public class BurpeeAnalyzer implements ExerciseAnalyzerInterface {
 
         // Tính offset angle để phát hiện lệch camera
         offsetAngle = calculateOffsetAngle(leftShoulder, nose, rightShoulder);
-        cameraWarning = offsetAngle > thresholds.getOffsetThresh();
+        int positionCheck = calculateAngleWithUpVertical(leftAnkle, leftShoulder);
+        cameraWarning = positionCheck < 45;
+
         feedbackList.clear();
 
         double now = System.nanoTime() / 1e9;
@@ -110,17 +112,17 @@ public class BurpeeAnalyzer implements ExerciseAnalyzerInterface {
             // Chọn bên để phân tích dựa trên visibility score
             // Tính average visibility cho mỗi bên
             float leftAvgVis = (
-                    leftShoulder.getOrDefault("visibility", 0f) +
-                            leftElbow.getOrDefault("visibility", 0f) +
-                            leftHip.getOrDefault("visibility", 0f) +
-                            leftKnee.getOrDefault("visibility", 0f)
+                leftShoulder.getOrDefault("visibility", 0f) +
+                leftElbow.getOrDefault("visibility", 0f) +
+                leftHip.getOrDefault("visibility", 0f) +
+                leftKnee.getOrDefault("visibility", 0f)
             ) / 4.0f;
-
+            
             float rightAvgVis = (
-                    rightShoulder.getOrDefault("visibility", 0f) +
-                            rightElbow.getOrDefault("visibility", 0f) +
-                            rightHip.getOrDefault("visibility", 0f) +
-                            rightKnee.getOrDefault("visibility", 0f)
+                rightShoulder.getOrDefault("visibility", 0f) +
+                rightElbow.getOrDefault("visibility", 0f) +
+                rightHip.getOrDefault("visibility", 0f) +
+                rightKnee.getOrDefault("visibility", 0f)
             ) / 4.0f;
 
             List<Map<String, Float>> points;
@@ -147,66 +149,89 @@ public class BurpeeAnalyzer implements ExerciseAnalyzerInterface {
             Map<String, Float> ankle = points.get(6);
             Map<String, Float> foot = points.get(7);
 
+
             // Tính các góc mới
-            int elbowAngle = calculateAngle(shldr, elbow, wrist);
-            int shldrAngle = calculateAngle(ear, shldr, hip);
-            int hipAngle = calculateAngle(shldr, hip, knee);
+            int hipAngle = calculateAngle(nose, hip, knee);
             int kneeAngle = calculateAngle(hip, knee, ankle);
             int earElbowHipAngle = calculateAngle(ear, elbow, hip); // Góc ear-elbow-hip (đỉnh là elbow)
 
 
-            float footYs4 = 0; //sử dụng cho s4
-            float footY = foot.get("y");
-            float kneeY = knee.get("y");
+            //tính khoảng cách giữa hai vai
+            float dx1 = rightShoulder.get("x") - leftShoulder.get("x");
+            float dy1 = rightShoulder.get("y") - leftShoulder.get("y");
+            float shoulderWidth = (float) Math.sqrt(dx1 * dx1 + dy1 * dy1);
 
-            int positionCheck = calculateAngleWithUpVertical(ankle, shldr);
+            //tính khoảng cách từ shoulder đến hip (độ dài thân)
+            float dx2 = shldr.get("x") - hip.get("x");
+            float dy2 = shldr.get("y") - hip.get("y");
+            float torsoLength = (float) Math.sqrt(dx2 * dx2 + dy2 * dy2);
+
+            //
+            float ratio = shoulderWidth/torsoLength;
+
 
             // State machine
-            currState = getState(elbowAngle, earElbowHipAngle, positionCheck, kneeAngle);
+            currState = getState(ratio);
             updateStateSequence(currState);
 
 
-            // Đếm Burpees đúng/sai
+            // Đếm RussianTwist đúng/sai
             String message = "";
-            if ("s5".equals(currState)) {
-                Boolean complete = stateSequence.containsAll(Arrays.asList("s1", "s2", "s3", "s4"));
-                if (complete && incorrectPosture) {
-                    incorrectCount++;
-                    message = "INCORRECT";
-                } else if (complete && !incorrectPosture) {
-                    if ((footY - footYs4) > (kneeY - footY) / 10) {
-                        correctCount++;
-                        message = "CORRECT";
+            if ("s1".equals(currState)) { //hiển thị lỗi tư thế ở s1(chỉ hiển thị lỗi chứ không bắt lỗi)
+                // Feedback động tác
+                if (hipAngle > thresholds.getHipThresholds()[1]) {
+                    displayText[1] = true;
+                    feedbackList.add("Over-Extended Hips");
+                }
+                if (kneeAngle < thresholds.getKneeThresholds()[0]) {
+                    displayText[2] = true;
+                    feedbackList.add("Over-Bent Knees");
+                }
+                if (kneeAngle > thresholds.getKneeThresholds()[1]) {
+                    displayText[3] = true;
+                    feedbackList.add("Over-Extended Knees");
+                }
+
+            }
+
+            if ("s2".equals(currState)) {
+                Boolean complete = stateSequence.contains("s1");
+                if (complete) {
+                    if (hipAngle < thresholds.getHipThresholds()[0]) {
+                        displayText[0] = true;
+                        incorrectPosture = true;
+                        feedbackList.add("Under-Extended Hips");
+                        incorrectCount++;
+                        message = "INCORRECT";
                     }
+                    if (hipAngle > thresholds.getHipThresholds()[1]) {
+                        displayText[1] = true;
+                        incorrectPosture = true;
+                        feedbackList.add("Over-Extended Hips");
+                        incorrectCount++;
+                        message = "INCORRECT";
+                    }
+                    if (kneeAngle < thresholds.getKneeThresholds()[0]) {
+                        displayText[2] = true;
+                        incorrectPosture = true;
+                        feedbackList.add("Over-Bent Knees");
+                        incorrectCount++;
+                        message = "INCORRECT";
+                    }
+                    if (kneeAngle > thresholds.getKneeThresholds()[1]) {
+                        displayText[3] = true;
+                        incorrectPosture = true;
+                        feedbackList.add("Over-Extended Knees");
+                        incorrectCount++;
+                        message = "INCORRECT";
+                    }
+                }
+                if (complete && !incorrectPosture) {
+                    correctCount++;
+                    message = "CORRECT";
                 }
                 stateSequence.clear();
                 incorrectPosture = false;
-            } else if ("s2".equals(currState) || "s3".equals(currState)) { //ở state pushup
-                // Feedback động tác
-                if (shldrAngle < thresholds.getShldrMin()) {
-                    displayText[0] = true;
-                    incorrectPosture = true;
-                    feedbackList.add("BENT NECK");
-                }
-                if (hipAngle < thresholds.getHipMin()) {
-                    displayText[1] = true;
-                    incorrectPosture = true;
-                    feedbackList.add("BENT HIP");
-                }
-                if (kneeAngle < thresholds.getKneeMin()) {
-                    displayText[2] = true;
-                    incorrectPosture = true;
-                    feedbackList.add("BENT KNEE");
-                }
-
-                if (earElbowHipAngle >= thresholds.getEarElbowHipTrans()[0] &&
-                        earElbowHipAngle <= thresholds.getEarElbowHipTrans()[1] &&
-                        stateSequence.stream().filter(s -> s.equals("s2")).count() == 1) {
-                    lowerHips = true;
-                    feedbackList.add("Continue lowering");
-                }
-            } else if ("s4".equals(currState)) {
-                footYs4 = foot.get("y");
             }
 
             // Inactivity logic
@@ -222,9 +247,6 @@ public class BurpeeAnalyzer implements ExerciseAnalyzerInterface {
                 inactiveTime = 0.0;
             }
 
-            if (stateSequence.contains("s3") || "s1".equals(currState)) {
-                lowerHips = false;
-            }
             prevState = currState;
 
             // Reset feedback nếu quá lâu
@@ -240,8 +262,7 @@ public class BurpeeAnalyzer implements ExerciseAnalyzerInterface {
             ExerciseFeedback feedback = new ExerciseFeedback(
                     correctCount, incorrectCount, message, cameraWarning, offsetAngle, new ArrayList<>(feedbackList)
             );
-
-            feedback.setCurrentState(currState);
+            feedback.setCurrentState(currState + " " + String.format("%.2f", ratio) + " " + hipAngle + " " + kneeAngle);
 
             return feedback;
         }
@@ -254,7 +275,7 @@ public class BurpeeAnalyzer implements ExerciseAnalyzerInterface {
 
     @Override
     public String getExerciseType() {
-        return "burpees";
+        return "russiantwist";
     }
 
     @Override
@@ -266,37 +287,43 @@ public class BurpeeAnalyzer implements ExerciseAnalyzerInterface {
     public Map<String, Object> getThresholds(String level) {
         Map<String, Object> result = new HashMap<>();
         if ("pro".equals(level)) {
-            BurpeesThresholds proThresholds = BurpeesThresholds.defaultPro();
-            result.put("elbowNormal", proThresholds.getElbowNormal());
-            result.put("earElbowHipNormal", proThresholds.getEarElbowHipNormal());
-            result.put("earElbowHipTrans", proThresholds.getEarElbowHipTrans());
-            result.put("earElbowHipPass", proThresholds.getEarElbowHipPass());
-            result.put("shldrMin", proThresholds.getShldrMin());
-            result.put("hipMin", proThresholds.getHipMin());
-            result.put("kneeMin", proThresholds.getKneeMin());
-            result.put("kneePreJump", proThresholds.getKneePreJump());
+            RussianTwistThresholds proThresholds = RussianTwistThresholds.defaultPro();
+            result.put("ratioThreshold", proThresholds.getRatioThreshold());
+            result.put("hipThresholds", proThresholds.getHipThresholds());
+            result.put("kneeThresholds", proThresholds.getKneeThresholds());
+            result.put("offsetThresh", proThresholds.getOffsetThresh());
+            result.put("inactiveThresh", proThresholds.getInactiveThresh());
+            result.put("cntFrameThresh", proThresholds.getCntFrameThresh());
         } else {
-            result.put("elbowNormal", thresholds.getElbowNormal());
-            result.put("earElbowHipNormal", thresholds.getEarElbowHipNormal());
-            result.put("earElbowHipTrans", thresholds.getEarElbowHipTrans());
-            result.put("earElbowHipPass", thresholds.getEarElbowHipPass());
-            result.put("shldrMin", thresholds.getShldrMin());
-            result.put("hipMin", thresholds.getHipMin());
-            result.put("kneePreJump", thresholds.getKneePreJump());
+            result.put("ratioThreshold", thresholds.getRatioThreshold());
+            result.put("hipThresholds", thresholds.getHipThresholds());
+            result.put("kneeThresholds", thresholds.getKneeThresholds());
+            result.put("offsetThresh", thresholds.getOffsetThresh());
+            result.put("inactiveThresh", thresholds.getInactiveThresh());
+            result.put("cntFrameThresh", thresholds.getCntFrameThresh());
         }
         return result;
     }
 
     @Override
     public void updateThresholds(Map<String, Object> thresholds) {
-        if (thresholds.containsKey("shldrMin")) {
-            this.thresholds.setShldrMin((Integer) thresholds.get("shldrMin"));
+        if (thresholds.containsKey("ratioThreshold")) {
+            this.thresholds.setRatioThreshold((float[]) thresholds.get("ratioThreshold"));
         }
-        if (thresholds.containsKey("hipMin")) {
-            this.thresholds.setHipMin((Integer) thresholds.get("hipMin"));
+        if (thresholds.containsKey("hipThresholds")) {
+            this.thresholds.setHipThresholds((int[]) thresholds.get("hipThresholds"));
         }
-        if (thresholds.containsKey("kneeMin")) {
-            this.thresholds.setKneeMin((Integer) thresholds.get("kneeMin"));
+        if (thresholds.containsKey("kneeThresholds")) {
+            this.thresholds.setKneeThresholds((int[]) thresholds.get("kneeThresholds"));
+        }
+        if (thresholds.containsKey("offsetThresh")) {
+            this.thresholds.setOffsetThresh((Integer) thresholds.get("offsetThresh"));
+        }
+        if (thresholds.containsKey("inactiveThresh")) {
+            this.thresholds.setInactiveThresh((Double) thresholds.get("inactiveThresh"));
+        }
+        if (thresholds.containsKey("cntFrameThresh")) {
+            this.thresholds.setCntFrameThresh((Integer) thresholds.get("cntFrameThresh"));
         }
     }
 
@@ -373,31 +400,11 @@ public class BurpeeAnalyzer implements ExerciseAnalyzerInterface {
         return (int) Math.toDegrees(theta);
     }
 
-    private String getState(int elbowAngle, int earElbowHipAngle, int positionCheck, int kneeAngle) {
-        if (elbowAngle > thresholds.getElbowNormal() &&
-                earElbowHipAngle < thresholds.getEarElbowHipNormal() &&
-                positionCheck > 60) {
-            System.out.println("s1");
+    private String getState(float ratio) {
+        if (ratio < thresholds.getRatioThreshold()[0]) {
             return "s1";
-        } else if (earElbowHipAngle >= thresholds.getEarElbowHipTrans()[0] &&
-                earElbowHipAngle <= thresholds.getEarElbowHipTrans()[1] &&
-                positionCheck > 60) {
-            System.out.println("s2");
+        } else if(ratio > thresholds.getRatioThreshold()[1]) {
             return "s2";
-        } else if (earElbowHipAngle >= thresholds.getEarElbowHipPass()[0] &&
-                earElbowHipAngle <= thresholds.getEarElbowHipPass()[1] &&
-                positionCheck > 60) {
-            System.out.println("s3");
-            return "s3";
-        } else if (kneeAngle < thresholds.getKneePreJump() &&
-                positionCheck < 45) {
-            System.out.println("s4");
-            return "s4";
-        } else if (kneeAngle >= thresholds.getKneeMin()&&
-                elbowAngle > thresholds.getElbowNormal() &&
-                positionCheck < 30) {
-            System.out.println("s5");
-            return "s5";
         }
         return null;
     }
@@ -406,137 +413,74 @@ public class BurpeeAnalyzer implements ExerciseAnalyzerInterface {
         if (state == null) return;
         if ("s1".equals(state) && stateSequence.isEmpty()) {
             stateSequence.add(state);
-        } else if ("s2".equals(state)) {
+            }
+        if ("s2".equals(state)) {
             if (!stateSequence.contains(state) && stateSequence.contains("s1")) {
-                stateSequence.add(state);
-            }
-        } else if ("s3".equals(state)) {
-            if (!stateSequence.contains(state) && stateSequence.contains("s2")) {
-                stateSequence.add(state);
-            }
-        } else if ("s4".equals(state)) {
-            if (!stateSequence.contains(state) && stateSequence.contains("s3")) {
-                stateSequence.add(state);
-            }
-        } else if ("s5".equals(state)) {
-            if (!stateSequence.contains(state) && stateSequence.contains("s4")) {
                 stateSequence.add(state);
             }
         }
     }
 
-    // Inner class for BurpeesThresholds
-    public static class BurpeesThresholds {
-        private int elbowNormal;
-        private int earElbowHipNormal;
-        private int[] earElbowHipTrans;
-        private int[] earElbowHipPass;
-        private int shldrMin;
-        private int hipMin;
-        private int kneeMin;
-        private int kneePreJump;
+    // Inner class for RussianTwistThresholds
+    public static class RussianTwistThresholds {
+        private float[] ratioThreshold;
+        private int[] hipThresholds;
+        private int[] kneeThresholds;
+
         private int offsetThresh;
         private double inactiveThresh;
         private int cntFrameThresh;
 
-        public BurpeesThresholds() {
-        }
+        public RussianTwistThresholds() {}
 
-        public BurpeesThresholds(int elbowNormal, int earElbowHipNormal, int[] earElbowHipTrans,
-                                 int[] earElbowHipPass, int shldrMin, int hipMin, int kneeMin,
-                                 int kneePreJump,
-                                 int offsetThresh, double inactiveThresh, int cntFrameThresh) {
-            this.elbowNormal = elbowNormal;
-            this.earElbowHipNormal = earElbowHipNormal;
-            this.earElbowHipTrans = earElbowHipTrans;
-            this.earElbowHipPass = earElbowHipPass;
-            this.shldrMin = shldrMin;
-            this.hipMin = hipMin;
-            this.kneeMin = kneeMin;
-            this.kneePreJump = kneePreJump;
+        public RussianTwistThresholds(float[] ratioThreshold, int[] hipThresholds, int[] kneeThresholds,
+                                int offsetThresh, double inactiveThresh, int cntFrameThresh) {
+            this.ratioThreshold = ratioThreshold;
+            this.hipThresholds = hipThresholds;
+            this.kneeThresholds = kneeThresholds;
             this.offsetThresh = offsetThresh;
             this.inactiveThresh = inactiveThresh;
             this.cntFrameThresh = cntFrameThresh;
         }
 
-        public static BurpeesThresholds defaultBeginner() {
-            return new BurpeesThresholds(
-                    150, 120, new int[]{125, 150}, new int[]{155, 180},
-                    120, 160, 150, 120,
+        public static RussianTwistThresholds defaultBeginner() {
+            return new RussianTwistThresholds(
+                    new float[]{0.3f, 0.45f}, new int[]{60, 100}, new int[]{90, 140},
                     35, 15.0, 50
             );
         }
 
-        public static BurpeesThresholds defaultPro() {
-            return new BurpeesThresholds(
-                    150, 120, new int[]{125, 150}, new int[]{155, 180},
-                    135, 160, 160, 120,
+        public static RussianTwistThresholds defaultPro() {
+            return new RussianTwistThresholds(
+                    new float[]{0.3f, 0.55f}, new int[]{70, 90}, new int[]{90, 130},
                     35, 15.0, 50
             );
         }
 
-        public int getElbowNormal() {
-            return elbowNormal;
+        // Getters and Setters
+
+        public float[] getRatioThreshold() {
+            return ratioThreshold;
         }
 
-        public void setElbowNormal(int elbowNormal) {
-            this.elbowNormal = elbowNormal;
+        public void setRatioThreshold(float[] ratioThreshold) {
+            this.ratioThreshold = ratioThreshold;
         }
 
-        public int getEarElbowHipNormal() {
-            return earElbowHipNormal;
+        public int[] getHipThresholds() {
+            return hipThresholds;
         }
 
-        public void setEarElbowHipNormal(int earElbowHipNormal) {
-            this.earElbowHipNormal = earElbowHipNormal;
+        public void setHipThresholds(int[] hipThresholds) {
+            this.hipThresholds = hipThresholds;
         }
 
-        public int[] getEarElbowHipTrans() {
-            return earElbowHipTrans;
+        public int[] getKneeThresholds() {
+            return kneeThresholds;
         }
 
-        public void setEarElbowHipTrans(int[] earElbowHipTrans) {
-            this.earElbowHipTrans = earElbowHipTrans;
-        }
-
-        public int[] getEarElbowHipPass() {
-            return earElbowHipPass;
-        }
-
-        public void setEarElbowHipPass(int[] earElbowHipPass) {
-            this.earElbowHipPass = earElbowHipPass;
-        }
-
-        public int getShldrMin() {
-            return shldrMin;
-        }
-
-        public void setShldrMin(int shldrMin) {
-            this.shldrMin = shldrMin;
-        }
-
-        public int getHipMin() {
-            return hipMin;
-        }
-
-        public void setHipMin(int hipMin) {
-            this.hipMin = hipMin;
-        }
-
-        public int getKneeMin() {
-            return kneeMin;
-        }
-
-        public void setKneeMin(int kneeMin) {
-            this.kneeMin = kneeMin;
-        }
-
-        public int getKneePreJump() {
-            return kneePreJump;
-        }
-
-        public void setKneePreJump(int kneePreJump) {
-            this.kneePreJump = kneePreJump;
+        public void setKneeThresholds(int[] kneeThresholds) {
+            this.kneeThresholds = kneeThresholds;
         }
 
         public int getOffsetThresh() {

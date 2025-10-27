@@ -445,6 +445,11 @@ public class FirebaseService {
                         if (document.exists()) {
                             try {
                                 Exercise exercise = document.toObject(Exercise.class);
+                                if (exercise != null) {
+                                    // QUAN TRỌNG: Set ID cho exercise
+                                    exercise.setId(document.getId());
+                                    Log.d(TAG, "Exercise loaded: " + exercise.getName() + " (ID: " + exercise.getId() + ")");
+                                }
                                 listener.onExerciseLoaded(exercise);
                             } catch (Exception e) {
                                 Log.e(TAG, "Error parsing exercise: " + e.getMessage());
