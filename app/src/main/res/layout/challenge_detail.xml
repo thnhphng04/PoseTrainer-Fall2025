@@ -1,0 +1,715 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#121212">
+
+    <!-- Header Background with Trainer Image -->
+    <RelativeLayout
+        android:id="@+id/header_section"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:background="@drawable/challenge_header_bg">
+
+        <!-- Dark overlay -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/dark_overlay" />
+
+        <!-- Back Button -->
+        <ImageView
+            android:id="@+id/btn_back"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentTop="true"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/circle_transparent_bg"
+            android:src="@drawable/ic_arrow_back_white"
+            android:padding="12dp"
+            android:foreground="?android:attr/selectableItemBackgroundBorderless" />
+
+        <!-- Menu Button -->
+        <ImageView
+            android:id="@+id/btn_menu"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentTop="true"
+            android:layout_marginEnd="16dp"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/circle_transparent_bg"
+            android:src="@drawable/ic_more_vert_white"
+            android:padding="12dp"
+            android:foreground="?android:attr/selectableItemBackgroundBorderless" />
+
+        <!-- Challenge Title -->
+        <TextView
+            android:id="@+id/tv_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentBottom="true"
+            android:layout_marginStart="16dp"
+            android:layout_marginBottom="60dp"
+            android:text="FULL BODY\nCHALLENGE"
+            android:textColor="#ffffff"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:lineSpacingMultiplier="0.9" />
+
+        <!-- Progress Section -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginBottom="16dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="28 Days left"
+                android:textColor="#b3b3b3"
+                android:textSize="14sp" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1"
+                android:layout_marginHorizontal="12dp"
+                android:background="#4dffffff" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0%"
+                android:textColor="#ffffff"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+    </RelativeLayout>
+
+    <!-- Content Section -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/header_section">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Motivational Message -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="#1e1e1e">
+
+<!--                <LinearLayout-->
+<!--                    android:layout_width="match_parent"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:orientation="horizontal"-->
+<!--                    android:padding="16dp"-->
+<!--                    android:gravity="center_vertical">-->
+<!--                    <ImageView-->
+<!--                        android:layout_width="48dp"-->
+<!--                        android:layout_height="48dp"-->
+<!--                        android:src="@drawable/trainer_avatar"-->
+<!--                        android:background="@drawable/circle_bg" />-->
+
+<!--                    <TextView-->
+<!--                        android:layout_width="0dp"-->
+<!--                        android:layout_height="wrap_content"-->
+<!--                        android:layout_weight="1"-->
+<!--                        android:layout_marginStart="12dp"-->
+<!--                        android:text="Kick off your full-body fitness journey with energy!"-->
+<!--                        android:textColor="#ffffff"-->
+<!--                        android:textSize="14sp"-->
+<!--                        android:fontFamily="sans-serif-medium" />-->
+
+<!--                </LinearLayout>-->
+
+
+            </androidx.cardview.widget.CardView>
+
+            <!-- Week 1 Section -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp"
+                android:gravity="center_vertical">
+
+                <!-- Week Number Circle -->
+                <View
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:background="@drawable/week_active_bg" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="12dp"
+                    android:text="Week 1"
+                    android:textColor="#2196F3"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="1/7"
+                    android:textColor="#b3b3b3"
+                    android:textSize="14sp" />
+
+            </LinearLayout>
+
+            <!-- Day Buttons Grid - Row 1 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp"
+                android:gravity="center_vertical">
+
+                <!-- Day 1 - Active -->
+                <TextView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:text="1"
+                    android:textColor="#ffffff"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:gravity="center"
+                    android:background="@drawable/circle_active"
+                    android:layout_margin="4dp" />
+
+                <!-- Arrow -->
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_arrow_forward"
+                    app:tint="#2196F3"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginHorizontal="8dp" />
+
+                <!-- Day 2 - Inactive -->
+                <TextView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:text="2"
+                    android:textColor="#ffffff"
+                    android:textSize="16sp"
+                    android:gravity="center"
+                    android:background="@drawable/circle_inactive"
+                    android:layout_margin="4dp" />
+
+                <!-- Arrow -->
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_arrow_forward"
+                    app:tint="#2196F3"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginHorizontal="8dp" />
+
+                <!-- Day 3 - Inactive -->
+                <TextView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:text="3"
+                    android:textColor="#ffffff"
+                    android:textSize="16sp"
+                    android:gravity="center"
+                    android:background="@drawable/circle_inactive"
+                    android:layout_margin="4dp" />
+
+                <!-- Arrow -->
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_arrow_forward"
+                    app:tint="#2196F3"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginHorizontal="8dp" />
+
+                <!-- Day 4 - Inactive -->
+                <TextView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:text="4"
+                    android:textColor="#ffffff"
+                    android:textSize="16sp"
+                    android:gravity="center"
+                    android:background="@drawable/circle_inactive"
+                    android:layout_margin="4dp" />
+
+            </LinearLayout>
+
+            <!-- Day Buttons Grid - Row 2 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="24dp"
+                android:gravity="center_vertical">
+
+                <!-- Day 5 - Inactive -->
+                <TextView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:text="5"
+                    android:textColor="#ffffff"
+                    android:textSize="16sp"
+                    android:gravity="center"
+                    android:background="@drawable/circle_inactive"
+                    android:layout_margin="4dp" />
+
+                <!-- Arrow -->
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_arrow_forward"
+                    app:tint="#2196F3"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginHorizontal="8dp" />
+
+                <!-- Day 6 - Inactive -->
+                <TextView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:text="6"
+                    android:textColor="#ffffff"
+                    android:textSize="16sp"
+                    android:gravity="center"
+                    android:background="@drawable/circle_inactive"
+                    android:layout_margin="4dp" />
+
+                <!-- Arrow -->
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_arrow_forward"
+                    app:tint="#2196F3"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginHorizontal="8dp" />
+
+                <TextView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:text="7"
+                    android:textColor="#ffffff"
+                    android:textSize="16sp"
+                    android:gravity="center"
+                    android:background="@drawable/circle_inactive"
+                    android:layout_margin="4dp" />
+
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_arrow_forward"
+                    app:tint="#666666"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginHorizontal="8dp" />
+
+                <ImageView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_trophy"
+                    app:tint="#FFA000"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginStart="16dp" />
+
+            </LinearLayout>
+
+            <!-- Week 2 Section -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp"
+                android:gravity="center_vertical">
+
+                <View
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:background="@drawable/week_inactive_bg" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="12dp"
+                    android:text="Week 2"
+                    android:textColor="#b3b3b3"
+                    android:textSize="16sp" />
+
+            </LinearLayout>
+
+            <!-- Week 2 Days - Row 1 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:text="1"
+                    android:textColor="#b3b3b3"
+                    android:textSize="16sp"
+                    android:gravity="center"
+                    android:background="@drawable/circle_inactive"
+                    android:layout_margin="4dp" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_arrow_forward"
+                    app:tint="#666666"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginHorizontal="8dp" />
+
+                <TextView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:text="2"
+                    android:textColor="#b3b3b3"
+                    android:textSize="16sp"
+                    android:gravity="center"
+                    android:background="@drawable/circle_inactive"
+                    android:layout_margin="4dp" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_arrow_forward"
+                    app:tint="#666666"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginHorizontal="8dp" />
+
+                <TextView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:text="3"
+                    android:textColor="#b3b3b3"
+                    android:textSize="16sp"
+                    android:gravity="center"
+                    android:background="@drawable/circle_inactive"
+                    android:layout_margin="4dp" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_arrow_forward"
+                    app:tint="#666666"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginHorizontal="8dp" />
+
+                <TextView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:text="4"
+                    android:textColor="#b3b3b3"
+                    android:textSize="16sp"
+                    android:gravity="center"
+                    android:background="@drawable/circle_inactive"
+                    android:layout_margin="4dp" />
+
+            </LinearLayout>
+
+            <!-- Week 2 Days - Row 2 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="24dp"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:text="5"
+                    android:textColor="#b3b3b3"
+                    android:textSize="16sp"
+                    android:gravity="center"
+                    android:background="@drawable/circle_inactive"
+                    android:layout_margin="4dp" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_arrow_forward"
+                    app:tint="#666666"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginHorizontal="8dp" />
+
+                <TextView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:text="6"
+                    android:textColor="#b3b3b3"
+                    android:textSize="16sp"
+                    android:gravity="center"
+                    android:background="@drawable/circle_inactive"
+                    android:layout_margin="4dp" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_arrow_forward"
+                    app:tint="#666666"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginHorizontal="8dp" />
+
+                <TextView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:text="7"
+                    android:textColor="#b3b3b3"
+                    android:textSize="16sp"
+                    android:gravity="center"
+                    android:background="@drawable/circle_inactive"
+                    android:layout_margin="4dp" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_arrow_forward"
+                    app:tint="#666666"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginHorizontal="8dp" />
+
+                <ImageView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_trophy"
+                    app:tint="#666666"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginStart="16dp" />
+
+            </LinearLayout>
+
+            <!-- Week 3 Section -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp"
+                android:gravity="center_vertical">
+
+                <View
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:background="@drawable/week_inactive_bg" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="12dp"
+                    android:text="Week 3"
+                    android:textColor="#b3b3b3"
+                    android:textSize="16sp" />
+
+            </LinearLayout>
+
+            <!-- Week 2 Days - Row 1 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:text="1"
+                    android:textColor="#b3b3b3"
+                    android:textSize="16sp"
+                    android:gravity="center"
+                    android:background="@drawable/circle_inactive"
+                    android:layout_margin="4dp" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_arrow_forward"
+                    app:tint="#666666"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginHorizontal="8dp" />
+
+                <TextView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:text="2"
+                    android:textColor="#b3b3b3"
+                    android:textSize="16sp"
+                    android:gravity="center"
+                    android:background="@drawable/circle_inactive"
+                    android:layout_margin="4dp" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_arrow_forward"
+                    app:tint="#666666"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginHorizontal="8dp" />
+
+                <TextView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:text="3"
+                    android:textColor="#b3b3b3"
+                    android:textSize="16sp"
+                    android:gravity="center"
+                    android:background="@drawable/circle_inactive"
+                    android:layout_margin="4dp" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_arrow_forward"
+                    app:tint="#666666"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginHorizontal="8dp" />
+
+                <TextView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:text="4"
+                    android:textColor="#b3b3b3"
+                    android:textSize="16sp"
+                    android:gravity="center"
+                    android:background="@drawable/circle_inactive"
+                    android:layout_margin="4dp" />
+
+            </LinearLayout>
+
+            <!-- Week 2 Days - Row 2 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="24dp"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:text="5"
+                    android:textColor="#b3b3b3"
+                    android:textSize="16sp"
+                    android:gravity="center"
+                    android:background="@drawable/circle_inactive"
+                    android:layout_margin="4dp" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_arrow_forward"
+                    app:tint="#666666"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginHorizontal="8dp" />
+
+                <TextView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:text="6"
+                    android:textColor="#b3b3b3"
+                    android:textSize="16sp"
+                    android:gravity="center"
+                    android:background="@drawable/circle_inactive"
+                    android:layout_margin="4dp" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_arrow_forward"
+                    app:tint="#666666"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginHorizontal="8dp" />
+
+                <TextView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:text="7"
+                    android:textColor="#b3b3b3"
+                    android:textSize="16sp"
+                    android:gravity="center"
+                    android:background="@drawable/circle_inactive"
+                    android:layout_margin="4dp" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_arrow_forward"
+                    app:tint="#666666"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginHorizontal="8dp" />
+
+                <ImageView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_trophy"
+                    app:tint="#666666"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginStart="16dp" />
+
+            </LinearLayout>
+
+            <!-- Additional padding for bottom button -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="60dp" />
+
+        </LinearLayout>
+
+    </ScrollView>
+
+        <!-- Bottom GO Button-->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cStartButton"
+            android:focusable="true"
+            android:clickable="true"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_margin="16dp"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="#2196F3"
+            android:foreground="?android:attr/selectableItemBackground">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="Bắt đầu tập"
+                android:textColor="#ffffff"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:letterSpacing="0.1" />
+
+        </androidx.cardview.widget.CardView>
+
+</RelativeLayout>

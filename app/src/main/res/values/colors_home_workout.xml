@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary Colors -->
+    <color name="hw_primary">#ff004aff</color>
+    <color name="hw_primary_dark">#ff0033cc</color>
+    <color name="hw_secondary">#ff0075ff</color>
+    <color name="hw_accent">#ffffa000</color>
+
+    <!-- Background Colors -->
+    <color name="hw_background">#fff6f8fa</color>
+    <color name="hw_surface">#ffffffff</color>
+    <color name="hw_card_bg">#fff5f6f8</color>
+
+    <!-- Text Colors -->
+    <color name="hw_text_primary">#de000000</color>
+    <color name="hw_text_secondary">#8a000000</color>
+    <color name="hw_text_hint">#61000000</color>
+    <color name="hw_text_white">#ffffffff</color>
+    <color name="hw_text_white_secondary">#ccffffff</color>
+
+    <!-- Gradient Colors -->
+    <color name="hw_gradient_start">#ff0075ff</color>
+    <color name="hw_gradient_end">#ff004aff</color>
+    <color name="hw_gradient_secondary_start">#ff4a90e2</color>
+    <color name="hw_gradient_secondary_end">#ff0075ff</color>
+
+    <!-- State Colors -->
+    <color name="hw_success">#ff00b153</color>
+    <color name="hw_warning">#ffff9000</color>
+    <color name="hw_error">#fff73f3f</color>
+
+    <!-- Overlay Colors -->
+    <color name="hw_overlay_dark">#80000000</color>
+    <color name="hw_overlay_light">#4dffffff</color>
+    <color name="hw_ripple">#1a004aff</color>
+
+
+</resources>

@@ -108,7 +108,7 @@
             android:layout_width="18dp"
             android:layout_height="18dp"
             android:src="@drawable/pic_1_1"
-            android:tint="@color/white" />
+            app:tint="@color/white" />
 
     </LinearLayout>
 

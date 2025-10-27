@@ -1,10 +1,9 @@
 package fpt.fall2025.posetrainer.Fragment;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
+import android.view.*;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -12,6 +11,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import fpt.fall2025.posetrainer.Activity.SearchActivity;
 import fpt.fall2025.posetrainer.Adapter.WorkoutTemplateAdapter;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
 import fpt.fall2025.posetrainer.Domain.User;
@@ -29,9 +29,12 @@ public class HomeFragment extends Fragment {
     private static final String TAG = "HomeFragment";
     private FragmentHomeBinding binding;
     private ArrayList<WorkoutTemplate> workoutTemplates;
+    private FirebaseAuth mAuth;
+    private FirebaseFirestore db;
 
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
         binding = FragmentHomeBinding.inflate(inflater, container, false);
         return binding.getRoot();
     }
@@ -39,119 +42,131 @@ public class HomeFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        mAuth = FirebaseAuth.getInstance();
+        db = FirebaseFirestore.getInstance();
 
-        // Initialize data
+        initBodyPartsListeners();
         workoutTemplates = new ArrayList<>();
 
-        // Setup RecyclerView
-        binding.view1.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
-        
-        // Load current user info
+        binding.view1.setLayoutManager(
+                new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false)
+        );
+
+        setupSearchListeners();
         loadCurrentUserInfo();
-        
-        // Load workout templates from Firestore
         loadWorkoutTemplates();
     }
 
-    /**
-     * Load workout templates from Firebase Firestore
-     */
-    private void loadWorkoutTemplates() {
-        Log.d(TAG, "Loading workout templates from Firestore...");
-        
-        FirebaseService.getInstance().loadWorkoutTemplates((androidx.appcompat.app.AppCompatActivity) getActivity(), new FirebaseService.OnWorkoutTemplatesLoadedListener() {
-            @Override
-            public void onWorkoutTemplatesLoaded(ArrayList<WorkoutTemplate> templates) {
-                workoutTemplates = templates;
-                binding.view1.setAdapter(new WorkoutTemplateAdapter(workoutTemplates));
-                Log.d(TAG, "Loaded " + workoutTemplates.size() + " workout templates");
-            }
+    private void setupSearchListeners() {
+        binding.searchBar.setOnClickListener(v -> {
+            startActivity(new Intent(getActivity(), SearchActivity.class));
         });
     }
 
+    private void loadWorkoutTemplates() {
+        FirebaseService.getInstance().loadWorkoutTemplates(
+                (androidx.appcompat.app.AppCompatActivity) getActivity(),
+                templates -> {
+                    workoutTemplates = templates;
+                    binding.view1.setAdapter(new WorkoutTemplateAdapter(workoutTemplates));
+                }
+        );
+    }
+
     /**
-     * Load current user information from Firestore
+     * 🔄 Load current user info from Firestore or Auth (like ProfileFragment)
      */
     private void loadCurrentUserInfo() {
-        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        if (currentUser == null) {
+        FirebaseUser current = mAuth.getCurrentUser();
+        if (current == null) {
             Log.w(TAG, "No current user found");
             return;
         }
 
-        String uid = currentUser.getUid();
-        Log.d(TAG, "Loading user info for UID: " + uid);
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
-        
+        String uid = current.getUid();
         db.collection("users").document(uid).get()
-                .addOnSuccessListener(documentSnapshot -> {
-                    Log.d(TAG, "HomeFragment: Firestore query completed");
-                    if (documentSnapshot.exists()) {
-                        Log.d(TAG, "HomeFragment: User document exists");
-                        User user = documentSnapshot.toObject(User.class);
+                .addOnSuccessListener(doc -> {
+                    if (doc.exists()) {
+                        User user = doc.toObject(User.class);
                         if (user != null) {
-                            Log.d(TAG, "HomeFragment: User object created successfully");
-                            updateUserUI(user);
+                            String photoUrl = null;
+                            // Ưu tiên field "photoUrl" (mới từ Storage)
+                            if (doc.contains("photoUrl")) {
+                                photoUrl = doc.getString("photoUrl");
+                            } else if (doc.contains("photourl")) { // trường cũ
+                                photoUrl = doc.getString("photourl");
+                            }
+
+                            if (photoUrl == null || photoUrl.isEmpty()) {
+                                photoUrl = user.getPhotoURL(); // fallback Google
+                            }
+
+                            updateUserUI(user.getDisplayName(), photoUrl);
                         } else {
-                            Log.e(TAG, "HomeFragment: Failed to convert document to User object");
+                            updateUserUIFromAuth(current);
                         }
                     } else {
-                        Log.w(TAG, "HomeFragment: User document not found in Firestore for UID: " + uid);
-                        // Fallback: use Firebase Auth user data directly
-                        updateUserUIFromFirebaseAuth(currentUser);
+                        updateUserUIFromAuth(current);
                     }
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "HomeFragment: Failed to load user info", e);
+                    Log.e(TAG, "Failed to load user info", e);
+                    updateUserUIFromAuth(current);
                 });
     }
 
-    /**
-     * Update UI with user information
-     */
-    private void updateUserUI(User user) {
-        // Update display name
-        if (user.getDisplayName() != null && !user.getDisplayName().isEmpty()) {
-            binding.textView5.setText(user.getDisplayName());
-        } else {
-            binding.textView5.setText("User");
-        }
+    private void updateUserUI(String name, String photoUrl) {
+        binding.tvUserName.setText(name != null && !name.isEmpty() ? name : "User");
 
-        // Update profile image
-        if (user.getPhotoURL() != null && !user.getPhotoURL().isEmpty()) {
+        if (photoUrl != null && !photoUrl.isEmpty()) {
             Glide.with(this)
-                    .load(user.getPhotoURL())
+                    .load(photoUrl)
                     .placeholder(R.drawable.profile)
                     .error(R.drawable.profile)
-                    .into(binding.imageView2);
+                    .into(binding.ivUserAvatar);
         } else {
-            // Keep default profile image
-            binding.imageView2.setImageResource(R.drawable.profile);
+            binding.ivUserAvatar.setImageResource(R.drawable.profile);
         }
     }
 
-    /**
-     * Fallback method to update UI with Firebase Auth user data when Firestore document is not found
-     */
-    private void updateUserUIFromFirebaseAuth(FirebaseUser firebaseUser) {
-        Log.d(TAG, "HomeFragment: Using Firebase Auth data as fallback");
-        
-        // Update display name
-        if (firebaseUser.getDisplayName() != null && !firebaseUser.getDisplayName().isEmpty()) {
-            binding.textView5.setText(firebaseUser.getDisplayName());
-        } else {
-            binding.textView5.setText("User");
-        }
+    private void updateUserUIFromAuth(FirebaseUser firebaseUser) {
+        String name = firebaseUser.getDisplayName() != null && !firebaseUser.getDisplayName().isEmpty()
+                ? firebaseUser.getDisplayName() : "User";
+        String photoUrl = firebaseUser.getPhotoUrl() != null
+                ? firebaseUser.getPhotoUrl().toString()
+                : null;
 
-        // Update profile image
-        if (firebaseUser.getPhotoUrl() != null) {
-            Glide.with(this)
-                    .load(firebaseUser.getPhotoUrl())
-                    .placeholder(R.drawable.profile)
-                    .error(R.drawable.profile)
-                    .into(binding.imageView2);
-        } else {
-            binding.imageView2.setImageResource(R.drawable.profile);
-        }
+        updateUserUI(name, photoUrl);
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        // Cập nhật lại khi người dùng quay lại Home sau khi chỉnh sửa
+        loadCurrentUserInfo();
+    }
+
+    private void initBodyPartsListeners() {
+        binding.bodyPartFullBody.setOnClickListener(v -> handleBodyPartClick("Full Body"));
+        binding.bodyPartCore.setOnClickListener(v -> handleBodyPartClick("Core"));
+        binding.bodyPartArm.setOnClickListener(v -> handleBodyPartClick("Arm"));
+        binding.bodyPartChest.setOnClickListener(v -> handleBodyPartClick("Chest"));
+        binding.bodyPartButtLeg.setOnClickListener(v -> handleBodyPartClick("Butt & Leg"));
+        binding.bodyPartBack.setOnClickListener(v -> handleBodyPartClick("Back"));
+        binding.bodyPartShoulder.setOnClickListener(v -> handleBodyPartClick("Shoulder"));
+        binding.bodyPartCustom.setOnClickListener(v -> handleBodyPartClick("Custom"));
+    }
+
+    private void handleBodyPartClick(String bodyPart) {
+        Toast.makeText(getActivity(), "Selected: " + bodyPart, Toast.LENGTH_SHORT).show();
+        Intent intent = new Intent(getActivity(), fpt.fall2025.posetrainer.Activity.ChallengeDetailActivity.class);
+        intent.putExtra("body_part", bodyPart);
+        startActivity(intent);
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        binding = null;
     }
 }

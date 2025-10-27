@@ -2,12 +2,11 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/mainColor"
-    tools:context=".Activity.RegisterAccountActivity"
-    android:fillViewport="true">
+    android:fillViewport="true"
+    tools:context=".Activity.RegisterAccountActivity">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -17,13 +16,6 @@
         android:orientation="vertical"
         android:padding="24dp"
         android:minHeight="600dp">
-
-        <ImageView
-            android:layout_width="120dp"
-            android:layout_height="120dp"
-            android:layout_marginBottom="24dp"
-            android:src="@drawable/intro_pic"
-            android:scaleType="centerCrop" />
 
         <TextView
             android:layout_width="match_parent"
@@ -37,114 +29,148 @@
 
         <!-- Email -->
         <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/til_email"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp">
+            android:layout_marginBottom="8dp"
+            app:boxBackgroundMode="outline"
+            app:boxStrokeColor="@color/white"
+            app:boxStrokeWidth="1dp"
+            app:hintTextColor="@color/white">
 
             <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/email"
+                android:id="@+id/et_email"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="Địa chỉ email..."
                 android:textColor="@color/white"
-                android:textColorHint="@color/white"
+                android:textColorHint="#80FFFFFF"
                 android:inputType="textEmailAddress" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Password -->
         <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/til_password"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp">
+            android:layout_marginBottom="8dp"
+            app:boxBackgroundMode="outline"
+            app:boxStrokeColor="@color/white"
+            app:boxStrokeWidth="1dp"
+            app:hintTextColor="@color/white"
+            app:endIconMode="password_toggle"
+            app:endIconTint="@color/white">
 
             <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/password"
+                android:id="@+id/et_password"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="Mật khẩu"
                 android:textColor="@color/white"
-                android:textColorHint="@color/white"
+                android:textColorHint="#80FFFFFF"
                 android:inputType="textPassword" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Confirm Password -->
         <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/layoutConfirmPassword"
+            android:id="@+id/til_confirm_password"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp">
+            android:layout_marginBottom="8dp"
+            app:boxBackgroundMode="outline"
+            app:boxStrokeColor="@color/white"
+            app:boxStrokeWidth="1dp"
+            app:hintTextColor="@color/white"
+            app:endIconMode="password_toggle"
+            app:endIconTint="@color/white">
 
             <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/confirmPassword"
+                android:id="@+id/et_confirm_password"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="Nhập lại mật khẩu"
                 android:textColor="@color/white"
-                android:textColorHint="@color/white"
+                android:textColorHint="#80FFFFFF"
                 android:inputType="textPassword" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Display Name -->
         <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/layoutDisplayName"
+            android:id="@+id/til_display_name"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp">
+            android:layout_marginBottom="8dp"
+            app:boxBackgroundMode="outline"
+            app:boxStrokeColor="@color/white"
+            app:boxStrokeWidth="1dp"
+            app:hintTextColor="@color/white">
 
             <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/editTextDisplayName"
+                android:id="@+id/et_display_name"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="Tên hiển thị"
                 android:textColor="@color/white"
-                android:textColorHint="@color/white" />
+                android:textColorHint="#80FFFFFF" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Photo URL -->
         <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/layoutPhotoUrl"
+            android:id="@+id/til_photo_url"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp">
+            android:layout_marginBottom="16dp"
+            app:boxBackgroundMode="outline"
+            app:boxStrokeColor="@color/white"
+            app:boxStrokeWidth="1dp"
+            app:hintTextColor="@color/white">
 
             <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/editTextPhotoUrl"
+                android:id="@+id/et_photo_url"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="URL ảnh đại diện (tùy chọn)"
                 android:textColor="@color/white"
-                android:textColorHint="@color/white"
+                android:textColorHint="#80FFFFFF"
                 android:inputType="textUri" />
         </com.google.android.material.textfield.TextInputLayout>
 
-
-
-
-        <!-- Loading & Register -->
-        <ProgressBar
-            android:id="@+id/progessBar"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:visibility="gone" />
-
-        <Button
+        <!-- Register Button -->
+        <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/btn_register"
+            style="@android:style/Widget.Button"
             android:layout_width="match_parent"
             android:layout_height="50dp"
-            android:backgroundTint="@color/mainColor"
+            android:background="@drawable/orange_bg"
             android:text="ĐĂNG KÝ"
             android:textColor="@color/white"
             android:textSize="18sp"
             android:textStyle="bold"
-            android:elevation="4dp"
-            android:layout_marginTop="16dp" />
+            android:elevation="4dp" />
 
+        <!-- Google Sign In Button -->
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btn_google_signin"
+            style="@android:style/Widget.Button"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/google_signin_bg"
+            android:drawableStart="@drawable/ic_google"
+            android:drawablePadding="12dp"
+            android:gravity="center"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:text="Đăng nhập bằng Google"
+            android:textColor="@color/white"
+            android:textSize="16sp" />
+
+        <!-- Back to Login Link -->
         <TextView
-            android:id="@+id/loginNow"
+            android:id="@+id/tv_back_to_login"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="24dp"
             android:gravity="center"
             android:text="Đã có tài khoản? Đăng nhập ngay"
             android:textColor="@color/white"
