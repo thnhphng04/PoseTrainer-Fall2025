@@ -5,33 +5,37 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/mainColor"
-    tools:context=".Fragment.FavoriteFragment">
+    tools:context=".Fragment.MyWorkoutFragment">
 
     <!-- Header -->
+
+    <!-- Empty State -->
+
     <LinearLayout
-        android:id="@+id/headerLayout"
+        android:id="@+id/header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="36dp"
+        android:gravity="center_vertical"
         android:orientation="horizontal"
         android:padding="16dp"
-        android:gravity="center_vertical"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toTopOf="parent"
+        tools:layout_editor_absoluteX="0dp">
 
         <ImageView
             android:id="@+id/userAvatar"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:src="@drawable/profile"
-            android:background="@drawable/circle_background"
-            android:scaleType="centerCrop"
-            android:padding="2dp" />
+            android:background="@drawable/blue_bg"
+            android:padding="8dp"
+            android:src="@drawable/profile" />
 
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
             android:layout_weight="1"
-            android:orientation="vertical"
-            android:layout_marginStart="16dp">
+            android:orientation="vertical">
 
             <TextView
                 android:id="@+id/userNameText"
@@ -43,58 +47,56 @@
                 android:textStyle="bold" />
 
             <TextView
+                android:id="@+id/subtitleText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Your saved and customized workouts"
+                android:layout_marginTop="4dp"
+                android:text="Những bài tập bạn đã lưu"
                 android:textColor="@color/white"
-                android:textSize="12sp"
-                android:layout_marginTop="4dp" />
+                android:textSize="12sp" />
 
         </LinearLayout>
 
     </LinearLayout>
 
-    <!-- Empty State -->
     <LinearLayout
         android:id="@+id/emptyStateLayout"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:gravity="center"
-        android:padding="32dp"
         android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@+id/headerLayout"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent">
+        app:layout_constraintEnd_toEndOf="parent">
 
         <ImageView
-            android:layout_width="80dp"
-            android:layout_height="80dp"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
             android:src="@drawable/ic_favorite_border"
             android:tint="@color/orange"
-            android:alpha="0.6" />
+            android:alpha="0.6"
+            android:layout_marginBottom="24dp" />
 
         <TextView
             android:id="@+id/emptyStateText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="No saved workouts yet"
+            android:text="No saved workouts yet.\nCreate or edit a workout to save it here!"
             android:textColor="@color/white"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:gravity="center" />
+            android:textSize="16sp"
+            android:textAlignment="center"
+            android:lineSpacingExtra="4dp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Create or edit a workout to save it here!"
-            android:textColor="@color/white"
+            android:layout_marginTop="16dp"
+            android:text="Go to Home to explore workouts"
+            android:textColor="#99ffffff"
             android:textSize="14sp"
-            android:alpha="0.7"
-            android:gravity="center" />
+            android:textAlignment="center" />
 
     </LinearLayout>
 
@@ -104,11 +106,9 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginTop="8dp"
-        android:padding="16dp"
+        android:padding="8dp"
         android:clipToPadding="false"
-        app:layout_constraintTop_toBottomOf="@+id/headerLayout"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/header"
         app:layout_constraintBottom_toBottomOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

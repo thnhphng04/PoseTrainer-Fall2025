@@ -25,7 +25,7 @@ import fpt.fall2025.posetrainer.databinding.DialogExerciseDetailBinding;
  */
 public class ExerciseDetailDialog extends Dialog {
     private static final String TAG = "ExerciseDetailDialog";
-    
+
     private DialogExerciseDetailBinding binding;
     private Exercise exercise;
     private Context context;
@@ -39,21 +39,21 @@ public class ExerciseDetailDialog extends Dialog {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
+
         // Remove default title bar
         requestWindowFeature(Window.FEATURE_NO_TITLE);
-        
+
         binding = DialogExerciseDetailBinding.inflate(LayoutInflater.from(context));
         setContentView(binding.getRoot());
-        
+
         // Set dialog properties
         getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         getWindow().setBackgroundDrawableResource(android.R.color.transparent);
-        
+
         // Make dialog cancelable when clicking outside
         setCancelable(true);
         setCanceledOnTouchOutside(true);
-        
+
         if (exercise == null) {
             Toast.makeText(context, "No exercise data provided", Toast.LENGTH_SHORT).show();
             dismiss();
@@ -62,7 +62,7 @@ public class ExerciseDetailDialog extends Dialog {
 
         setupUI();
         updateExerciseUI();
-        
+
         // Debug binding
         Log.d(TAG, "Binding closeBtn: " + (binding.closeBtn != null ? "NOT NULL" : "NULL"));
         Log.d(TAG, "Binding startExerciseBtn: " + (binding.startExerciseBtn != null ? "NOT NULL" : "NULL"));
@@ -75,6 +75,12 @@ public class ExerciseDetailDialog extends Dialog {
         // Close button with null check and enhanced debugging
         if (binding.closeBtn != null) {
             Log.d(TAG, "Close button found, setting listener");
+
+            // Ensure the button is clickable and focusable
+            binding.closeBtn.setClickable(true);
+            binding.closeBtn.setFocusable(true);
+            binding.closeBtn.setFocusableInTouchMode(true);
+
             binding.closeBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -82,20 +88,9 @@ public class ExerciseDetailDialog extends Dialog {
                     dismiss();
                 }
             });
-            
-            // Also try setting onTouchListener as backup
-            binding.closeBtn.setOnTouchListener(new View.OnTouchListener() {
-                @Override
-                public boolean onTouch(View v, android.view.MotionEvent event) {
-                    if (event.getAction() == android.view.MotionEvent.ACTION_UP) {
-                        Log.d(TAG, "Close button touched!");
-                        dismiss();
-                        return true;
-                    }
-                    return false;
-                }
-            });
-            
+
+            // Background selector is already set in XML
+
             Log.d(TAG, "Close button listener set successfully");
         } else {
             Log.e(TAG, "Close button is null!");
@@ -121,17 +116,17 @@ public class ExerciseDetailDialog extends Dialog {
 
         // Set exercise name
         binding.exerciseNameTxt.setText(exercise.getName());
-        
+
         // Set level
         binding.exerciseLevelTxt.setText(exercise.getLevel());
-        
+
         // Set category (first category if available)
         if (exercise.getCategory() != null && !exercise.getCategory().isEmpty()) {
             binding.exerciseCategoryTxt.setText(exercise.getCategory().get(0));
         } else {
             binding.exerciseCategoryTxt.setText("General");
         }
-        
+
         // Set sets x reps
         if (exercise.getDefaultConfig() != null) {
             String setsReps = exercise.getDefaultConfig().getSets() + " x " + exercise.getDefaultConfig().getReps();
@@ -139,7 +134,7 @@ public class ExerciseDetailDialog extends Dialog {
         } else {
             binding.exerciseSetsRepsTxt.setText("3 x 12");
         }
-        
+
         // Set muscles (if available)
         if (exercise.getMuscles() != null && !exercise.getMuscles().isEmpty()) {
             StringBuilder musclesText = new StringBuilder();
@@ -151,7 +146,7 @@ public class ExerciseDetailDialog extends Dialog {
         } else {
             binding.exerciseMusclesTxt.setText("Full body");
         }
-        
+
         // Set equipment (if available)
         if (exercise.getEquipment() != null && !exercise.getEquipment().isEmpty()) {
             StringBuilder equipmentText = new StringBuilder();
@@ -163,7 +158,7 @@ public class ExerciseDetailDialog extends Dialog {
         } else {
             binding.exerciseEquipmentTxt.setText("No equipment");
         }
-        
+
         // Load media (demo video or thumbnail)
         loadExerciseMedia();
     }
@@ -210,7 +205,7 @@ public class ExerciseDetailDialog extends Dialog {
     private void startExercise() {
         Intent intent = new Intent(context, ExerciseActivity.class);
         intent.putExtra("exercise", exercise);
-        
+
         // Pass default config if available
         if (exercise.getDefaultConfig() != null) {
             intent.putExtra("sets", exercise.getDefaultConfig().getSets());
@@ -221,7 +216,7 @@ public class ExerciseDetailDialog extends Dialog {
             intent.putExtra("reps", 12);
             intent.putExtra("difficulty", "beginner");
         }
-        
+
         context.startActivity(intent);
         dismiss();
     }

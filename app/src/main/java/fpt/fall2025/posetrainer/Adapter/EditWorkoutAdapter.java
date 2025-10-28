@@ -115,7 +115,7 @@ public class EditWorkoutAdapter extends RecyclerView.Adapter<EditWorkoutAdapter.
         }
 
         public void bind(Exercise exercise, int position) {
-            // Set exercise name
+            // Set exercise name (no duplicate counting)
             titleTxt.setText(exercise.getName());
             
             // Set level/difficulty

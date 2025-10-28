@@ -10,7 +10,7 @@
     android:maxHeight="600dp"
     tools:context=".Activity.ExerciseDetailActivity">
 
-    <!-- Close button - positioned independently -->
+    <!-- Close button - positioned independently with higher elevation -->
     <ImageView
         android:id="@+id/closeBtn"
         android:layout_width="48dp"
@@ -19,11 +19,13 @@
         android:src="@drawable/ic_close"
         android:tint="@color/white"
         android:padding="12dp"
-        android:background="@android:color/transparent"
+        android:background="@drawable/close_button_selector"
         android:clickable="true"
         android:focusable="true"
         android:contentDescription="Close"
         android:scaleType="centerInside"
+        android:elevation="10dp"
+        android:stateListAnimator="@null"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 

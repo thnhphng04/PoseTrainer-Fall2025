@@ -41,11 +41,8 @@ public class ExerciseSelectionActivity extends AppCompatActivity implements Exer
 
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
 
-        // Get current workout exercise IDs from intent
-        currentWorkoutExerciseIds = getIntent().getStringArrayListExtra("currentWorkoutExerciseIds");
-        if (currentWorkoutExerciseIds == null) {
-            currentWorkoutExerciseIds = new ArrayList<>();
-        }
+        // No need to filter current exercises - allow duplicates
+        currentWorkoutExerciseIds = new ArrayList<>();
 
         initializeData();
         setupUI();
@@ -127,11 +124,11 @@ public class ExerciseSelectionActivity extends AppCompatActivity implements Exer
                 
                 if (exercises != null && !exercises.isEmpty()) {
                     allExercises = exercises;
-                    // Filter out exercises that are already in the workout
-                    filteredExercises = filterAvailableExercises(exercises);
+                    // Allow all exercises to be selected (including duplicates)
+                    filteredExercises = new ArrayList<>(exercises);
                     adapter.updateExercises(filteredExercises);
                     
-                    Log.d(TAG, "Loaded " + exercises.size() + " exercises, " + filteredExercises.size() + " available");
+                    Log.d(TAG, "Loaded " + exercises.size() + " exercises, all available for selection");
                 } else {
                     Log.e(TAG, "No exercises loaded from Firebase");
                     Toast.makeText(ExerciseSelectionActivity.this, "No exercises available", Toast.LENGTH_SHORT).show();
@@ -140,53 +137,35 @@ public class ExerciseSelectionActivity extends AppCompatActivity implements Exer
         });
     }
 
-    /**
-     * Filter out exercises that are already in the workout
-     */
-    private ArrayList<Exercise> filterAvailableExercises(ArrayList<Exercise> allExercises) {
-        ArrayList<Exercise> filteredExercises = new ArrayList<>();
-        
-        for (Exercise exercise : allExercises) {
-            boolean alreadyInWorkout = currentWorkoutExerciseIds.contains(exercise.getId());
-            if (!alreadyInWorkout) {
-                filteredExercises.add(exercise);
-            }
-        }
-        
-        Log.d(TAG, "Filtered " + filteredExercises.size() + " available exercises (removed " + (allExercises.size() - filteredExercises.size()) + " duplicates)");
-        return filteredExercises;
-    }
 
     /**
      * Filter exercises based on search query
      */
     private void filterExercises(String query) {
         if (query == null || query.trim().isEmpty()) {
-            filteredExercises = filterAvailableExercises(allExercises);
+            // Show all exercises (including duplicates)
+            filteredExercises = new ArrayList<>(allExercises);
         } else {
             filteredExercises = new ArrayList<>();
             String lowerQuery = query.toLowerCase().trim();
             
             for (Exercise exercise : allExercises) {
-                boolean alreadyInWorkout = currentWorkoutExerciseIds.contains(exercise.getId());
-                if (!alreadyInWorkout) {
-                    // Search in name, level, and categories
-                    boolean matchesName = exercise.getName().toLowerCase().contains(lowerQuery);
-                    boolean matchesLevel = exercise.getLevel().toLowerCase().contains(lowerQuery);
-                    boolean matchesCategory = false;
-                    
-                    if (exercise.getCategory() != null) {
-                        for (String category : exercise.getCategory()) {
-                            if (category.toLowerCase().contains(lowerQuery)) {
-                                matchesCategory = true;
-                                break;
-                            }
+                // Search in name, level, and categories (allow all exercises)
+                boolean matchesName = exercise.getName().toLowerCase().contains(lowerQuery);
+                boolean matchesLevel = exercise.getLevel().toLowerCase().contains(lowerQuery);
+                boolean matchesCategory = false;
+                
+                if (exercise.getCategory() != null) {
+                    for (String category : exercise.getCategory()) {
+                        if (category.toLowerCase().contains(lowerQuery)) {
+                            matchesCategory = true;
+                            break;
                         }
                     }
-                    
-                    if (matchesName || matchesLevel || matchesCategory) {
-                        filteredExercises.add(exercise);
-                    }
+                }
+                
+                if (matchesName || matchesLevel || matchesCategory) {
+                    filteredExercises.add(exercise);
                 }
             }
         }

@@ -63,7 +63,7 @@ public class ProfileFragment extends Fragment {
     }
 
     /**
-     * ✅ Load thông tin user giống FavoriteFragment:
+     * ✅ Load thông tin user giống MyWorkoutFragment:
      *   - Lấy dữ liệu Firestore ("users" collection)
      *   - Ưu tiên dùng photoUrl trong Firestore (Storage link)
      */
