@@ -81,16 +81,23 @@ public class ExerciseSelectionActivity extends AppCompatActivity implements Exer
         binding.searchEditText.setOnQueryTextListener(new androidx.appcompat.widget.SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
+                Log.d(TAG, "Search submitted: " + query);
                 filterExercises(query);
                 return true;
             }
 
             @Override
             public boolean onQueryTextChange(String newText) {
+                Log.d(TAG, "Search text changed: " + newText);
                 filterExercises(newText);
                 return true;
             }
         });
+        
+        // Set search view properties
+        binding.searchEditText.setIconifiedByDefault(false);
+        binding.searchEditText.setFocusable(true);
+        binding.searchEditText.requestFocus();
 
         // Setup RecyclerView
         setupRecyclerView();
@@ -119,6 +126,7 @@ public class ExerciseSelectionActivity extends AppCompatActivity implements Exer
         FirebaseService.getInstance().loadAllExercises(this, new FirebaseService.OnExercisesLoadedListener() {
             @Override
             public void onExercisesLoaded(ArrayList<Exercise> exercises) {
+                Log.d(TAG, "onExercisesLoaded callback received");
                 binding.progressBar.setVisibility(View.GONE);
                 binding.exercisesRecyclerView.setVisibility(View.VISIBLE);
                 
@@ -126,11 +134,23 @@ public class ExerciseSelectionActivity extends AppCompatActivity implements Exer
                     allExercises = exercises;
                     // Allow all exercises to be selected (including duplicates)
                     filteredExercises = new ArrayList<>(exercises);
-                    adapter.updateExercises(filteredExercises);
                     
-                    Log.d(TAG, "Loaded " + exercises.size() + " exercises, all available for selection");
+                    Log.d(TAG, "Loaded " + exercises.size() + " exercises from Firebase");
+                    
+                    // Debug: Log first few exercise names
+                    for (int i = 0; i < Math.min(5, exercises.size()); i++) {
+                        Exercise ex = exercises.get(i);
+                        Log.d(TAG, "Exercise " + i + ": " + (ex != null ? ex.getName() : "null"));
+                    }
+                    
+                    if (adapter != null) {
+                        adapter.updateExercises(filteredExercises);
+                        Log.d(TAG, "Updated adapter with " + filteredExercises.size() + " exercises");
+                    } else {
+                        Log.e(TAG, "Adapter is null when trying to update exercises");
+                    }
                 } else {
-                    Log.e(TAG, "No exercises loaded from Firebase");
+                    Log.e(TAG, "No exercises loaded from Firebase - exercises is " + (exercises == null ? "null" : "empty"));
                     Toast.makeText(ExerciseSelectionActivity.this, "No exercises available", Toast.LENGTH_SHORT).show();
                 }
             }
@@ -142,22 +162,32 @@ public class ExerciseSelectionActivity extends AppCompatActivity implements Exer
      * Filter exercises based on search query
      */
     private void filterExercises(String query) {
+        Log.d(TAG, "filterExercises called with query: '" + query + "'");
+        Log.d(TAG, "Total exercises available: " + (allExercises != null ? allExercises.size() : "null"));
+        
         if (query == null || query.trim().isEmpty()) {
             // Show all exercises (including duplicates)
             filteredExercises = new ArrayList<>(allExercises);
+            Log.d(TAG, "Showing all exercises: " + filteredExercises.size());
         } else {
             filteredExercises = new ArrayList<>();
             String lowerQuery = query.toLowerCase().trim();
+            Log.d(TAG, "Searching for: '" + lowerQuery + "'");
             
             for (Exercise exercise : allExercises) {
+                if (exercise == null || exercise.getName() == null) {
+                    Log.w(TAG, "Skipping null exercise or exercise with null name");
+                    continue;
+                }
+                
                 // Search in name, level, and categories (allow all exercises)
                 boolean matchesName = exercise.getName().toLowerCase().contains(lowerQuery);
-                boolean matchesLevel = exercise.getLevel().toLowerCase().contains(lowerQuery);
+                boolean matchesLevel = exercise.getLevel() != null && exercise.getLevel().toLowerCase().contains(lowerQuery);
                 boolean matchesCategory = false;
                 
                 if (exercise.getCategory() != null) {
                     for (String category : exercise.getCategory()) {
-                        if (category.toLowerCase().contains(lowerQuery)) {
+                        if (category != null && category.toLowerCase().contains(lowerQuery)) {
                             matchesCategory = true;
                             break;
                         }
@@ -166,12 +196,20 @@ public class ExerciseSelectionActivity extends AppCompatActivity implements Exer
                 
                 if (matchesName || matchesLevel || matchesCategory) {
                     filteredExercises.add(exercise);
+                    Log.d(TAG, "Match found: " + exercise.getName() + 
+                          " (name:" + matchesName + ", level:" + matchesLevel + ", category:" + matchesCategory + ")");
                 }
             }
         }
         
-        adapter.updateExercises(filteredExercises);
-        Log.d(TAG, "Filtered to " + filteredExercises.size() + " exercises for query: " + query);
+        if (adapter != null) {
+            adapter.updateExercises(filteredExercises);
+            Log.d(TAG, "Updated adapter with " + filteredExercises.size() + " exercises");
+        } else {
+            Log.e(TAG, "Adapter is null, cannot update exercises");
+        }
+        
+        Log.d(TAG, "Filtered to " + filteredExercises.size() + " exercises for query: '" + query + "'");
     }
 
     @Override

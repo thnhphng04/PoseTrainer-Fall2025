@@ -29,11 +29,23 @@ public class ExerciseDetailDialog extends Dialog {
     private DialogExerciseDetailBinding binding;
     private Exercise exercise;
     private Context context;
+    private int customSets = -1;
+    private int customReps = -1;
+    private String customDifficulty = null;
 
     public ExerciseDetailDialog(@NonNull Context context, Exercise exercise) {
         super(context);
         this.context = context;
         this.exercise = exercise;
+    }
+
+    public ExerciseDetailDialog(@NonNull Context context, Exercise exercise, int customSets, int customReps, String customDifficulty) {
+        super(context);
+        this.context = context;
+        this.exercise = exercise;
+        this.customSets = customSets;
+        this.customReps = customReps;
+        this.customDifficulty = customDifficulty;
     }
 
     @Override
@@ -65,7 +77,6 @@ public class ExerciseDetailDialog extends Dialog {
 
         // Debug binding
         Log.d(TAG, "Binding closeBtn: " + (binding.closeBtn != null ? "NOT NULL" : "NULL"));
-        Log.d(TAG, "Binding startExerciseBtn: " + (binding.startExerciseBtn != null ? "NOT NULL" : "NULL"));
     }
 
     /**
@@ -95,17 +106,6 @@ public class ExerciseDetailDialog extends Dialog {
         } else {
             Log.e(TAG, "Close button is null!");
         }
-
-        // Start Exercise button
-        if (binding.startExerciseBtn != null) {
-            binding.startExerciseBtn.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    Log.d(TAG, "Start exercise button clicked!");
-                    startExercise();
-                }
-            });
-        }
     }
 
     /**
@@ -127,13 +127,20 @@ public class ExerciseDetailDialog extends Dialog {
             binding.exerciseCategoryTxt.setText("General");
         }
 
-        // Set sets x reps
-        if (exercise.getDefaultConfig() != null) {
-            String setsReps = exercise.getDefaultConfig().getSets() + " x " + exercise.getDefaultConfig().getReps();
-            binding.exerciseSetsRepsTxt.setText(setsReps);
+        // Set sets x reps - use custom config if available, otherwise use default
+        int sets, reps;
+        if (customSets > 0 && customReps > 0) {
+            sets = customSets;
+            reps = customReps;
+        } else if (exercise.getDefaultConfig() != null) {
+            sets = exercise.getDefaultConfig().getSets();
+            reps = exercise.getDefaultConfig().getReps();
         } else {
-            binding.exerciseSetsRepsTxt.setText("3 x 12");
+            sets = 3;
+            reps = 12;
         }
+        String setsReps = sets + " x " + reps;
+        binding.exerciseSetsRepsTxt.setText(setsReps);
 
         // Set muscles (if available)
         if (exercise.getMuscles() != null && !exercise.getMuscles().isEmpty()) {
@@ -200,28 +207,6 @@ public class ExerciseDetailDialog extends Dialog {
     }
 
     /**
-     * Start exercise - navigate to ExerciseActivity
-     */
-    private void startExercise() {
-        Intent intent = new Intent(context, ExerciseActivity.class);
-        intent.putExtra("exercise", exercise);
-
-        // Pass default config if available
-        if (exercise.getDefaultConfig() != null) {
-            intent.putExtra("sets", exercise.getDefaultConfig().getSets());
-            intent.putExtra("reps", exercise.getDefaultConfig().getReps());
-            intent.putExtra("difficulty", exercise.getDefaultConfig().getDifficulty());
-        } else {
-            intent.putExtra("sets", 3);
-            intent.putExtra("reps", 12);
-            intent.putExtra("difficulty", "beginner");
-        }
-
-        context.startActivity(intent);
-        dismiss();
-    }
-
-    /**
      * Static method to show dialog
      */
     public static void show(Context context, Exercise exercise) {
@@ -229,6 +214,19 @@ public class ExerciseDetailDialog extends Dialog {
             ExerciseDetailDialog dialog = new ExerciseDetailDialog(context, exercise);
             dialog.show();
             Log.d(TAG, "Dialog shown successfully");
+        } catch (Exception e) {
+            Log.e(TAG, "Error showing dialog: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Static method to show dialog with custom config
+     */
+    public static void show(Context context, Exercise exercise, int customSets, int customReps, String customDifficulty) {
+        try {
+            ExerciseDetailDialog dialog = new ExerciseDetailDialog(context, exercise, customSets, customReps, customDifficulty);
+            dialog.show();
+            Log.d(TAG, "Dialog shown successfully with custom config");
         } catch (Exception e) {
             Log.e(TAG, "Error showing dialog: " + e.getMessage(), e);
         }

@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import fpt.fall2025.posetrainer.Activity.ExerciseActivity;
 import fpt.fall2025.posetrainer.Activity.ExerciseDetailActivity;
+import fpt.fall2025.posetrainer.Dialog.ExerciseDetailDialog;
 import fpt.fall2025.posetrainer.Domain.Exercise;
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
 import fpt.fall2025.posetrainer.R;
@@ -152,9 +153,19 @@ public class UserWorkoutExerciseAdapter extends RecyclerView.Adapter<UserWorkout
 
         // Set click listeners
         holder.binding.getRoot().setOnClickListener(v -> {
-            Intent intent = new Intent(context, ExerciseDetailActivity.class);
-            intent.putExtra("exercise", exercise);
-            context.startActivity(intent);
+            // Get custom config from UserWorkout if available
+            UserWorkout.UserWorkoutItem workoutItemForClick = getUserWorkoutItemForExercise(exercise.getId());
+            
+            if (workoutItemForClick != null && workoutItemForClick.getConfig() != null) {
+                // Use custom config from UserWorkout
+                ExerciseDetailDialog.show(context, exercise, 
+                    workoutItemForClick.getConfig().getSets(), 
+                    workoutItemForClick.getConfig().getReps(), 
+                    workoutItemForClick.getConfig().getDifficulty());
+            } else {
+                // Use default config
+                ExerciseDetailDialog.show(context, exercise);
+            }
         });
 
         // Sets and reps change listeners
