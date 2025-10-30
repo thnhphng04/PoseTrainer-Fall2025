@@ -37,7 +37,7 @@
                 android:id="@+id/userNameText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="My Workouts"
+                android:text="Bài tập của tôi"
                 android:textColor="@color/white"
                 android:textSize="18sp"
                 android:textStyle="bold" />
@@ -45,7 +45,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Your saved and customized workouts"
+                android:text="Bài tập đã lưu và tùy chỉnh của bạn"
                 android:textColor="@color/white"
                 android:textSize="12sp"
                 android:layout_marginTop="4dp" />
@@ -72,7 +72,7 @@
             android:layout_width="80dp"
             android:layout_height="80dp"
             android:src="@drawable/ic_favorite_border"
-            android:tint="@color/orange"
+            app:tint="@color/orange"
             android:alpha="0.6" />
 
         <TextView
@@ -80,7 +80,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="No saved workouts yet"
+            android:text="Chưa có bài tập đã lưu"
             android:textColor="@color/white"
             android:textSize="18sp"
             android:textStyle="bold"
@@ -90,7 +90,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Create or edit a workout to save it here!"
+            android:text="Tạo hoặc chỉnh sửa bài tập để lưu vào đây!"
             android:textColor="@color/white"
             android:textSize="14sp"
             android:alpha="0.7"

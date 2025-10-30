@@ -22,7 +22,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Welcome back"
+                android:text="Chào mừng trở lại"
                 android:textColor="#99ffffff"
                 android:textSize="14sp" />
 
@@ -38,7 +38,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="User"
+                    android:text="Người dùng"
                     android:textColor="#ffffff"
                     android:textSize="20sp"
                     android:textStyle="bold" />
@@ -78,7 +78,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Search Workout..."
+                    android:text="Tìm kiếm bài tập..."
                     android:textColor="#66ffffff"
                     android:textSize="14sp" />
 
@@ -133,7 +133,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Full body"
+                        android:text="Toàn thân"
                         android:textAlignment="center"
                         android:textColor="#ffffff"
                         android:textSize="12sp"
@@ -174,7 +174,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Core"
+                        android:text="Bụng"
                         android:textAlignment="center"
                         android:textColor="#ffffff"
                         android:textSize="12sp"
@@ -215,7 +215,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Arm"
+                        android:text="Cánh tay"
                         android:textAlignment="center"
                         android:textColor="#ffffff"
                         android:textSize="12sp"
@@ -255,7 +255,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Chest"
+                        android:text="Ngực"
                         android:textAlignment="center"
                         android:textColor="#ffffff"
                         android:textSize="12sp"
@@ -295,7 +295,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Butt &amp; Leg"
+                        android:text="Mông &amp; Chân"
                         android:textAlignment="center"
                         android:textColor="#ffffff"
                         android:textSize="12sp"
@@ -335,7 +335,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Back"
+                        android:text="Lưng"
                         android:textAlignment="center"
                         android:textColor="#ffffff"
                         android:textSize="12sp"
@@ -375,7 +375,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Shoulder"
+                        android:text="Vai"
                         android:textAlignment="center"
                         android:textColor="#ffffff"
                         android:textSize="12sp"
@@ -414,7 +414,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Custom"
+                        android:text="Tùy chỉnh"
                         android:textAlignment="center"
                         android:textColor="#ffffff"
                         android:textSize="12sp"
@@ -450,22 +450,22 @@
                 <TextView
                     android:id="@+id/chip_latest"
                     style="@style/CategoryChipSelected"
-                    android:text="Latest Updates" />
+                    android:text="Mới cập nhật" />
 
                 <TextView
                     android:id="@+id/chip_beginner"
                     style="@style/CategoryChip"
-                    android:text="Beginner" />
+                    android:text="Người mới" />
 
                 <TextView
                     android:id="@+id/chip_intermediate"
                     style="@style/CategoryChip"
-                    android:text="Intermediate" />
+                    android:text="Trung bình" />
 
                 <TextView
                     android:id="@+id/chip_advanced"
                     style="@style/CategoryChip"
-                    android:text="Advanced" />
+                    android:text="Nâng cao" />
 
             </LinearLayout>
 
@@ -487,22 +487,22 @@
                 <TextView
                     android:id="@+id/chip_1_7min"
                     style="@style/DurationChip"
-                    android:text="1-7 min" />
+                    android:text="1-7 phút" />
 
                 <TextView
                     android:id="@+id/chip_8_15min"
                     style="@style/DurationChip"
-                    android:text="8-15 min" />
+                    android:text="8-15 phút" />
 
                 <TextView
                     android:id="@+id/chip_15min_plus"
                     style="@style/DurationChip"
-                    android:text=">15 min" />
+                    android:text=">15 phút" />
 
                 <TextView
                     android:id="@+id/chip_stretching"
                     style="@style/DurationChip"
-                    android:text="Stretching &amp; Warm-up" />
+                    android:text="Giãn cơ &amp; Khởi động" />
 
             </LinearLayout>
 
@@ -543,7 +543,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:letterSpacing="0.05"
-                android:text="POPULAR GOALS"
+                android:text="MỤC TIÊU PHỔ BIẾN"
                 android:textColor="#4d9df2"
                 android:textSize="12sp"
                 android:textStyle="bold" />
@@ -554,7 +554,7 @@
                 android:layout_height="wrap_content"
                 android:foreground="?android:attr/selectableItemBackground"
                 android:padding="8dp"
-                android:text="See All"
+                android:text="Xem tất cả"
                 android:textColor="#4d9df2"
                 android:textSize="14sp" />
 
@@ -584,7 +584,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Build Muscle"
+                        android:text="Tăng cơ bắp"
                         android:textColor="#ffffff"
                         android:textSize="20sp"
                         android:textStyle="bold" />
@@ -593,7 +593,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="115 Workouts"
+                        android:text="115 Bài tập"
                         android:textColor="#99ffffff"
                         android:textSize="12sp" />
 
@@ -602,7 +602,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="See All"
+                    android:text="Xem tất cả"
                     android:textColor="#4d9df2"
                     android:textSize="14sp"
                     android:foreground="?android:attr/selectableItemBackground"

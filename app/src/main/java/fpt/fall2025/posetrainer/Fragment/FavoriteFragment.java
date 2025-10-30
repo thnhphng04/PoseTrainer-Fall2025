@@ -50,7 +50,7 @@ public class FavoriteFragment extends Fragment {
 
         // Setup RecyclerView with vertical layout for card view
         binding.userWorkoutsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false));
-        
+
         // Get current user ID and load avatar
         getCurrentUserId();
         loadUserAvatar();
@@ -74,18 +74,18 @@ public class FavoriteFragment extends Fragment {
                 binding.userAvatar.setImageResource(R.drawable.profile);
                 Log.d(TAG, "Using default profile image");
             }
-            
-            // Set user name
+
+            // Set user name - ĐÃ SỬA: Dùng tiếng Việt
             String displayName = currentUser.getDisplayName();
             if (displayName != null && !displayName.isEmpty()) {
-                binding.userNameText.setText(displayName + "'s Workouts");
+                binding.userNameText.setText("Bài tập của " + displayName);
             } else {
-                binding.userNameText.setText("My Workouts");
+                binding.userNameText.setText("Bài tập của tôi");
             }
         } else {
             // Use default profile image and text
             binding.userAvatar.setImageResource(R.drawable.profile);
-            binding.userNameText.setText("My Workouts");
+            binding.userNameText.setText("Bài tập của tôi");
             Log.d(TAG, "No user logged in, using defaults");
         }
     }
@@ -102,10 +102,10 @@ public class FavoriteFragment extends Fragment {
             loadUserWorkouts();
         } else {
             Log.w(TAG, "No user logged in");
-            // Show empty state with login message
+            // Show empty state with login message - ĐÃ SỬA: Dùng tiếng Việt
             binding.emptyStateLayout.setVisibility(View.VISIBLE);
             binding.userWorkoutsRecyclerView.setVisibility(View.GONE);
-            binding.emptyStateText.setText("Please log in to view your workouts");
+            binding.emptyStateText.setText("Vui lòng đăng nhập để xem bài tập của bạn");
         }
     }
 
@@ -115,27 +115,27 @@ public class FavoriteFragment extends Fragment {
     private void loadUserWorkouts() {
         Log.d(TAG, "=== FAVORITE FRAGMENT LOADING ===");
         Log.d(TAG, "Loading user workouts for userId: " + userId);
-        
+
         FirebaseService.getInstance().loadUserWorkouts(userId, (androidx.appcompat.app.AppCompatActivity) getActivity(), new FirebaseService.OnUserWorkoutsLoadedListener() {
             @Override
             public void onUserWorkoutsLoaded(ArrayList<UserWorkout> workouts) {
                 Log.d(TAG, "=== FAVORITE FRAGMENT CALLBACK ===");
                 Log.d(TAG, "Received " + (workouts != null ? workouts.size() : "null") + " workouts");
-                
+
                 userWorkouts = workouts;
-                
+
                 if (userWorkouts == null || userWorkouts.isEmpty()) {
                     Log.d(TAG, "No workouts found, showing empty state");
-                    // Show empty state
+                    // Show empty state - ĐÃ SỬA: Không cần set text vì đã có trong XML
                     binding.emptyStateLayout.setVisibility(View.VISIBLE);
                     binding.userWorkoutsRecyclerView.setVisibility(View.GONE);
-                    binding.emptyStateText.setText("No saved workouts yet.\nCreate or edit a workout to save it here!");
+                    // Đã xóa dòng set text ở đây vì XML đã có text tiếng Việt
                 } else {
                     Log.d(TAG, "Found " + userWorkouts.size() + " workouts, setting up adapter");
                     // Show workouts
                     binding.emptyStateLayout.setVisibility(View.GONE);
                     binding.userWorkoutsRecyclerView.setVisibility(View.VISIBLE);
-                    
+
                     // Setup adapter with delete listener
                     userWorkoutAdapter = new UserWorkoutCardAdapter(userWorkouts);
                     userWorkoutAdapter.setOnUserWorkoutDeletedListener(() -> {
@@ -143,10 +143,10 @@ public class FavoriteFragment extends Fragment {
                         loadUserWorkouts();
                     });
                     binding.userWorkoutsRecyclerView.setAdapter(userWorkoutAdapter);
-                    
+
                     Log.d(TAG, "Adapter set with " + userWorkouts.size() + " items");
                 }
-                
+
                 Log.d(TAG, "=== END FAVORITE FRAGMENT CALLBACK ===");
             }
         });
