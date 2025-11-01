@@ -1,18 +1,21 @@
 package fpt.fall2025.posetrainer.Activity;
 
 import android.app.DatePickerDialog;
-import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
+import android.util.TypedValue;
+import android.view.View;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
@@ -30,21 +33,51 @@ import fpt.fall2025.posetrainer.R;
 
 public class EditGoalsActivity extends AppCompatActivity {
 
-    private TextInputLayout tilBirthday, tilGender, tilHeight, tilWeight, tilBodyType,
-            tilDailyMinutes, tilExperience, tilGoalType, tilTargetWeight, tilTargetBody;
+    // ===== Views =====
+    private TextInputLayout tilBirthday, tilGender, tilHeight, tilWeight,
+            tilDailyMinutes, tilExperience, tilTargetWeight;
     private TextInputEditText etBirthday, etHeight, etWeight, etDailyMinutes, etTargetWeight;
-    private MaterialAutoCompleteTextView ddGender, ddBodyType, ddExperience, ddGoalType, ddTargetBody;
-    private Button btnSave, btnCancel;
+    private MaterialAutoCompleteTextView ddGender, ddExperience;
     private ProgressBar progress;
+
+    // Grid: body hiện tại
+    private MaterialCardView[] bodyCards;
+    private ImageView[] bodyImages;
+    private TextView[] bodyTexts;
+
+    // Grid: body mục tiêu
+    private MaterialCardView[] targetCards;
+    private ImageView[] targetImages;
+    private TextView[] targetTexts;
+
+    // ===== State =====
+    private String currentBodyType = null; // very_lean|lean|normal|overweight|obese
+    private String targetBodyType  = null; // very_lean|lean|normal|overweight|obese
 
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
     private String uid;
 
-    private final String[] genders = {"male", "female", "other"};
-    private final String[] bodyTypes = {"very_lean", "lean", "normal", "overweight", "obese"};
+    private final String[] genders   = {"male", "female"};
     private final String[] expLevels = {"beginner", "intermediate", "advanced"};
-    private final String[] goalTypes = {"lose_fat", "gain_muscle", "maintain"};
+    private final String[] bodyTypes = {"very_lean", "lean", "normal", "overweight", "obese"};
+    private final String[] bodyLabels= {"Very Lean", "Lean", "Normal", "Overweight", "Obese"};
+
+    // 10 ảnh mẫu theo giới tính
+    private final int[] maleBodies = {
+            R.drawable.male_body_very_lean,
+            R.drawable.male_body_lean,
+            R.drawable.male_body_normal,
+            R.drawable.male_body_overweight,
+            R.drawable.male_body_obese
+    };
+    private final int[] femaleBodies = {
+            R.drawable.female_body_very_lean,
+            R.drawable.female_body_lean,
+            R.drawable.female_body_normal,
+            R.drawable.female_body_overweight,
+            R.drawable.female_body_obese
+    };
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -65,48 +98,97 @@ public class EditGoalsActivity extends AppCompatActivity {
         bindViews();
         setupDropdowns();
         setupBirthdayPicker();
+        setupCurrentGrid();
+        setupTargetGrid();
 
         loadProfile();
 
-        btnSave.setOnClickListener(v -> saveProfile());
-        btnCancel.setOnClickListener(v -> finish());
+        findViewById(R.id.btn_save).setOnClickListener(v -> saveProfile());
+        View cancel = findViewById(R.id.btn_cancel);
+        if (cancel != null) cancel.setOnClickListener(v -> finish());
     }
 
     private void bindViews() {
-        tilBirthday = findViewById(R.id.til_birthday);
-        tilGender = findViewById(R.id.til_gender);
-        tilHeight = findViewById(R.id.til_height);
-        tilWeight = findViewById(R.id.til_weight);
-        tilBodyType = findViewById(R.id.til_body_type);
+        // TIL
+        tilBirthday     = findViewById(R.id.til_birthday);
+        tilGender       = findViewById(R.id.til_gender);
+        tilHeight       = findViewById(R.id.til_height);
+        tilWeight       = findViewById(R.id.til_weight);
         tilDailyMinutes = findViewById(R.id.til_daily_minutes);
-        tilExperience = findViewById(R.id.til_experience);
-        tilGoalType = findViewById(R.id.til_goal_type);
+        tilExperience   = findViewById(R.id.til_experience);
         tilTargetWeight = findViewById(R.id.til_target_weight);
-        tilTargetBody = findViewById(R.id.til_target_body);
 
-        etBirthday = findViewById(R.id.et_birthday);
-        etHeight = findViewById(R.id.et_height);
-        etWeight = findViewById(R.id.et_weight);
+        // Inputs
+        etBirthday     = findViewById(R.id.et_birthday);
+        etHeight       = findViewById(R.id.et_height);
+        etWeight       = findViewById(R.id.et_weight);
         etDailyMinutes = findViewById(R.id.et_daily_minutes);
         etTargetWeight = findViewById(R.id.et_target_weight);
 
-        ddGender = findViewById(R.id.dd_gender);
-        ddBodyType = findViewById(R.id.dd_body_type);
+        ddGender     = findViewById(R.id.dd_gender);
         ddExperience = findViewById(R.id.dd_experience);
-        ddGoalType = findViewById(R.id.dd_goal_type);
-        ddTargetBody = findViewById(R.id.dd_target_body);
 
-        btnSave = findViewById(R.id.btn_save);
-        btnCancel = findViewById(R.id.btn_cancel);
         progress = findViewById(R.id.progress);
+
+        // body current
+        bodyCards = new MaterialCardView[]{
+                findViewById(R.id.card_body_1),
+                findViewById(R.id.card_body_2),
+                findViewById(R.id.card_body_3),
+                findViewById(R.id.card_body_4),
+                findViewById(R.id.card_body_5)
+        };
+        bodyImages = new ImageView[]{
+                findViewById(R.id.ivBody1),
+                findViewById(R.id.ivBody2),
+                findViewById(R.id.ivBody3),
+                findViewById(R.id.ivBody4),
+                findViewById(R.id.ivBody5)
+        };
+        bodyTexts = new TextView[]{
+                findViewById(R.id.tvBody1),
+                findViewById(R.id.tvBody2),
+                findViewById(R.id.tvBody3),
+                findViewById(R.id.tvBody4),
+                findViewById(R.id.tvBody5)
+        };
+
+        // body target
+        targetCards = new MaterialCardView[]{
+                findViewById(R.id.card_target_1),
+                findViewById(R.id.card_target_2),
+                findViewById(R.id.card_target_3),
+                findViewById(R.id.card_target_4),
+                findViewById(R.id.card_target_5)
+        };
+        targetImages = new ImageView[]{
+                findViewById(R.id.ivTarget1),
+                findViewById(R.id.ivTarget2),
+                findViewById(R.id.ivTarget3),
+                findViewById(R.id.ivTarget4),
+                findViewById(R.id.ivTarget5)
+        };
+        targetTexts = new TextView[]{
+                findViewById(R.id.tvTarget1),
+                findViewById(R.id.tvTarget2),
+                findViewById(R.id.tvTarget3),
+                findViewById(R.id.tvTarget4),
+                findViewById(R.id.tvTarget5)
+        };
     }
 
     private void setupDropdowns() {
         ddGender.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, genders));
-        ddBodyType.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, bodyTypes));
         ddExperience.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, expLevels));
-        ddGoalType.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, goalTypes));
-        ddTargetBody.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, bodyTypes));
+
+        // mặc định female (trùng ảnh trong XML)
+        ddGender.setText("female", false);
+        updateAllBodyImages("female");
+
+        ddGender.setOnItemClickListener((p, v, pos, id) -> {
+            String g = ddGender.getText() != null ? ddGender.getText().toString().toLowerCase() : "female";
+            updateAllBodyImages(g);
+        });
     }
 
     private void setupBirthdayPicker() {
@@ -123,10 +205,78 @@ public class EditGoalsActivity extends AppCompatActivity {
         });
     }
 
+    private void setupCurrentGrid() {
+        for (int i = 0; i < bodyCards.length; i++) {
+            bodyCards[i].setTag(bodyTypes[i]);
+            final int idx = i;
+            bodyCards[i].setOnClickListener(v -> selectCurrentCard(idx));
+        }
+    }
+
+    private void setupTargetGrid() {
+        for (int i = 0; i < targetCards.length; i++) {
+            targetCards[i].setTag(bodyTypes[i]);
+            final int idx = i;
+            targetCards[i].setOnClickListener(v -> selectTargetCard(idx));
+        }
+    }
+
+    /** Cập nhật ảnh + nhãn cho CẢ 2 lưới theo giới tính */
+    private void updateAllBodyImages(String gender) {
+        int[] drawables = "male".equalsIgnoreCase(gender) ? maleBodies : femaleBodies;
+
+        for (int i = 0; i < 5; i++) {
+            // current
+            bodyImages[i].setImageResource(drawables[i]);
+            bodyTexts[i].setText(bodyLabels[i]);
+            setCardStroke(bodyCards[i], false);
+
+            // target
+            targetImages[i].setImageResource(drawables[i]);
+            targetTexts[i].setText(bodyLabels[i]);
+            setCardStroke(targetCards[i], false);
+        }
+        currentBodyType = null;
+        targetBodyType = null;
+    }
+
+    /** Chọn duy nhất 1 card (current) */
+    private void selectCurrentCard(int index) {
+        for (int i = 0; i < bodyCards.length; i++) {
+            setCardStroke(bodyCards[i], i == index);
+        }
+        currentBodyType = String.valueOf(bodyCards[index].getTag());
+    }
+
+    /** Chọn duy nhất 1 card (target) */
+    private void selectTargetCard(int index) {
+        for (int i = 0; i < targetCards.length; i++) {
+            setCardStroke(targetCards[i], i == index);
+        }
+        targetBodyType = String.valueOf(targetCards[index].getTag());
+    }
+
+    private void setCardStroke(MaterialCardView card, boolean selected) {
+        card.setStrokeWidth(selected ? dp(2) : dp(1));
+        card.setStrokeColor(resolveAttr(selected
+                ? com.google.android.material.R.attr.colorPrimary
+                : com.google.android.material.R.attr.colorOutline));
+    }
+
+    private int dp(int v) { return Math.round(getResources().getDisplayMetrics().density * v); }
+
+    private int resolveAttr(int attr) {
+        TypedValue tv = new TypedValue();
+        getTheme().resolveAttribute(attr, tv, true);
+        return tv.data;
+    }
+
     private void setLoading(boolean on) {
-        progress.setVisibility(on ? android.view.View.VISIBLE : android.view.View.GONE);
-        btnSave.setEnabled(!on);
-        btnCancel.setEnabled(!on);
+        if (progress != null) progress.setVisibility(on ? View.VISIBLE : View.GONE);
+        View save = findViewById(R.id.btn_save);
+        View cancel = findViewById(R.id.btn_cancel);
+        if (save != null) save.setEnabled(!on);
+        if (cancel != null) cancel.setEnabled(!on);
     }
 
     private void loadProfile() {
@@ -144,21 +294,43 @@ public class EditGoalsActivity extends AppCompatActivity {
         setLoading(false);
         if (!doc.exists()) return;
 
+        // gender trước để chọn bộ ảnh
+        String gender = doc.getString("gender");
+        if (TextUtils.isEmpty(gender)) gender = "female";
+        ddGender.setText(gender, false);
+        updateAllBodyImages(gender);
+
         // base
         etBirthday.setText(doc.getString("birthday"));
-        setText(ddGender, doc.getString("gender"));
         setInt(etHeight, doc.getLong("heightCm"));
         setInt(etWeight, doc.getLong("weightKg"));
-        setText(ddBodyType, doc.getString("currentBodyType"));
         setInt(etDailyMinutes, doc.getLong("dailyTrainingMinutes"));
         setText(ddExperience, doc.getString("experienceLevel"));
+
+        // select current body
+        String cur = doc.getString("currentBodyType");
+        if (cur != null) {
+            for (int i = 0; i < bodyCards.length; i++) {
+                if (cur.equals(bodyCards[i].getTag())) {
+                    selectCurrentCard(i);
+                    break;
+                }
+            }
+        }
 
         // goals
         if (doc.contains("goals") && doc.get("goals") instanceof Map) {
             Map<?, ?> g = (Map<?, ?>) doc.get("goals");
-            setText(ddGoalType, str(g.get("type")));
             setInt(etTargetWeight, toLong(g.get("targetWeightKg")));
-            setText(ddTargetBody, str(g.get("targetBodyType")));
+            String tgt = str(g.get("targetBodyType"));
+            if (tgt != null) {
+                for (int i = 0; i < targetCards.length; i++) {
+                    if (tgt.equals(targetCards[i].getTag())) {
+                        selectTargetCard(i);
+                        break;
+                    }
+                }
+            }
         }
     }
 
@@ -166,33 +338,29 @@ public class EditGoalsActivity extends AppCompatActivity {
         clearErrors();
 
         String birthday = txt(etBirthday);
-        String gender = txt(ddGender);
-        String heightStr = txt(etHeight);
-        String weightStr = txt(etWeight);
-        String currentBodyType = txt(ddBodyType);
+        String gender   = txt(ddGender);
+        String heightStr= txt(etHeight);
+        String weightStr= txt(etWeight);
         String dailyStr = txt(etDailyMinutes);
-        String exp = txt(ddExperience);
-        String goalType = txt(ddGoalType);
+        String exp      = txt(ddExperience);
         String targetWeightStr = txt(etTargetWeight);
-        String targetBodyType = txt(ddTargetBody);
 
-        // Validate nhẹ
         if (TextUtils.isEmpty(birthday)) { tilBirthday.setError("Chọn ngày sinh"); return; }
-        if (TextUtils.isEmpty(gender)) { tilGender.setError("Chọn giới tính"); return; }
-        if (TextUtils.isEmpty(heightStr)) { tilHeight.setError("Nhập chiều cao"); return; }
-        if (TextUtils.isEmpty(weightStr)) { tilWeight.setError("Nhập cân nặng"); return; }
-        if (TextUtils.isEmpty(currentBodyType)) { tilBodyType.setError("Chọn body hiện tại"); return; }
+        if (TextUtils.isEmpty(gender))   { tilGender.setError("Chọn giới tính"); return; }
+        if (TextUtils.isEmpty(heightStr)){ tilHeight.setError("Nhập chiều cao"); return; }
+        if (TextUtils.isEmpty(weightStr)){ tilWeight.setError("Nhập cân nặng"); return; }
+        if (currentBodyType == null)     { Toast.makeText(this, "Chọn body hiện tại", Toast.LENGTH_SHORT).show(); return; }
+        if (targetBodyType == null)      { Toast.makeText(this, "Chọn body mục tiêu", Toast.LENGTH_SHORT).show(); return; }
         if (TextUtils.isEmpty(dailyStr)) { tilDailyMinutes.setError("Nhập phút tập/ngày"); return; }
-        if (TextUtils.isEmpty(exp)) { tilExperience.setError("Chọn kinh nghiệm"); return; }
-        if (TextUtils.isEmpty(goalType)) { tilGoalType.setError("Chọn loại mục tiêu"); return; }
-        if (TextUtils.isEmpty(targetWeightStr)) { tilTargetWeight.setError("Nhập cân nặng mục tiêu"); return; }
-        if (TextUtils.isEmpty(targetBodyType)) { tilTargetBody.setError("Chọn body mục tiêu"); return; }
+        if (TextUtils.isEmpty(exp))      { tilExperience.setError("Chọn kinh nghiệm"); return; }
+        if (TextUtils.isEmpty(targetWeightStr)){ tilTargetWeight.setError("Nhập cân nặng mục tiêu"); return; }
 
-        int height = pInt(heightStr), weight = pInt(weightStr), daily = pInt(dailyStr), targetW = pInt(targetWeightStr);
+        int height = pInt(heightStr), weight = pInt(weightStr),
+                daily = pInt(dailyStr), targetW = pInt(targetWeightStr);
         if (height <= 0) { tilHeight.setError("Chiều cao không hợp lệ"); return; }
         if (weight <= 0) { tilWeight.setError("Cân nặng không hợp lệ"); return; }
-        if (daily <= 0) { tilDailyMinutes.setError("Phút tập phải > 0"); return; }
-        if (targetW <= 0) { tilTargetWeight.setError("Cân nặng mục tiêu không hợp lệ"); return; }
+        if (daily  <= 0) { tilDailyMinutes.setError("Phút tập phải > 0"); return; }
+        if (targetW<= 0) { tilTargetWeight.setError("Cân nặng mục tiêu không hợp lệ"); return; }
 
         Map<String, Object> data = new HashMap<>();
         data.put("uid", uid);
@@ -206,7 +374,6 @@ public class EditGoalsActivity extends AppCompatActivity {
         data.put("lastUpdatedAt", System.currentTimeMillis());
 
         Map<String, Object> goals = new HashMap<>();
-        goals.put("type", goalType);
         goals.put("targetWeightKg", targetW);
         goals.put("targetBodyType", targetBodyType);
         data.put("goals", goals);
@@ -217,7 +384,6 @@ public class EditGoalsActivity extends AppCompatActivity {
                 .addOnSuccessListener(unused -> {
                     setLoading(false);
                     Toast.makeText(this, "Cập nhật mục tiêu thành công", Toast.LENGTH_SHORT).show();
-                    // Quay về Profile (onResume ProfileFragment sẽ reload)
                     finish();
                 })
                 .addOnFailureListener(e -> {
@@ -242,11 +408,8 @@ public class EditGoalsActivity extends AppCompatActivity {
         tilGender.setError(null);
         tilHeight.setError(null);
         tilWeight.setError(null);
-        tilBodyType.setError(null);
         tilDailyMinutes.setError(null);
         tilExperience.setError(null);
-        tilGoalType.setError(null);
         tilTargetWeight.setError(null);
-        tilTargetBody.setError(null);
     }
 }
