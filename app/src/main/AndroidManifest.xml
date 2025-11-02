@@ -57,6 +57,12 @@
         <activity
             android:name=".Activity.EditProfileActivity"
             android:exported="false"/>
+        <activity
+            android:name=".Activity.CreatePostActivity"
+            android:exported="false"/>
+        <activity
+            android:name=".Activity.PostDetailActivity"
+            android:exported="false"/>
 
         <!--        <activity-->
 <!--            android:name=".Activity.MainActivity"-->
