@@ -162,4 +162,4 @@ public class FavoriteFragment extends Fragment {
         getCurrentUserId();
         loadUserAvatar();
     }
-}
+    
