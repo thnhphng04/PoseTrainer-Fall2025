@@ -11,6 +11,7 @@ import fpt.fall2025.posetrainer.Fragment.HomeFragment;
 import fpt.fall2025.posetrainer.Fragment.MyWorkoutFragment;
 import fpt.fall2025.posetrainer.Fragment.DailyFragment;
 import fpt.fall2025.posetrainer.Fragment.ProfileFragment;
+import fpt.fall2025.posetrainer.Fragment.CommunityFragment;
 import fpt.fall2025.posetrainer.databinding.ActivityMainBinding;
 
 public class MainActivity extends AppCompatActivity {
@@ -40,6 +41,7 @@ public class MainActivity extends AppCompatActivity {
             loadFragment(new DailyFragment());
         });
         binding.profileBtn.setOnClickListener(v -> loadFragment(new ProfileFragment()));
+        binding.Community.setOnClickListener(v -> loadFragment(new CommunityFragment()));
     }
 
     private void loadFragment(Fragment fragment) {

@@ -16,6 +16,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+import fpt.fall2025.posetrainer.Activity.EditGoalsActivity;
 import fpt.fall2025.posetrainer.Activity.EditProfileActivity;
 import fpt.fall2025.posetrainer.Activity.LoginActivity;
 import fpt.fall2025.posetrainer.Domain.User;
@@ -57,6 +58,10 @@ public class ProfileFragment extends Fragment {
     private void setupClicks() {
         binding.btnEditProfile.setOnClickListener(v ->
                 startActivity(new Intent(requireContext(), EditProfileActivity.class))
+        );
+        // ➕ NÚT MỤC TIÊU
+        binding.btnGoal.setOnClickListener(v ->
+                startActivity(new Intent(requireContext(), EditGoalsActivity.class))
         );
 
         binding.btnLogout.setOnClickListener(v -> logout());
