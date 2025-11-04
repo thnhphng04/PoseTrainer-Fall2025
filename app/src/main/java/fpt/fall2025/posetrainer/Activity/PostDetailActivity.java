@@ -120,6 +120,10 @@ public class PostDetailActivity extends AppCompatActivity {
                     .addOnSuccessListener(x -> edtComment.setText(""))
                     .addOnFailureListener(err -> Toast.makeText(this, err.getMessage(), Toast.LENGTH_SHORT).show());
         });
+        //Nút back
+        ImageView btnBack = findViewById(R.id.btnBack);
+        btnBack.setOnClickListener(v -> onBackPressed());
+
     }
 
     private void bindPost(@Nullable Community p) {
@@ -141,7 +145,7 @@ public class PostDetailActivity extends AppCompatActivity {
 
     private void renderLikeIcon() {
         // dùng 2 icon: ic_heart_fill & ic_heart_outline
-        btnLike.setImageResource(likedByMe ? R.drawable.ic_heart_fill : R.drawable.ic_heart_outline);
+        btnLike.setImageResource(likedByMe ? R.drawable.ic_favorite_filled : R.drawable.ic_heart_outline);
     }
 
     @Override protected void onStart() { super.onStart(); if (cmtAdapter != null) cmtAdapter.startListening(); }
@@ -152,22 +156,42 @@ public class PostDetailActivity extends AppCompatActivity {
     }
 
     // --- ViewHolder comment ---
+    // --- ViewHolder comment ---
     static class CmtVH extends RecyclerView.ViewHolder {
+        ImageView ivAvatar;
         TextView tvName, tvText, tvTime;
+
         CmtVH(View item) {
             super(item);
-            tvName = item.findViewById(R.id.tvName);
-            tvText = item.findViewById(R.id.tvText);
-            tvTime = item.findViewById(R.id.tvTime);
+            ivAvatar = item.findViewById(R.id.ivAvatar);
+            tvName   = item.findViewById(R.id.tvName);
+            tvText   = item.findViewById(R.id.tvText);
+            tvTime   = item.findViewById(R.id.tvTime);
         }
+
         void bind(Community.Comment c) {
             tvName.setText(c.displayName != null ? c.displayName : "User");
             tvText.setText(c.text != null ? c.text : "");
+
             if (c.createdAt != null) {
                 java.util.Date d = c.createdAt.toDate();
                 tvTime.setText(android.text.format.DateFormat.format("dd/MM/yyyy HH:mm", d));
-            } else tvTime.setText("");
+            } else {
+                tvTime.setText("");
+            }
+
+            // Load avatar người bình luận
+            if (c.photoURL != null && !c.photoURL.isEmpty()) {
+                com.bumptech.glide.Glide.with(itemView.getContext())
+                        .load(c.photoURL)
+                        .placeholder(R.drawable.ic_person)
+                        .circleCrop()
+                        .into(ivAvatar);
+            } else {
+                ivAvatar.setImageResource(R.drawable.ic_person);
+            }
         }
     }
+
 }
 
