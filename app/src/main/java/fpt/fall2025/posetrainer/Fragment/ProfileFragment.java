@@ -19,6 +19,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import fpt.fall2025.posetrainer.Activity.EditGoalsActivity;
 import fpt.fall2025.posetrainer.Activity.EditProfileActivity;
 import fpt.fall2025.posetrainer.Activity.LoginActivity;
+import fpt.fall2025.posetrainer.Activity.OnboardingActivity;
 import fpt.fall2025.posetrainer.Domain.User;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.databinding.FragmentProfileBinding;
@@ -57,23 +58,19 @@ public class ProfileFragment extends Fragment {
     }
 
     private void setupClicks() {
-        // Premium button
         binding.btnPremium.setOnClickListener(v ->
                 Toast.makeText(requireContext(), "Tính năng Premium đang phát triển", Toast.LENGTH_SHORT).show()
         );
 
-        // Menu Settings
         binding.menuSettings.setOnClickListener(v ->
                 startActivity(new Intent(requireContext(), EditProfileActivity.class))
         );
-        // ➕ NÚT MỤC TIÊU
         binding.btnGoal.setOnClickListener(v ->
                 startActivity(new Intent(requireContext(), EditGoalsActivity.class))
         );
 
-        // Menu Support
         binding.menuSupport.setOnClickListener(v ->
-                Toast.makeText(requireContext(), "Hỗ trợ và Mục tiêu", Toast.LENGTH_SHORT).show()
+                startActivity(new Intent(requireContext(), OnboardingActivity.class))
         );
 
         // Menu Workouts
@@ -146,7 +143,6 @@ public class ProfileFragment extends Fragment {
         binding.profileEmail.setText(email);
 
         if (photoUrl != null && !photoUrl.isEmpty()) {
-            // Load vào avatar lớn
             Glide.with(this)
                     .load(photoUrl)
                     .placeholder(R.drawable.profile)
@@ -154,7 +150,6 @@ public class ProfileFragment extends Fragment {
                     .circleCrop()
                     .into(binding.profileImage);
 
-            // Load vào avatar nhỏ ở header
             Glide.with(this)
                     .load(photoUrl)
                     .placeholder(R.drawable.profile)
@@ -257,7 +252,6 @@ public class ProfileFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        // 🔄 Tải lại dữ liệu khi quay về Profile
         loadUserFromFirestore();
         loadUserStats();
     }

@@ -198,7 +198,7 @@
             app:layout_constraintEnd_toEndOf="parent"/>
 
         <TextView
-            android:id="@+id/tv_menu_label"
+            android:id="@+id/btn_goal"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Mục tiêu"
@@ -219,7 +219,7 @@
             android:layout_marginTop="10dp"
             android:layout_marginBottom="24dp"
             android:background="@drawable/profile_item_background"
-            app:layout_constraintTop_toBottomOf="@id/tv_menu_label"
+            app:layout_constraintTop_toBottomOf="@id/btn_goal"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent">
 
@@ -278,7 +278,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Hỗ trợ và Mục tiêu"
+                    android:text="Hồ sơ và Mục tiêu"
                     android:textColor="@color/white"
                     android:textSize="15sp"/>
 

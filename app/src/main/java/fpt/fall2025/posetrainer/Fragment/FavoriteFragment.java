@@ -24,10 +24,6 @@ import fpt.fall2025.posetrainer.databinding.FragmentFavoriteBinding;
 
 import java.util.ArrayList;
 
-/**
- * FavoriteFragment - Fragment hiển thị danh sách user workouts đã lưu của user
- * Cho phép xem và xóa các workout đã tạo
- */
 public class FavoriteFragment extends Fragment {
     private static final String TAG = "FavoriteFragment";
     private FragmentFavoriteBinding binding;
@@ -48,10 +44,8 @@ public class FavoriteFragment extends Fragment {
         // Initialize data
         userWorkouts = new ArrayList<>();
 
-        // Setup RecyclerView with vertical layout for card view
         binding.userWorkoutsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false));
 
-        // Get current user ID and load avatar
         getCurrentUserId();
         loadUserAvatar();
     }
@@ -75,7 +69,6 @@ public class FavoriteFragment extends Fragment {
                 Log.d(TAG, "Using default profile image");
             }
 
-            // Set user name - ĐÃ SỬA: Dùng tiếng Việt
             String displayName = currentUser.getDisplayName();
             if (displayName != null && !displayName.isEmpty()) {
                 binding.userNameText.setText("Bài tập của " + displayName);
@@ -83,7 +76,6 @@ public class FavoriteFragment extends Fragment {
                 binding.userNameText.setText("Bài tập của tôi");
             }
         } else {
-            // Use default profile image and text
             binding.userAvatar.setImageResource(R.drawable.profile);
             binding.userNameText.setText("Bài tập của tôi");
             Log.d(TAG, "No user logged in, using defaults");
@@ -102,7 +94,6 @@ public class FavoriteFragment extends Fragment {
             loadUserWorkouts();
         } else {
             Log.w(TAG, "No user logged in");
-            // Show empty state with login message - ĐÃ SỬA: Dùng tiếng Việt
             binding.emptyStateLayout.setVisibility(View.VISIBLE);
             binding.userWorkoutsRecyclerView.setVisibility(View.GONE);
             binding.emptyStateText.setText("Vui lòng đăng nhập để xem bài tập của bạn");
@@ -162,4 +153,5 @@ public class FavoriteFragment extends Fragment {
         getCurrentUserId();
         loadUserAvatar();
     }
+}
     
