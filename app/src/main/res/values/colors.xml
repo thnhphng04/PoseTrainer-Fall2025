@@ -22,4 +22,8 @@
     <!-- Colors for SessionActivity -->
     <color name="gray">#FF9E9E9E</color>
     <color name="primary">#FF2196F3</color>
+    
+    <!-- Additional colors for daily screen -->
+    <color name="primary_blue">#FF2196F3</color>
+    <color name="gray_text">#FF757575</color>
 </resources>

@@ -168,8 +168,11 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
     private void updateWorkoutTemplateUI() {
         if (originalWorkoutTemplate == null) return;
 
+        // Set editable text fields
         binding.titleTxt.setText(originalWorkoutTemplate.getTitle());
         binding.descriptionTxt.setText(originalWorkoutTemplate.getDescription());
+        
+        // Set read-only display fields
         binding.levelTxt.setText(originalWorkoutTemplate.getLevel());
         binding.durationTxt.setText(originalWorkoutTemplate.getEstDurationMin() + " min");
     }
@@ -248,10 +251,9 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
             @Override
             public void onExercisesLoaded(ArrayList<Exercise> availableExercises) {
                 if (availableExercises != null && !availableExercises.isEmpty()) {
-                    Log.d(TAG, "Loaded " + availableExercises.size() + " exercises from Firebase");
-                    // Filter out exercises that are already in the workout
-                    ArrayList<Exercise> filteredExercises = filterAvailableExercises(availableExercises);
-                    showExerciseSelectionDialog(filteredExercises);
+                    Log.d(TAG, "Loaded " + availableExercises.size() + " exercises from Firebase - all available for selection");
+                    // Allow all exercises to be selected (including duplicates)
+                    showExerciseSelectionDialog(availableExercises);
                 } else {
                     Log.e(TAG, "No exercises loaded from Firebase");
                     Toast.makeText(EditWorkoutActivity.this, "No exercises available", Toast.LENGTH_SHORT).show();
@@ -260,42 +262,14 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
         });
     }
     
-    /**
-     * Filter out exercises that are already in the workout
-     */
-    private ArrayList<Exercise> filterAvailableExercises(ArrayList<Exercise> allExercises) {
-        ArrayList<Exercise> filteredExercises = new ArrayList<>();
-        
-        for (Exercise exercise : allExercises) {
-            boolean alreadyInWorkout = false;
-            for (Exercise workoutExercise : exercises) {
-                if (exercise.getId().equals(workoutExercise.getId())) {
-                    alreadyInWorkout = true;
-                    break;
-                }
-            }
-            if (!alreadyInWorkout) {
-                filteredExercises.add(exercise);
-            }
-        }
-        
-        Log.d(TAG, "Filtered " + filteredExercises.size() + " available exercises (removed " + (allExercises.size() - filteredExercises.size()) + " duplicates)");
-        return filteredExercises;
-    }
     
     /**
      * Show exercise selection activity
      */
     private void showExerciseSelectionDialog(ArrayList<Exercise> availableExercises) {
-        // Get current exercise IDs to filter out
-        ArrayList<String> currentExerciseIds = new ArrayList<>();
-        for (Exercise exercise : exercises) {
-            currentExerciseIds.add(exercise.getId());
-        }
-        
-        // Start ExerciseSelectionActivity
+        // Start ExerciseSelectionActivity without filtering current exercises
         Intent intent = new Intent(this, ExerciseSelectionActivity.class);
-        intent.putStringArrayListExtra("currentWorkoutExerciseIds", currentExerciseIds);
+        // Don't pass currentWorkoutExerciseIds to allow duplicate exercises
         startActivityForResult(intent, 1001); // Request code for exercise selection
     }
     
@@ -322,6 +296,14 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
     private void saveWorkout() {
         if (exercises == null || exercises.isEmpty()) {
             Toast.makeText(this, "No exercises to save", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Validate title input
+        String workoutTitle = binding.titleTxt.getText().toString().trim();
+        if (workoutTitle.isEmpty()) {
+            Toast.makeText(this, "Please enter a workout title", Toast.LENGTH_SHORT).show();
+            binding.titleTxt.requestFocus();
             return;
         }
 
@@ -366,8 +348,21 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
         // Generate unique ID for user workout
         userWorkout.setId(generateUserWorkoutId());
         userWorkout.setUid(userId);
-        userWorkout.setTitle(originalWorkoutTemplate.getTitle());
-        userWorkout.setDescription(originalWorkoutTemplate.getDescription());
+        
+        // Get title and description from EditText fields
+        String workoutTitle = binding.titleTxt.getText().toString().trim();
+        String workoutDescription = binding.descriptionTxt.getText().toString().trim();
+        
+        // Use original values as fallback if fields are empty
+        if (workoutTitle.isEmpty()) {
+            workoutTitle = originalWorkoutTemplate.getTitle();
+        }
+        if (workoutDescription.isEmpty()) {
+            workoutDescription = originalWorkoutTemplate.getDescription();
+        }
+        
+        userWorkout.setTitle(workoutTitle);
+        userWorkout.setDescription(workoutDescription);
         userWorkout.setSource("custom");
         
         // Set timestamps in seconds

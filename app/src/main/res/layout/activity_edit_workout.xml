@@ -27,44 +27,109 @@
                     android:id="@+id/backBtn"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginTop="24dp"
                     android:src="@drawable/ic_arrow_back_white"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
+                <!-- Workout Title Input -->
+
                 <TextView
-                    android:id="@+id/titleTxt"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="16dp"
-                    android:layout_marginTop="8dp"
-                    android:text="Edit Workout"
+                    android:layout_marginTop="24dp"
+                    android:text="Chỉnh sửa bài tập"
                     android:textColor="@color/white"
                     android:textSize="24sp"
                     android:textStyle="bold"
                     app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintHorizontal_bias="0.0"
                     app:layout_constraintStart_toEndOf="@+id/backBtn"
                     app:layout_constraintTop_toTopOf="parent" />
 
-                <TextView
-                    android:id="@+id/descriptionTxt"
+                <LinearLayout
+                    android:id="@+id/titleInputLayout"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="Description"
-                    android:textColor="@color/white"
-                    android:textSize="14sp"
+                    android:layout_marginTop="16dp"
+                    android:orientation="vertical"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/titleTxt" />
+                    app:layout_constraintTop_toBottomOf="@+id/backBtn">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Tên bài tập"
+                        android:textColor="@color/orange"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="4dp" />
+
+                    <EditText
+                        android:id="@+id/titleTxt"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:background="@drawable/edit_text_background"
+                        android:textColor="@color/white"
+                        android:textColorHint="#B3FFFFFF"
+                        android:textSize="16sp"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp"
+                        android:hint="Enter workout title" />
+
+                </LinearLayout>
+
+                <!-- Workout Description Input -->
+                <LinearLayout
+                    android:id="@+id/descriptionInputLayout"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="vertical"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/titleInputLayout">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Mô tả"
+                        android:textColor="@color/orange"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="4dp" />
+
+                    <EditText
+                        android:id="@+id/descriptionTxt"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minHeight="80dp"
+                        android:background="@drawable/edit_text_background"
+                        android:inputType="textMultiLine"
+                        android:lines="3"
+                        android:maxLines="5"
+                        android:textColor="@color/white"
+                        android:textColorHint="#B3FFFFFF"
+                        android:textSize="14sp"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp"
+                        android:hint="Enter workout description" />
+
+                </LinearLayout>
 
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="12dp"
                     android:orientation="horizontal"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/descriptionTxt">
+                    app:layout_constraintTop_toBottomOf="@+id/descriptionInputLayout">
 
                     <TextView
                         android:id="@+id/levelTxt"
@@ -100,7 +165,7 @@
                 android:layout_height="50dp"
                 android:layout_margin="16dp"
                 android:background="@drawable/orange_bg"
-                android:text="+ Add Exercise"
+                android:text="+ Thêm bài tập"
                 android:textColor="@color/white"
                 android:textSize="16sp"
                 android:textStyle="bold" />
@@ -111,7 +176,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
                 android:layout_marginTop="16dp"
-                android:text="Exercises"
+                android:text="Danh sách bài tập"
                 android:textColor="@color/white"
                 android:textSize="18sp"
                 android:textStyle="bold" />
@@ -136,7 +201,7 @@
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="32dp"
         android:background="@drawable/orange_bg"
-        android:text="Save Workout"
+        android:text="Lưu bài tập"
         android:textColor="@color/white"
         android:textSize="18sp"
         android:textStyle="bold"

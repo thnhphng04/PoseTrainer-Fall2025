@@ -25,10 +25,13 @@ import fpt.fall2025.posetrainer.databinding.DialogExerciseDetailBinding;
  */
 public class ExerciseDetailDialog extends Dialog {
     private static final String TAG = "ExerciseDetailDialog";
-    
+
     private DialogExerciseDetailBinding binding;
     private Exercise exercise;
     private Context context;
+    private int customSets = -1;
+    private int customReps = -1;
+    private String customDifficulty = null;
 
     public ExerciseDetailDialog(@NonNull Context context, Exercise exercise) {
         super(context);
@@ -36,24 +39,33 @@ public class ExerciseDetailDialog extends Dialog {
         this.exercise = exercise;
     }
 
+    public ExerciseDetailDialog(@NonNull Context context, Exercise exercise, int customSets, int customReps, String customDifficulty) {
+        super(context);
+        this.context = context;
+        this.exercise = exercise;
+        this.customSets = customSets;
+        this.customReps = customReps;
+        this.customDifficulty = customDifficulty;
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
+
         // Remove default title bar
         requestWindowFeature(Window.FEATURE_NO_TITLE);
-        
+
         binding = DialogExerciseDetailBinding.inflate(LayoutInflater.from(context));
         setContentView(binding.getRoot());
-        
+
         // Set dialog properties
         getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         getWindow().setBackgroundDrawableResource(android.R.color.transparent);
-        
+
         // Make dialog cancelable when clicking outside
         setCancelable(true);
         setCanceledOnTouchOutside(true);
-        
+
         if (exercise == null) {
             Toast.makeText(context, "No exercise data provided", Toast.LENGTH_SHORT).show();
             dismiss();
@@ -62,10 +74,9 @@ public class ExerciseDetailDialog extends Dialog {
 
         setupUI();
         updateExerciseUI();
-        
+
         // Debug binding
         Log.d(TAG, "Binding closeBtn: " + (binding.closeBtn != null ? "NOT NULL" : "NULL"));
-        Log.d(TAG, "Binding startExerciseBtn: " + (binding.startExerciseBtn != null ? "NOT NULL" : "NULL"));
     }
 
     /**
@@ -75,6 +86,12 @@ public class ExerciseDetailDialog extends Dialog {
         // Close button with null check and enhanced debugging
         if (binding.closeBtn != null) {
             Log.d(TAG, "Close button found, setting listener");
+
+            // Ensure the button is clickable and focusable
+            binding.closeBtn.setClickable(true);
+            binding.closeBtn.setFocusable(true);
+            binding.closeBtn.setFocusableInTouchMode(true);
+
             binding.closeBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -82,34 +99,12 @@ public class ExerciseDetailDialog extends Dialog {
                     dismiss();
                 }
             });
-            
-            // Also try setting onTouchListener as backup
-            binding.closeBtn.setOnTouchListener(new View.OnTouchListener() {
-                @Override
-                public boolean onTouch(View v, android.view.MotionEvent event) {
-                    if (event.getAction() == android.view.MotionEvent.ACTION_UP) {
-                        Log.d(TAG, "Close button touched!");
-                        dismiss();
-                        return true;
-                    }
-                    return false;
-                }
-            });
-            
+
+            // Background selector is already set in XML
+
             Log.d(TAG, "Close button listener set successfully");
         } else {
             Log.e(TAG, "Close button is null!");
-        }
-
-        // Start Exercise button
-        if (binding.startExerciseBtn != null) {
-            binding.startExerciseBtn.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    Log.d(TAG, "Start exercise button clicked!");
-                    startExercise();
-                }
-            });
         }
     }
 
@@ -121,25 +116,32 @@ public class ExerciseDetailDialog extends Dialog {
 
         // Set exercise name
         binding.exerciseNameTxt.setText(exercise.getName());
-        
+
         // Set level
         binding.exerciseLevelTxt.setText(exercise.getLevel());
-        
+
         // Set category (first category if available)
         if (exercise.getCategory() != null && !exercise.getCategory().isEmpty()) {
             binding.exerciseCategoryTxt.setText(exercise.getCategory().get(0));
         } else {
             binding.exerciseCategoryTxt.setText("General");
         }
-        
-        // Set sets x reps
-        if (exercise.getDefaultConfig() != null) {
-            String setsReps = exercise.getDefaultConfig().getSets() + " x " + exercise.getDefaultConfig().getReps();
-            binding.exerciseSetsRepsTxt.setText(setsReps);
+
+        // Set sets x reps - use custom config if available, otherwise use default
+        int sets, reps;
+        if (customSets > 0 && customReps > 0) {
+            sets = customSets;
+            reps = customReps;
+        } else if (exercise.getDefaultConfig() != null) {
+            sets = exercise.getDefaultConfig().getSets();
+            reps = exercise.getDefaultConfig().getReps();
         } else {
-            binding.exerciseSetsRepsTxt.setText("3 x 12");
+            sets = 3;
+            reps = 12;
         }
-        
+        String setsReps = sets + " x " + reps;
+        binding.exerciseSetsRepsTxt.setText(setsReps);
+
         // Set muscles (if available)
         if (exercise.getMuscles() != null && !exercise.getMuscles().isEmpty()) {
             StringBuilder musclesText = new StringBuilder();
@@ -151,7 +153,7 @@ public class ExerciseDetailDialog extends Dialog {
         } else {
             binding.exerciseMusclesTxt.setText("Full body");
         }
-        
+
         // Set equipment (if available)
         if (exercise.getEquipment() != null && !exercise.getEquipment().isEmpty()) {
             StringBuilder equipmentText = new StringBuilder();
@@ -163,7 +165,7 @@ public class ExerciseDetailDialog extends Dialog {
         } else {
             binding.exerciseEquipmentTxt.setText("No equipment");
         }
-        
+
         // Load media (demo video or thumbnail)
         loadExerciseMedia();
     }
@@ -205,28 +207,6 @@ public class ExerciseDetailDialog extends Dialog {
     }
 
     /**
-     * Start exercise - navigate to ExerciseActivity
-     */
-    private void startExercise() {
-        Intent intent = new Intent(context, ExerciseActivity.class);
-        intent.putExtra("exercise", exercise);
-        
-        // Pass default config if available
-        if (exercise.getDefaultConfig() != null) {
-            intent.putExtra("sets", exercise.getDefaultConfig().getSets());
-            intent.putExtra("reps", exercise.getDefaultConfig().getReps());
-            intent.putExtra("difficulty", exercise.getDefaultConfig().getDifficulty());
-        } else {
-            intent.putExtra("sets", 3);
-            intent.putExtra("reps", 12);
-            intent.putExtra("difficulty", "beginner");
-        }
-        
-        context.startActivity(intent);
-        dismiss();
-    }
-
-    /**
      * Static method to show dialog
      */
     public static void show(Context context, Exercise exercise) {
@@ -234,6 +214,19 @@ public class ExerciseDetailDialog extends Dialog {
             ExerciseDetailDialog dialog = new ExerciseDetailDialog(context, exercise);
             dialog.show();
             Log.d(TAG, "Dialog shown successfully");
+        } catch (Exception e) {
+            Log.e(TAG, "Error showing dialog: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Static method to show dialog with custom config
+     */
+    public static void show(Context context, Exercise exercise, int customSets, int customReps, String customDifficulty) {
+        try {
+            ExerciseDetailDialog dialog = new ExerciseDetailDialog(context, exercise, customSets, customReps, customDifficulty);
+            dialog.show();
+            Log.d(TAG, "Dialog shown successfully with custom config");
         } catch (Exception e) {
             Log.e(TAG, "Error showing dialog: " + e.getMessage(), e);
         }
