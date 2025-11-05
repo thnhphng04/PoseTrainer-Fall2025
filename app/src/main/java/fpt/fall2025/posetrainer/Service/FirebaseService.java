@@ -3,6 +3,7 @@ package fpt.fall2025.posetrainer.Service;
 import android.util.Log;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -10,13 +11,20 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 import fpt.fall2025.posetrainer.Domain.Exercise;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
 import fpt.fall2025.posetrainer.Domain.Session;
+import fpt.fall2025.posetrainer.Domain.Schedule;
+import fpt.fall2025.posetrainer.Domain.Notification;
 
 /**
  * FirebaseService - Service để quản lý tất cả Firebase operations
@@ -96,23 +104,28 @@ public class FirebaseService {
                                     activity.runOnUiThread(() -> {
                                         listener.onWorkoutTemplateLoaded(workoutTemplate);
                                     });
+                                } else {
+                                    Log.e(TAG, "WorkoutTemplate object is null");
+                                    activity.runOnUiThread(() -> {
+                                        listener.onWorkoutTemplateLoaded(null);
+                                    });
                                 }
                             } catch (Exception e) {
                                 Log.e(TAG, "Error parsing template: " + e.getMessage());
                                 activity.runOnUiThread(() -> {
-                                    Toast.makeText(activity, "Error loading workout template", Toast.LENGTH_SHORT).show();
+                                    listener.onWorkoutTemplateLoaded(null);
                                 });
                             }
                         } else {
                             Log.e(TAG, "No such document");
                             activity.runOnUiThread(() -> {
-                                Toast.makeText(activity, "Workout template not found", Toast.LENGTH_SHORT).show();
+                                listener.onWorkoutTemplateLoaded(null);
                             });
                         }
                     } else {
                         Log.e(TAG, "Error getting document: ", task.getException());
                         activity.runOnUiThread(() -> {
-                            Toast.makeText(activity, "Error loading workout template", Toast.LENGTH_SHORT).show();
+                            listener.onWorkoutTemplateLoaded(null);
                         });
                     }
                 });
@@ -857,5 +870,185 @@ public class FirebaseService {
                         }
                     });
         }
+    }
+
+    // ===================== SCHEDULE METHODS (Firestore) =====================
+
+    /**
+     * Load user schedule from Firestore
+     */
+    public void loadUserSchedule(String uid, OnScheduleLoadedListener listener) {
+        Log.d(TAG, "Loading schedule for userId: " + uid);
+        
+        db.collection("schedules")
+                .whereEqualTo("uid", uid)
+                .limit(1)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        DocumentSnapshot document = queryDocumentSnapshots.getDocuments().get(0);
+                        Schedule schedule = document.toObject(Schedule.class);
+                        if (schedule != null) {
+                            schedule.setId(document.getId());
+                            Log.d(TAG, "Loaded schedule: " + schedule.getTitle());
+                            if (listener != null) {
+                                listener.onScheduleLoaded(schedule);
+                            }
+                        } else {
+                            Log.w(TAG, "Schedule object is null");
+                            if (listener != null) {
+                                listener.onScheduleLoaded(null);
+                            }
+                        }
+                    } else {
+                        Log.d(TAG, "No schedule found for user");
+                        if (listener != null) {
+                            listener.onScheduleLoaded(null);
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error loading schedule", e);
+                    if (listener != null) {
+                        listener.onScheduleLoaded(null);
+                    }
+                });
+    }
+
+    /**
+     * Save or update user schedule
+     */
+    public void saveSchedule(Schedule schedule, OnScheduleSavedListener listener) {
+        Log.d(TAG, "Saving schedule: " + schedule.getTitle());
+        
+        if (schedule.getId() == null || schedule.getId().isEmpty()) {
+            // Create new schedule
+            db.collection("schedules")
+                    .add(schedule)
+                    .addOnSuccessListener(documentReference -> {
+                        Log.d(TAG, "Schedule created successfully: " + documentReference.getId());
+                        schedule.setId(documentReference.getId());
+                        if (listener != null) {
+                            listener.onScheduleSaved(true);
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "Error creating schedule", e);
+                        if (listener != null) {
+                            listener.onScheduleSaved(false);
+                        }
+                    });
+        } else {
+            // Update existing schedule
+            db.collection("schedules")
+                    .document(schedule.getId())
+                    .set(schedule)
+                    .addOnSuccessListener(aVoid -> {
+                        Log.d(TAG, "Schedule updated successfully");
+                        if (listener != null) {
+                            listener.onScheduleSaved(true);
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "Error updating schedule", e);
+                        if (listener != null) {
+                            listener.onScheduleSaved(false);
+                        }
+                    });
+        }
+    }
+
+    /**
+     * Get formatted date string (yyyy-MM-dd)
+     */
+    public static String getFormattedDate(Calendar calendar) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+        return sdf.format(calendar.getTime());
+    }
+
+    /**
+     * Get formatted date string for today
+     */
+    public static String getTodayFormattedDate() {
+        return getFormattedDate(Calendar.getInstance());
+    }
+
+    // Interface for Schedule callbacks
+    public interface OnScheduleLoadedListener {
+        void onScheduleLoaded(Schedule schedule);
+    }
+
+    public interface OnScheduleSavedListener {
+        void onScheduleSaved(boolean success);
+    }
+
+    // ===================== NOTIFICATION METHODS (Firestore) =====================
+
+    /**
+     * Save notification to Firestore
+     */
+    public void saveNotification(Notification notification, OnNotificationSavedListener listener) {
+        Log.d(TAG, "Saving notification: " + notification.getTitle());
+        
+        db.collection("notifications")
+                .add(notification)
+                .addOnSuccessListener(documentReference -> {
+                    Log.d(TAG, "Notification saved successfully: " + documentReference.getId());
+                    notification.setId(documentReference.getId());
+                    if (listener != null) {
+                        listener.onNotificationSaved(true);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error saving notification", e);
+                    if (listener != null) {
+                        listener.onNotificationSaved(false);
+                    }
+                });
+    }
+
+    /**
+     * Load notifications for a user
+     */
+    public void loadUserNotifications(String uid, OnNotificationsLoadedListener listener) {
+        Log.d(TAG, "Loading notifications for userId: " + uid);
+        
+        db.collection("notifications")
+                .whereEqualTo("uid", uid)
+                .orderBy("sentAt", Query.Direction.DESCENDING)
+                .limit(50)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    ArrayList<Notification> notifications = new ArrayList<>();
+                    for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
+                        try {
+                            Notification notification = document.toObject(Notification.class);
+                            if (notification != null) {
+                                notification.setId(document.getId());
+                                notifications.add(notification);
+                            }
+                        } catch (Exception e) {
+                            Log.e(TAG, "Error parsing notification: " + e.getMessage());
+                        }
+                    }
+                    Log.d(TAG, "Loaded " + notifications.size() + " notifications");
+                    if (listener != null) {
+                        listener.onNotificationsLoaded(notifications);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error loading notifications", e);
+                    if (listener != null) {
+                        listener.onNotificationsLoaded(new ArrayList<>());
+                    }
+                });
+    }
+
+    public interface OnNotificationSavedListener {
+        void onNotificationSaved(boolean success);
+    }
+
+    public interface OnNotificationsLoadedListener {
+        void onNotificationsLoaded(ArrayList<Notification> notifications);
     }
 }
