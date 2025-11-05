@@ -1,44 +1,140 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
-    android:padding="12dp"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/bg_card"
-    android:layout_marginBottom="8dp">
+    android:orientation="vertical"
+    android:background="@android:color/white"
+    android:layout_marginBottom="8dp"
+    android:padding="8dp"
+    android:elevation="2dp"
+    android:layout_marginHorizontal="6dp"
+    android:clipToOutline="true"
+    android:backgroundTint="@android:color/white">
 
-    <TextView
-        android:id="@+id/tvAuthor"
-        android:textStyle="bold"
-        android:textSize="15sp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"/>
-
-    <TextView
-        android:id="@+id/tvTime"
-        android:layout_width="wrap_content"
+    <!-- Tên người đăng + thời gian -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textSize="12sp"
-        android:textColor="#777777"
-        android:layout_marginTop="2dp"/>
+        android:orientation="vertical">
 
+        <TextView
+            android:id="@+id/tvAuthor"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tên người đăng"
+            android:textColor="@android:color/black"
+            android:textStyle="bold"
+            android:textSize="15sp" />
+
+        <TextView
+            android:id="@+id/tvTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="04/11/2025 13:27"
+            android:textSize="12sp"
+            android:textColor="#888888" />
+    </LinearLayout>
+
+    <!-- Nội dung bài viết -->
     <TextView
         android:id="@+id/tvContent"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"/>
+        android:text="Nội dung bài viết ở đây"
+        android:textColor="@android:color/black"
+        android:textSize="14sp"
+        android:layout_marginTop="6dp" />
 
+    <!-- Ảnh bài viết -->
     <ImageView
         android:id="@+id/ivImage"
         android:layout_width="match_parent"
         android:layout_height="200dp"
+        android:layout_marginTop="6dp"
         android:scaleType="centerCrop"
-        android:layout_marginTop="8dp"
-        android:visibility="gone"/>
+        android:visibility="gone"
+        android:background="#EEE" />
 
+    <!-- Số lượng like/comment -->
     <TextView
         android:id="@+id/tvCounts"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"/>
+        android:text="❤ 0   💬 0"
+        android:textSize="13sp"
+        android:textColor="#555"
+        android:layout_marginTop="4dp"
+        android:layout_marginStart="4dp" />
+
+    <!-- Thanh hành động -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0.5dp"
+        android:background="#DDD"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="4dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:weightSum="2">
+
+        <!-- Nút like -->
+        <LinearLayout
+            android:id="@+id/btnLike"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:background="?attr/selectableItemBackgroundBorderless">
+
+            <ImageView
+                android:id="@+id/iconLike"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_favorite_border"
+                android:tint="#606770" />
+
+            <TextView
+                android:id="@+id/tvLike"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Thích"
+                android:textSize="14sp"
+                android:textColor="#606770"
+                android:layout_marginStart="6dp" />
+        </LinearLayout>
+
+        <!-- Nút comment -->
+        <LinearLayout
+            android:id="@+id/btnComment"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:background="?attr/selectableItemBackgroundBorderless">
+
+            <ImageView
+                android:id="@+id/iconComment"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_comment"
+                android:tint="#606770" />
+
+            <TextView
+                android:id="@+id/tvComment"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Bình luận"
+                android:textSize="14sp"
+                android:textColor="#606770"
+                android:layout_marginStart="6dp" />
+        </LinearLayout>
+    </LinearLayout>
+
 </LinearLayout>

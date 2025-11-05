@@ -7,30 +7,31 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * ONE domain to bind UI:
- * - Trực tiếp map được với document "community/{postId}" (các field Post)
- * - Kèm các cấu trúc phụ (comments, likedByMe) để hiển thị — dùng @Exclude để không serialize lên Firestore
+ * Model đại diện cho một bài đăng (post) trong "community".
+ * Map trực tiếp với Firestore collection "community/{postId}"
  */
 public class Community {
 
-    // ====== Fields map trực tiếp với community/{postId} ======
-    public String id;               // = postId (docId)
-    public String uid;              // uid người đăng
-    public Author author;           // thông tin người đăng tại thời điểm post
-    public String content;          // <= 500 chars
-    public String imageUrl;         // có thể rỗng
-    public String imagePath;        // đường dẫn trong Storage
-    public long likesCount;         // đếm nhanh
-    public long commentsCount;      // đếm nhanh
-    public Timestamp createdAt;     // serverTimestamp()
-    public Timestamp updatedAt;     // serverTimestamp()
+    // ====== Các field map trực tiếp với Firestore ======
+    public String id;               // ID bài đăng (docId)
+    public String uid;              // UID người đăng
+    public Author author;           // Thông tin người đăng tại thời điểm đăng
+    public String content;          // Nội dung bài viết
+    public String imageUrl;         // URL ảnh bài viết (có thể null)
+    public String imagePath;        // Đường dẫn trong Storage
+    public long likesCount;         // Tổng lượt thích
+    public long commentsCount;      // Tổng lượt bình luận
+    public Timestamp createdAt;     // Ngày tạo
+    public Timestamp updatedAt;     // Ngày cập nhật
+    public List<String> likedBy;    // Danh sách UID người đã like
 
+    // ====== Constructor bắt buộc Firestore cần ======
     public Community() {}
 
     public Community(String id, String uid, Author author, String content,
                      String imageUrl, String imagePath,
                      long likesCount, long commentsCount,
-                     Timestamp createdAt, Timestamp updatedAt) {
+                     Timestamp createdAt, Timestamp updatedAt, List<String> likedBy) {
         this.id = id;
         this.uid = uid;
         this.author = author;
@@ -41,45 +42,81 @@ public class Community {
         this.commentsCount = commentsCount;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.likedBy = likedBy != null ? likedBy : new ArrayList<>();
     }
 
-    // ====== Phần bổ trợ cho UI (KHÔNG lưu Firestore) ======
-    @Exclude public boolean likedByMe = false;     // client tính từ likes/{myUid}
-    @Exclude public List<Comment> comments = new ArrayList<>(); // load lazy khi mở chi tiết
+    // ====== Các field chỉ dùng trong client, không lưu Firestore ======
+    @Exclude public boolean likedByMe = false;     // người dùng hiện tại đã like chưa
+    @Exclude public List<Comment> comments = new ArrayList<>(); // danh sách comment khi mở chi tiết
 
-    // ====== Nested types ======
+    // ====== Getter tiện ích cho UI ======
+    @Exclude
+    public String getDisplayName() {
+        return (author != null && author.displayName != null && !author.displayName.isEmpty())
+                ? author.displayName
+                : "Người dùng";
+    }
+
+    @Exclude
+    public String getPhotoURL() {
+        return (author != null && author.photoURL != null) ? author.photoURL : null;
+    }
+
+    @Exclude
+    public String getTimeString() {
+        if (createdAt == null) return "";
+        java.util.Date d = createdAt.toDate();
+        return android.text.format.DateFormat.format("dd/MM/yyyy HH:mm", d).toString();
+    }
+
+    // ====== Nested classes ======
     public static class Author {
         public String uid;
         public String displayName;
         public String photoURL;
+
         public Author() {}
+
         public Author(String uid, String displayName, String photoURL) {
-            this.uid = uid; this.displayName = displayName; this.photoURL = photoURL;
+            this.uid = uid;
+            this.displayName = displayName;
+            this.photoURL = photoURL;
         }
     }
 
     public static class Like {
-        public String uid;          // docId = uid
-        public Timestamp createdAt; // serverTimestamp()
+        public String uid;
+        public Timestamp createdAt;
+
         public Like() {}
-        public Like(String uid, Timestamp createdAt) { this.uid = uid; this.createdAt = createdAt; }
+
+        public Like(String uid, Timestamp createdAt) {
+            this.uid = uid;
+            this.createdAt = createdAt;
+        }
     }
 
     public static class Comment {
-        public String id;           // = commentId (docId)
-        public String postId;       // id bài post
-        public String uid;          // ai bình luận
+        public String id;
+        public String postId;
+        public String uid;
         public String displayName;
         public String photoURL;
-        public String text;         // <= 500 chars
-        public Timestamp createdAt; // serverTimestamp()
+        public String text;
+        public Timestamp createdAt;
+
         public Comment() {}
+
         public Comment(String id, String postId, String uid,
                        String displayName, String photoURL,
                        String text, Timestamp createdAt) {
-            this.id = id; this.postId = postId; this.uid = uid;
-            this.displayName = displayName; this.photoURL = photoURL;
-            this.text = text; this.createdAt = createdAt;
+            this.id = id;
+            this.postId = postId;
+            this.uid = uid;
+            this.displayName = displayName;
+            this.photoURL = photoURL;
+            this.text = text;
+            this.createdAt = createdAt;
         }
     }
 }
