@@ -1,5 +1,9 @@
 package fpt.fall2025.posetrainer.Domain;
 
+import java.time.LocalDate;
+import java.util.Date;
+import java.util.Locale;
+
 public class OnboardingData {
     private String gender;
     private String bodyPart;
@@ -8,9 +12,11 @@ public class OnboardingData {
     private int weeklyGoal;
     private float weight;
     private float height;
+    private Date birthdate;
 
     public OnboardingData() {
         // Default values
+
         this.weeklyGoal = 4;
         this.weight = 75.0f;
         this.height = 175.0f;
@@ -24,6 +30,7 @@ public class OnboardingData {
     public int getWeeklyGoal() { return weeklyGoal; }
     public float getWeight() { return weight; }
     public float getHeight() { return height; }
+    public Date getBirthdate() { return birthdate; }
 
     // Setters
     public void setGender(String gender) { this.gender = gender; }
@@ -33,4 +40,6 @@ public class OnboardingData {
     public void setWeeklyGoal(int weeklyGoal) { this.weeklyGoal = weeklyGoal; }
     public void setWeight(float weight) { this.weight = weight; }
     public void setHeight(float height) { this.height = height; }
+    public void setBirthdate(Date birthdate) { this.birthdate = birthdate; }
+
 }

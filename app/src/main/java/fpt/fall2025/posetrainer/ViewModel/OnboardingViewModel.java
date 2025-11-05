@@ -1,6 +1,9 @@
 package fpt.fall2025.posetrainer.ViewModel;
 
 import androidx.lifecycle.ViewModel;
+
+import java.util.Date;
+
 import fpt.fall2025.posetrainer.Domain.OnboardingData;
 
 public class OnboardingViewModel extends ViewModel {
@@ -37,4 +40,8 @@ public class OnboardingViewModel extends ViewModel {
     public void setHeight(float height) {
         data.setHeight(height);
     }
+    public void setBirthdate(Date birthdate) {
+        data.setBirthdate(birthdate);
+    }
+
 }

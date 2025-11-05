@@ -41,9 +41,9 @@ public class PlanReadyFragment extends Fragment {
 
         // Customize plan title based on selections
         if (bodyPart != null && bodyPart.equals("fullbody")) {
-            binding.tvPlanTitle.setText("TOÀN THÂN THỬ THÁCH 7X4");
+            binding.tvPlanTitle.setText("TOÀN THÂN THỬ THÁCH");
         } else if (bodyPart != null) {
-            binding.tvPlanTitle.setText(bodyPart.toUpperCase() + " THỬ THÁCH 7X4");
+            binding.tvPlanTitle.setText(bodyPart.toUpperCase() + " THỬ THÁCH");
         }
     }
 

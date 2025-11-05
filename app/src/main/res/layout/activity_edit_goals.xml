@@ -10,6 +10,7 @@
         android:orientation="vertical"
         android:padding="16dp">
 
+        <!-- ===== THÔNG TIN CƠ BẢN ===== -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/til_birthday"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -113,6 +114,7 @@
             android:layout_marginBottom="12dp"
             android:background="?attr/colorOutline" />
 
+        <!-- ===== BODY HIỆN TẠI (chọn 1) ===== -->
         <TextView
             android:id="@+id/tv_section_body_current"
             android:layout_width="wrap_content"
@@ -141,8 +143,8 @@
                 android:foreground="?attr/selectableItemBackground"
                 android:tag="very_lean"
                 app:cardCornerRadius="16dp"
-                app:strokeColor="?attr/colorOutline"
-                app:strokeWidth="1dp">
+                app:strokeWidth="1dp"
+                app:strokeColor="?attr/colorOutline">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -155,9 +157,9 @@
                         android:id="@+id/ivBody1"
                         android:layout_width="match_parent"
                         android:layout_height="110dp"
-                        android:contentDescription="Very Lean"
                         android:scaleType="centerCrop"
-                        android:src="@drawable/female_body_very_lean" />
+                        android:src="@drawable/female_body_very_lean"
+                        android:contentDescription="Very Lean" />
 
                     <TextView
                         android:id="@+id/tvBody1"
@@ -180,8 +182,8 @@
                 android:foreground="?attr/selectableItemBackground"
                 android:tag="lean"
                 app:cardCornerRadius="16dp"
-                app:strokeColor="?attr/colorOutline"
-                app:strokeWidth="1dp">
+                app:strokeWidth="1dp"
+                app:strokeColor="?attr/colorOutline">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -194,9 +196,9 @@
                         android:id="@+id/ivBody2"
                         android:layout_width="match_parent"
                         android:layout_height="110dp"
-                        android:contentDescription="Lean"
                         android:scaleType="centerCrop"
-                        android:src="@drawable/female_body_lean" />
+                        android:src="@drawable/female_body_lean"
+                        android:contentDescription="Lean" />
 
                     <TextView
                         android:id="@+id/tvBody2"
@@ -219,8 +221,8 @@
                 android:foreground="?attr/selectableItemBackground"
                 android:tag="normal"
                 app:cardCornerRadius="16dp"
-                app:strokeColor="?attr/colorOutline"
-                app:strokeWidth="1dp">
+                app:strokeWidth="1dp"
+                app:strokeColor="?attr/colorOutline">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -233,9 +235,9 @@
                         android:id="@+id/ivBody3"
                         android:layout_width="match_parent"
                         android:layout_height="110dp"
-                        android:contentDescription="Normal"
                         android:scaleType="centerCrop"
-                        android:src="@drawable/female_body_normal" />
+                        android:src="@drawable/female_body_normal"
+                        android:contentDescription="Normal" />
 
                     <TextView
                         android:id="@+id/tvBody3"
@@ -258,8 +260,8 @@
                 android:foreground="?attr/selectableItemBackground"
                 android:tag="overweight"
                 app:cardCornerRadius="16dp"
-                app:strokeColor="?attr/colorOutline"
-                app:strokeWidth="1dp">
+                app:strokeWidth="1dp"
+                app:strokeColor="?attr/colorOutline">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -272,9 +274,9 @@
                         android:id="@+id/ivBody4"
                         android:layout_width="match_parent"
                         android:layout_height="110dp"
-                        android:contentDescription="Overweight"
                         android:scaleType="centerCrop"
-                        android:src="@drawable/female_body_overweight" />
+                        android:src="@drawable/female_body_overweight"
+                        android:contentDescription="Overweight" />
 
                     <TextView
                         android:id="@+id/tvBody4"
@@ -297,8 +299,8 @@
                 android:foreground="?attr/selectableItemBackground"
                 android:tag="obese"
                 app:cardCornerRadius="16dp"
-                app:strokeColor="?attr/colorOutline"
-                app:strokeWidth="1dp">
+                app:strokeWidth="1dp"
+                app:strokeColor="?attr/colorOutline">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -311,9 +313,9 @@
                         android:id="@+id/ivBody5"
                         android:layout_width="match_parent"
                         android:layout_height="110dp"
-                        android:contentDescription="Obese"
                         android:scaleType="centerCrop"
-                        android:src="@drawable/female_body_obese" />
+                        android:src="@drawable/female_body_obese"
+                        android:contentDescription="Obese" />
 
                     <TextView
                         android:id="@+id/tvBody5"
@@ -326,6 +328,7 @@
             </com.google.android.material.card.MaterialCardView>
         </GridLayout>
 
+        <!-- ===== BODY MỤC TIÊU (chọn 1) ===== -->
         <TextView
             android:id="@+id/tv_section_body_target"
             android:layout_width="wrap_content"

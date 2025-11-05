@@ -1,5 +1,6 @@
 package fpt.fall2025.posetrainer.Fragment.onboarding;
 
+import android.app.DatePickerDialog;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -11,6 +12,9 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+
+import java.util.Calendar;
+import java.util.Locale;
 
 import fpt.fall2025.posetrainer.ViewModel.OnboardingViewModel;
 import fpt.fall2025.posetrainer.databinding.FragmentBodyInfoBinding;
@@ -36,43 +40,22 @@ public class BodyInfoFragment extends Fragment {
         setupListeners();
     }
 
+
     private void setupListeners() {
-        binding.etWeight.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                try {
-                    float weight = Float.parseFloat(s.toString());
-                    viewModel.setWeight(weight);
-                } catch (NumberFormatException e) {
-                    // Ignore
-                }
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {}
-        });
-
+        // --- Chiều cao ---
         binding.etHeight.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
                 try {
                     float height = Float.parseFloat(s.toString());
                     viewModel.setHeight(height);
-                } catch (NumberFormatException e) {
-                    // Ignore
-                }
+                } catch (NumberFormatException ignored) {}
             }
-
-            @Override
-            public void afterTextChanged(Editable s) {}
+            @Override public void afterTextChanged(Editable s) {}
         });
     }
+
 
     @Override
     public void onDestroyView() {
