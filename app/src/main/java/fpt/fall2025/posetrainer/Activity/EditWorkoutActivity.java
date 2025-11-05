@@ -12,6 +12,7 @@ import com.google.firebase.auth.FirebaseUser;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.FragmentManager;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -22,7 +23,7 @@ import java.util.UUID;
 
 import fpt.fall2025.posetrainer.Adapter.EditWorkoutAdapter;
 import fpt.fall2025.posetrainer.Adapter.ExerciseItemTouchHelper;
-import fpt.fall2025.posetrainer.Activity.ExerciseSelectionActivity;
+import fpt.fall2025.posetrainer.Dialog.ExerciseSelectionDialog;
 import fpt.fall2025.posetrainer.Domain.Exercise;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
@@ -230,47 +231,16 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
     }
 
     /**
-     * Open exercise selection dialog/activity
+     * Open exercise selection dialog
      */
     private void openExerciseSelection() {
-        // Load all available exercises from Firebase
-        loadAllExercises();
-    }
-    
-    /**
-     * Load all available exercises from Firebase
-     */
-    private void loadAllExercises() {
-        Log.d(TAG, "Loading all exercises from Firebase for selection");
-        
-        // Show loading indicator
-        Toast.makeText(this, "Loading exercises...", Toast.LENGTH_SHORT).show();
-        
-        // Load all exercises from Firebase
-        FirebaseService.getInstance().loadAllExercises(this, new FirebaseService.OnExercisesLoadedListener() {
-            @Override
-            public void onExercisesLoaded(ArrayList<Exercise> availableExercises) {
-                if (availableExercises != null && !availableExercises.isEmpty()) {
-                    Log.d(TAG, "Loaded " + availableExercises.size() + " exercises from Firebase - all available for selection");
-                    // Allow all exercises to be selected (including duplicates)
-                    showExerciseSelectionDialog(availableExercises);
-                } else {
-                    Log.e(TAG, "No exercises loaded from Firebase");
-                    Toast.makeText(EditWorkoutActivity.this, "No exercises available", Toast.LENGTH_SHORT).show();
-                }
-            }
+        ExerciseSelectionDialog dialog = new ExerciseSelectionDialog();
+        dialog.setOnExerciseSelectedListener(exercise -> {
+            addExerciseToWorkout(exercise);
         });
-    }
-    
-    
-    /**
-     * Show exercise selection activity
-     */
-    private void showExerciseSelectionDialog(ArrayList<Exercise> availableExercises) {
-        // Start ExerciseSelectionActivity without filtering current exercises
-        Intent intent = new Intent(this, ExerciseSelectionActivity.class);
-        // Don't pass currentWorkoutExerciseIds to allow duplicate exercises
-        startActivityForResult(intent, 1001); // Request code for exercise selection
+        
+        FragmentManager fragmentManager = getSupportFragmentManager();
+        dialog.show(fragmentManager, "ExerciseSelectionDialog");
     }
     
     /**
@@ -395,18 +365,6 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
         userWorkout.setItems(newItems);
         
         return userWorkout;
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        
-        if (requestCode == 1001 && resultCode == RESULT_OK && data != null) {
-            Exercise selectedExercise = (Exercise) data.getSerializableExtra("selectedExercise");
-            if (selectedExercise != null) {
-                addExerciseToWorkout(selectedExercise);
-            }
-        }
     }
 
     @Override

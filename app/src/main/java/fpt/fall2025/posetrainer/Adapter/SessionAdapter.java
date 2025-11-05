@@ -27,7 +27,12 @@ public class SessionAdapter extends RecyclerView.Adapter<SessionAdapter.SessionV
     private Context context;
 
     public SessionAdapter(ArrayList<Session> sessions) {
-        this.sessions = sessions;
+        this.sessions = sessions != null ? sessions : new ArrayList<>();
+    }
+
+    public void updateSessions(ArrayList<Session> newSessions) {
+        this.sessions = newSessions != null ? newSessions : new ArrayList<>();
+        notifyDataSetChanged();
     }
 
     @NonNull

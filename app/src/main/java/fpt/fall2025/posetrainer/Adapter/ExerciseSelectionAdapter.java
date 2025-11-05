@@ -17,7 +17,7 @@ import fpt.fall2025.posetrainer.Domain.Exercise;
 import fpt.fall2025.posetrainer.R;
 
 /**
- * ExerciseSelectionAdapter - Adapter cho RecyclerView trong ExerciseSelectionActivity
+ * ExerciseSelectionAdapter - Adapter cho RecyclerView trong ExerciseSelectionDialog
  * Hiển thị danh sách exercises với khả năng chọn
  */
 public class ExerciseSelectionAdapter extends RecyclerView.Adapter<ExerciseSelectionAdapter.ExerciseViewHolder> {
