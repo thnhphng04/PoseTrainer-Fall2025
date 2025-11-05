@@ -14,6 +14,8 @@ import androidx.annotation.NonNull;
 
 import com.firebase.ui.firestore.FirestoreRecyclerAdapter;
 import com.firebase.ui.firestore.FirestoreRecyclerOptions;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.*;
 
 import fpt.fall2025.posetrainer.Data.CommunityRepository;
@@ -59,12 +61,25 @@ public class PostDetailActivity extends AppCompatActivity {
         btnSend         = findViewById(R.id.btnSend);
 
         // --- 1) Listen Post realtime ---
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
         postListener = db.collection("community").document(postId)
                 .addSnapshotListener((snap, e) -> {
                     if (e != null || snap == null || !snap.exists()) return;
                     Community p = snap.toObject(Community.class);
+                    if (p == null) return;
+
                     bindPost(p);
+
+                    // Cập nhật trạng thái like realtime
+                    if (currentUser != null && p.likedBy != null) {
+                        boolean nowLiked = p.likedBy.contains(currentUser.getUid());
+                        if (likedByMe != nowLiked) {
+                            likedByMe = nowLiked;
+                            renderLikeIcon();
+                        }
+                    }
                 });
+
 
         // --- 2) Initial like state ---
         repo.isLikedByMe(postId).addOnSuccessListener(b -> {
@@ -73,11 +88,11 @@ public class PostDetailActivity extends AppCompatActivity {
         });
 
         // --- 3) Like toggle ---
-        btnLike.setOnClickListener(v ->
-                repo.toggleLike(postId)
-                        .addOnSuccessListener(x -> repo.isLikedByMe(postId).addOnSuccessListener(b -> { likedByMe = b; renderLikeIcon(); }))
-                        .addOnFailureListener(err -> Toast.makeText(this, err.getMessage(), Toast.LENGTH_SHORT).show())
-        );
+        btnLike.setOnClickListener(v -> {
+            repo.toggleLike(postId)
+                    .addOnFailureListener(err ->
+                            Toast.makeText(this, "Lỗi khi like: " + err.getMessage(), Toast.LENGTH_SHORT).show());
+        });
 
         // --- 4) Comments list ---
         // --- 4) Comments list ---
