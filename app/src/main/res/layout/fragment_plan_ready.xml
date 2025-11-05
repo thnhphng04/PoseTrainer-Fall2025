@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:gravity="center"
+    android:background="@color/mainColor">
+
+    <TextView
+        android:layout_width="200dp"
+        android:layout_height="200dp"
+        android:text="🎉"
+        android:textSize="120sp"
+        android:gravity="center"
+        android:layout_marginBottom="32dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Kế hoạch của bạn đã sẵn sàng!"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:textColor="@color/white"
+        android:gravity="center"
+        android:layout_marginBottom="16dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Chúng tôi đã chọn kế hoạch này phù hợp với bạn nhất"
+        android:textSize="14sp"
+        android:textColor="#999999"
+        android:gravity="center"
+        android:layout_marginBottom="32dp"/>
+
+    <!-- Plan Card -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="4dp"
+        app:cardBackgroundColor="#4285F4">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="28 NGÀY"
+                android:textSize="12sp"
+                android:textColor="#FFFFFF"
+                android:layout_marginBottom="4dp"/>
+
+            <TextView
+                android:id="@+id/tv_plan_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="TOÀN THÂN THỬ THÁCH"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="#FFFFFF"
+                android:layout_marginBottom="12dp"/>
+
+            <TextView
+                android:id="@+id/tv_plan_description"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Bắt đầu hành trình tạo dáng cơ thể để tập trung vào tất cả các nhóm cơ và xây dựng cơ thể mơ ước của bạn trong 4 tuần!"
+                android:textSize="14sp"
+                android:textColor="#FFFFFF"
+                android:alpha="0.9"/>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+</LinearLayout>

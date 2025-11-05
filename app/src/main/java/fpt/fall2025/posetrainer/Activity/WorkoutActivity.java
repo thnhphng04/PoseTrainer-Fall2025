@@ -37,7 +37,7 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
     private int[] exerciseReps;
     private String[] exerciseDifficulties;
     private Session currentSession;
-    private boolean hasActiveSession = false; // Kiểm tra có session đang diễn ra không
+    private boolean hasActiveSession = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,7 +45,7 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
         binding = ActivityWorkoutBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
+//        getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
 
         // Initialize data
         exercises = new ArrayList<>();
@@ -152,7 +152,7 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
             createWorkoutSession();
         }
     }
-    
+
     /**
      * Resume workout hiện tại
      */

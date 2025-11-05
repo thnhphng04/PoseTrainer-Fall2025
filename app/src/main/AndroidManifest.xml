@@ -66,6 +66,9 @@
         <activity
             android:name=".Activity.PostDetailActivity"
             android:exported="false"/>
+        <activity
+            android:name=".Activity.OnboardingActivity"
+            android:theme="@style/HomeWorkoutTheme" />
 
         <!--        <activity-->
 <!--            android:name=".Activity.MainActivity"-->

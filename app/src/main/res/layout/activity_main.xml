@@ -44,7 +44,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Home"
+                android:text="Trang chủ"
                 android:textAlignment="center"
                 android:textColor="@color/white"
                 android:textSize="12sp" />
@@ -154,7 +154,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Profile"
+                android:text="Hồ sơ"
                 android:textAlignment="center"
                 android:textColor="@color/white"
                 android:textSize="12sp" />

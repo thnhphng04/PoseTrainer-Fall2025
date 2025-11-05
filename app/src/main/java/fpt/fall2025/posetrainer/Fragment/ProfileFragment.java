@@ -19,6 +19,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import fpt.fall2025.posetrainer.Activity.EditGoalsActivity;
 import fpt.fall2025.posetrainer.Activity.EditProfileActivity;
 import fpt.fall2025.posetrainer.Activity.LoginActivity;
+import fpt.fall2025.posetrainer.Activity.OnboardingActivity;
 import fpt.fall2025.posetrainer.Domain.User;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.databinding.FragmentProfileBinding;
@@ -53,29 +54,47 @@ public class ProfileFragment extends Fragment {
 
         setupClicks();
         loadUserFromFirestore();
+        loadUserStats();
     }
 
     private void setupClicks() {
-        binding.btnEditProfile.setOnClickListener(v ->
+        binding.btnPremium.setOnClickListener(v ->
+                Toast.makeText(requireContext(), "Tính năng Premium đang phát triển", Toast.LENGTH_SHORT).show()
+        );
+
+        binding.menuSettings.setOnClickListener(v ->
                 startActivity(new Intent(requireContext(), EditProfileActivity.class))
         );
-        // ➕ NÚT MỤC TIÊU
         binding.btnGoal.setOnClickListener(v ->
                 startActivity(new Intent(requireContext(), EditGoalsActivity.class))
         );
 
+        binding.menuSupport.setOnClickListener(v ->
+                startActivity(new Intent(requireContext(), OnboardingActivity.class))
+        );
+
+        // Menu Workouts
+        binding.menuWorkouts.setOnClickListener(v ->
+                Toast.makeText(requireContext(), "My Workouts - Coming soon!", Toast.LENGTH_SHORT).show()
+        );
+
+        // Menu Sync
+        binding.menuSync.setOnClickListener(v ->
+                Toast.makeText(requireContext(), "Đồng bộ dữ liệu", Toast.LENGTH_SHORT).show()
+        );
+
+        // Logout
         binding.btnLogout.setOnClickListener(v -> logout());
     }
 
     /**
-     * ✅ Load thông tin user giống MyWorkoutFragment:
-     *   - Lấy dữ liệu Firestore ("users" collection)
-     *   - Ưu tiên dùng photoUrl trong Firestore (Storage link)
+     * ✅ Load thông tin user từ Firestore
+     * Ưu tiên photoUrl trong Firestore, fallback sang FirebaseAuth
      */
     private void loadUserFromFirestore() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser == null) {
-            Toast.makeText(requireContext(), "No user logged in", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), "Chưa đăng nhập", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -89,6 +108,7 @@ public class ProfileFragment extends Fragment {
                         User user = doc.toObject(User.class);
                         if (user != null) {
                             String name = user.getDisplayName() != null ? user.getDisplayName() : "User";
+                            String email = user.getEmail() != null ? user.getEmail() : currentUser.getEmail();
                             String photoUrl = doc.contains("photoUrl") ? doc.getString("photoUrl") : null;
 
                             // Nếu chưa có photoUrl thì fallback sang FirebaseAuth
@@ -98,7 +118,7 @@ public class ProfileFragment extends Fragment {
                                 }
                             }
 
-                            bindUser(name, photoUrl);
+                            bindUser(name, email, photoUrl);
                         }
                     } else {
                         bindFromAuth(currentUser);
@@ -113,24 +133,28 @@ public class ProfileFragment extends Fragment {
 
     private void bindFromAuth(FirebaseUser user) {
         String name = user.getDisplayName() != null ? user.getDisplayName() : "User";
+        String email = user.getEmail() != null ? user.getEmail() : "email@example.com";
         String photo = user.getPhotoUrl() != null ? user.getPhotoUrl().toString() : null;
-        bindUser(name, photo);
+        bindUser(name, email, photo);
     }
 
-    private void bindUser(String name, String photoUrl) {
+    private void bindUser(String name, String email, String photoUrl) {
         binding.profileName.setText(name);
+        binding.profileEmail.setText(email);
 
         if (photoUrl != null && !photoUrl.isEmpty()) {
             Glide.with(this)
                     .load(photoUrl)
                     .placeholder(R.drawable.profile)
                     .error(R.drawable.profile)
+                    .circleCrop()
                     .into(binding.profileImage);
 
             Glide.with(this)
                     .load(photoUrl)
                     .placeholder(R.drawable.profile)
                     .error(R.drawable.profile)
+                    .circleCrop()
                     .into(binding.ivUserAvatarSmall);
         } else {
             binding.profileImage.setImageResource(R.drawable.profile);
@@ -138,10 +162,52 @@ public class ProfileFragment extends Fragment {
         }
     }
 
-    private void setLoading(boolean on) {
-        binding.progressBar.setVisibility(on ? View.VISIBLE : View.GONE);
-        binding.btnEditProfile.setEnabled(!on);
-        binding.btnLogout.setEnabled(!on);
+    /**
+     * ✅ Load workout statistics từ Firestore
+     */
+    private void loadUserStats() {
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser == null) return;
+
+        db.collection("users").document(currentUser.getUid())
+                .get()
+                .addOnSuccessListener(doc -> {
+                    if (doc.exists()) {
+                        // Lấy stats từ Firestore
+                        long workoutCount = doc.contains("workoutCount") ? doc.getLong("workoutCount") : 0;
+                        long calories = doc.contains("totalCalories") ? doc.getLong("totalCalories") : 0;
+                        long duration = doc.contains("totalDuration") ? doc.getLong("totalDuration") : 0;
+
+                        binding.tvWorkoutCount.setText(String.valueOf(workoutCount));
+                        binding.tvCalories.setText(String.valueOf(calories));
+                        binding.tvDuration.setText(String.valueOf(duration));
+                    } else {
+                        // Set giá trị mặc định
+                        setDefaultStats();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "loadUserStats error: " + e.getMessage());
+                    setDefaultStats();
+                });
+    }
+
+    private void setDefaultStats() {
+        binding.tvWorkoutCount.setText("0");
+        binding.tvCalories.setText("0");
+        binding.tvDuration.setText("0");
+    }
+
+    private void setLoading(boolean isLoading) {
+        binding.progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
+
+        // Disable/enable các view khi loading
+        binding.btnPremium.setEnabled(!isLoading);
+        binding.menuSettings.setEnabled(!isLoading);
+        binding.menuSupport.setEnabled(!isLoading);
+        binding.menuWorkouts.setEnabled(!isLoading);
+        binding.menuSync.setEnabled(!isLoading);
+        binding.btnLogout.setEnabled(!isLoading);
     }
 
     private void logout() {
@@ -166,24 +232,28 @@ public class ProfileFragment extends Fragment {
     }
 
     private void safeFirebaseSignOut() {
-        try { FirebaseAuth.getInstance().signOut(); }
-        catch (Exception e) { Log.w(TAG, "Firebase signOut error: " + e.getMessage()); }
+        try {
+            FirebaseAuth.getInstance().signOut();
+        } catch (Exception e) {
+            Log.w(TAG, "Firebase signOut error: " + e.getMessage());
+        }
     }
 
     private void goLogin() {
         setLoading(false);
-        Intent i = new Intent(requireContext(), LoginActivity.class);
-        i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
+        Intent intent = new Intent(requireContext(), LoginActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
                 | Intent.FLAG_ACTIVITY_NEW_TASK
                 | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(i);
+        startActivity(intent);
         requireActivity().finish();
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        loadUserFromFirestore(); // 🔁 Luôn tải lại khi quay lại Profile
+        loadUserFromFirestore();
+        loadUserStats();
     }
 
     @Override
