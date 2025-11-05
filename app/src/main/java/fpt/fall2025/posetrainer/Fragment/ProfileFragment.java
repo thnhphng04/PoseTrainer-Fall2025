@@ -103,6 +103,11 @@ public class ProfileFragment extends Fragment {
         db.collection("users").document(currentUser.getUid())
                 .get()
                 .addOnSuccessListener(doc -> {
+                    // Check if fragment view is still attached
+                    if (binding == null || !isAdded()) {
+                        return;
+                    }
+                    
                     setLoading(false);
                     if (doc.exists()) {
                         User user = doc.toObject(User.class);
@@ -125,6 +130,11 @@ public class ProfileFragment extends Fragment {
                     }
                 })
                 .addOnFailureListener(e -> {
+                    // Check if fragment view is still attached
+                    if (binding == null || !isAdded()) {
+                        return;
+                    }
+                    
                     setLoading(false);
                     Log.e(TAG, "loadUserFromFirestore: " + e.getMessage());
                     bindFromAuth(currentUser);
@@ -139,26 +149,43 @@ public class ProfileFragment extends Fragment {
     }
 
     private void bindUser(String name, String email, String photoUrl) {
-        binding.profileName.setText(name);
-        binding.profileEmail.setText(email);
+        // Check if binding is null (fragment view might be destroyed)
+        if (binding == null || !isAdded()) {
+            return;
+        }
+        
+        if (binding.profileName != null) {
+            binding.profileName.setText(name);
+        }
+        if (binding.profileEmail != null) {
+            binding.profileEmail.setText(email);
+        }
 
         if (photoUrl != null && !photoUrl.isEmpty()) {
-            Glide.with(this)
-                    .load(photoUrl)
-                    .placeholder(R.drawable.profile)
-                    .error(R.drawable.profile)
-                    .circleCrop()
-                    .into(binding.profileImage);
+            if (binding.profileImage != null) {
+                Glide.with(this)
+                        .load(photoUrl)
+                        .placeholder(R.drawable.profile)
+                        .error(R.drawable.profile)
+                        .circleCrop()
+                        .into(binding.profileImage);
+            }
 
-            Glide.with(this)
-                    .load(photoUrl)
-                    .placeholder(R.drawable.profile)
-                    .error(R.drawable.profile)
-                    .circleCrop()
-                    .into(binding.ivUserAvatarSmall);
+            if (binding.ivUserAvatarSmall != null) {
+                Glide.with(this)
+                        .load(photoUrl)
+                        .placeholder(R.drawable.profile)
+                        .error(R.drawable.profile)
+                        .circleCrop()
+                        .into(binding.ivUserAvatarSmall);
+            }
         } else {
-            binding.profileImage.setImageResource(R.drawable.profile);
-            binding.ivUserAvatarSmall.setImageResource(R.drawable.profile);
+            if (binding.profileImage != null) {
+                binding.profileImage.setImageResource(R.drawable.profile);
+            }
+            if (binding.ivUserAvatarSmall != null) {
+                binding.ivUserAvatarSmall.setImageResource(R.drawable.profile);
+            }
         }
     }
 
@@ -172,6 +199,11 @@ public class ProfileFragment extends Fragment {
         db.collection("users").document(currentUser.getUid())
                 .get()
                 .addOnSuccessListener(doc -> {
+                    // Check if fragment view is still attached
+                    if (binding == null || !isAdded()) {
+                        return;
+                    }
+                    
                     if (doc.exists()) {
                         // Lấy stats từ Firestore
                         long workoutCount = doc.contains("workoutCount") ? doc.getLong("workoutCount") : 0;
@@ -187,27 +219,62 @@ public class ProfileFragment extends Fragment {
                     }
                 })
                 .addOnFailureListener(e -> {
+                    // Check if fragment view is still attached
+                    if (binding == null || !isAdded()) {
+                        return;
+                    }
+                    
                     Log.e(TAG, "loadUserStats error: " + e.getMessage());
                     setDefaultStats();
                 });
     }
 
     private void setDefaultStats() {
-        binding.tvWorkoutCount.setText("0");
-        binding.tvCalories.setText("0");
-        binding.tvDuration.setText("0");
+        // Check if binding is null (fragment view might be destroyed)
+        if (binding == null || !isAdded()) {
+            return;
+        }
+        
+        if (binding.tvWorkoutCount != null) {
+            binding.tvWorkoutCount.setText("0");
+        }
+        if (binding.tvCalories != null) {
+            binding.tvCalories.setText("0");
+        }
+        if (binding.tvDuration != null) {
+            binding.tvDuration.setText("0");
+        }
     }
 
     private void setLoading(boolean isLoading) {
-        binding.progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
+        // Check if binding is null (fragment view might be destroyed)
+        if (binding == null) {
+            return;
+        }
+        
+        if (binding.progressBar != null) {
+            binding.progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
+        }
 
         // Disable/enable các view khi loading
-        binding.btnPremium.setEnabled(!isLoading);
-        binding.menuSettings.setEnabled(!isLoading);
-        binding.menuSupport.setEnabled(!isLoading);
-        binding.menuWorkouts.setEnabled(!isLoading);
-        binding.menuSync.setEnabled(!isLoading);
-        binding.btnLogout.setEnabled(!isLoading);
+        if (binding.btnPremium != null) {
+            binding.btnPremium.setEnabled(!isLoading);
+        }
+        if (binding.menuSettings != null) {
+            binding.menuSettings.setEnabled(!isLoading);
+        }
+        if (binding.menuSupport != null) {
+            binding.menuSupport.setEnabled(!isLoading);
+        }
+        if (binding.menuWorkouts != null) {
+            binding.menuWorkouts.setEnabled(!isLoading);
+        }
+        if (binding.menuSync != null) {
+            binding.menuSync.setEnabled(!isLoading);
+        }
+        if (binding.btnLogout != null) {
+            binding.btnLogout.setEnabled(!isLoading);
+        }
     }
 
     private void logout() {
