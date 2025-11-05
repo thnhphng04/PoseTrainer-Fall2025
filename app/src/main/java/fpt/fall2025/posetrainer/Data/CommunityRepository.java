@@ -33,20 +33,35 @@ public class CommunityRepository {
             DocumentSnapshot likeSnap = trx.get(likeRef);
             DocumentSnapshot postSnap = trx.get(pRef);
             long likes = postSnap.contains("likesCount") ? postSnap.getLong("likesCount") : 0L;
+            
+            // Lấy danh sách likedBy hiện tại và tạo ArrayList mới để đảm bảo tính nhất quán
+            List<String> currentLikedBy = (List<String>) postSnap.get("likedBy");
+            List<String> likedBy = new ArrayList<>();
+            if (currentLikedBy != null) {
+                likedBy.addAll(currentLikedBy);
+            }
 
             Map<String, Object> updates = new HashMap<>();
 
             if (likeSnap.exists()) {
+                // Unlike: xóa khỏi subcollection và likedBy array
                 trx.delete(likeRef);
+                likedBy.remove(uid); // Xóa uid khỏi array
                 updates.put("likesCount", Math.max(0, likes - 1));
             } else {
+                // Like: thêm vào subcollection và likedBy array
                 Map<String, Object> like = new HashMap<>();
                 like.put("uid", uid);
                 like.put("createdAt", FieldValue.serverTimestamp());
                 trx.set(likeRef, like);
+                if (!likedBy.contains(uid)) {
+                    likedBy.add(uid); // Thêm uid vào array
+                }
                 updates.put("likesCount", likes + 1);
             }
 
+            // Cập nhật field likedBy array trong document chính
+            updates.put("likedBy", likedBy);
             // ⚠️ Rule yêu cầu có updatedAt
             updates.put("updatedAt", FieldValue.serverTimestamp());
             trx.update(pRef, updates);

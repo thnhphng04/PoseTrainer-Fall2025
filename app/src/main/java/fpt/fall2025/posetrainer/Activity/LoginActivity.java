@@ -44,6 +44,8 @@ public class LoginActivity extends AppCompatActivity {
     public void onStart() {
         super.onStart();
         mAuth = FirebaseAuth.getInstance();
+        // Check if user is already logged in
+        checkCurrentUser();
     }
 
     @Override
@@ -241,5 +243,18 @@ public class LoginActivity extends AppCompatActivity {
                     // If check fails, try to create user document
                     createUserDocumentForGoogle(firebaseUser);
                 });
+    }
+
+    /**
+     * Check if user is already logged in and navigate to MainActivity if true
+     */
+    private void checkCurrentUser() {
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser != null) {
+            // User is already logged in, navigate to MainActivity
+            Log.d("FIREBASE_AUTH", "User already logged in: " + currentUser.getUid());
+            startActivity(new Intent(getApplicationContext(), MainActivity.class));
+            finish();
+        }
     }
 }
