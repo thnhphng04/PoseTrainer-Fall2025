@@ -1,4 +1,5 @@
 package fpt.fall2025.posetrainer.Fragment;
+
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
@@ -150,16 +151,12 @@ public class CommunityFragment extends Fragment {
                     if (doc.exists()) {
                         User user = doc.toObject(User.class);
                         if (user != null) {
-                            String name = user.getDisplayName() != null ? user.getDisplayName() : "User";
                             String photoUrl = doc.contains("photoUrl") ? doc.getString("photoUrl") : null;
-
                             if (photoUrl == null || photoUrl.isEmpty()) {
-                                if (currentUser.getPhotoUrl() != null) {
+                                if (currentUser.getPhotoUrl() != null)
                                     photoUrl = currentUser.getPhotoUrl().toString();
-                                }
                             }
-
-                            bindUser(name, photoUrl);
+                            bindUser(photoUrl);
                         }
                     } else {
                         bindFromAuth(currentUser);
@@ -171,7 +168,7 @@ public class CommunityFragment extends Fragment {
                 });
     }
 
-    private void bindUser(String name, String photoUrl) {
+    private void bindUser(String photoUrl) {
         if (photoUrl != null && !photoUrl.isEmpty()) {
             Glide.with(this)
                     .load(photoUrl)
@@ -212,7 +209,6 @@ public class CommunityFragment extends Fragment {
         private final TextView tvAuthor, tvContent, tvCounts, tvTime, tvLike, tvComment;
         private final ImageView ivImage, iconLike, iconComment;
         private final LinearLayout btnLike, btnComment;
-        private boolean isLiked = false;
 
         public PostVH(@NonNull View itemView) {
             super(itemView);
@@ -231,9 +227,9 @@ public class CommunityFragment extends Fragment {
         }
 
         public void bind(Community p) {
-            String author = (p.author != null && p.author.displayName != null && !p.author.displayName.isEmpty())
-                    ? p.author.displayName : "User";
-            tvAuthor.setText(author);
+            FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+
+            tvAuthor.setText((p.author != null && p.author.displayName != null) ? p.author.displayName : "User");
             tvContent.setText(p.content != null ? p.content : "");
             tvCounts.setText("❤ " + p.likesCount + "   💬 " + p.commentsCount);
 
@@ -247,75 +243,42 @@ public class CommunityFragment extends Fragment {
                 ivImage.setVisibility(View.VISIBLE);
             } else ivImage.setVisibility(View.GONE);
 
-            FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-            if (currentUser != null && p.likedBy != null && p.likedBy.contains(currentUser.getUid())) {
-                isLiked = true;
-                iconLike.setImageResource(R.drawable.ic_favorite_filled);
-                iconLike.setColorFilter(android.graphics.Color.parseColor("#E0245E"));
-                tvLike.setTextColor(android.graphics.Color.parseColor("#E0245E"));
-            } else {
-                isLiked = false;
-                iconLike.setImageResource(R.drawable.ic_favorite_border);
-                iconLike.setColorFilter(android.graphics.Color.parseColor("#606770"));
-                tvLike.setTextColor(android.graphics.Color.parseColor("#606770"));
-            }
+            // --- Hiển thị trạng thái like realtime ---
+            boolean liked = currentUser != null && p.likedBy != null && p.likedBy.contains(currentUser.getUid());
+            renderLike(liked);
 
-            // ⚡ Xử lý Like / Unlike
+            // --- Xử lý Like / Unlike ---
             btnLike.setOnClickListener(v -> {
-                FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-                if (user == null) {
+                if (currentUser == null) {
                     Toast.makeText(itemView.getContext(), "Bạn cần đăng nhập để thích bài viết", Toast.LENGTH_SHORT).show();
                     return;
                 }
 
-                String uid = user.getUid();
-                DocumentReference postRef = FirebaseFirestore.getInstance()
-                        .collection("community")
-                        .document(p.id);
-
-                FirebaseFirestore.getInstance().runTransaction(transaction -> {
-                    DocumentSnapshot snapshot = transaction.get(postRef);
-                    Long likesCount = snapshot.getLong("likesCount");
-                    if (likesCount == null) likesCount = 0L;
-
-                    List<String> likedBy = (List<String>) snapshot.get("likedBy");
-                    if (likedBy == null) likedBy = new ArrayList<>();
-
-                    if (likedBy.contains(uid)) {
-                        likedBy.remove(uid);
-                        likesCount--;
-                        isLiked = false;
-                    } else {
-                        likedBy.add(uid);
-                        likesCount++;
-                        isLiked = true;
-                    }
-
-                    transaction.update(postRef, "likedBy", likedBy);
-                    transaction.update(postRef, "likesCount", likesCount);
-                    return null;
-                }).addOnSuccessListener(aVoid -> {
-                    if (isLiked) {
-                        iconLike.setImageResource(R.drawable.ic_favorite_filled);
-                        iconLike.setColorFilter(android.graphics.Color.parseColor("#E0245E"));
-                        tvLike.setTextColor(android.graphics.Color.parseColor("#E0245E"));
-                    } else {
-                        iconLike.setImageResource(R.drawable.ic_favorite_border);
-                        iconLike.setColorFilter(android.graphics.Color.parseColor("#606770"));
-                        tvLike.setTextColor(android.graphics.Color.parseColor("#606770"));
-                    }
-                }).addOnFailureListener(e -> {
-                    Log.e("LIKE", "Error updating like", e);
-                    Toast.makeText(itemView.getContext(), "Lỗi cập nhật lượt thích", Toast.LENGTH_SHORT).show();
-                });
+                // 🔹 Dùng repository chung
+                new fpt.fall2025.posetrainer.Data.CommunityRepository()
+                        .toggleLike(p.id)
+                        .addOnFailureListener(e ->
+                                Log.e("LIKE", "Error toggling like: " + e.getMessage()));
             });
 
-            // 💬 Nút Comment
+            // --- Mở chi tiết bài viết ---
             btnComment.setOnClickListener(v -> {
                 Intent i = new Intent(itemView.getContext(), PostDetailActivity.class);
                 i.putExtra(PostDetailActivity.EXTRA_POST_ID, p.id);
                 itemView.getContext().startActivity(i);
             });
+        }
+
+        private void renderLike(boolean liked) {
+            if (liked) {
+                iconLike.setImageResource(R.drawable.ic_favorite_filled);
+                iconLike.setColorFilter(android.graphics.Color.parseColor("#E0245E"));
+                tvLike.setTextColor(android.graphics.Color.parseColor("#E0245E"));
+            } else {
+                iconLike.setImageResource(R.drawable.ic_favorite_border);
+                iconLike.setColorFilter(android.graphics.Color.parseColor("#606770"));
+                tvLike.setTextColor(android.graphics.Color.parseColor("#606770"));
+            }
         }
     }
 }

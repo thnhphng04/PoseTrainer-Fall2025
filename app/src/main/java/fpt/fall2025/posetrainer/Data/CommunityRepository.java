@@ -3,8 +3,12 @@ package fpt.fall2025.posetrainer.Data;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.*;
+
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class CommunityRepository {
@@ -15,53 +19,73 @@ public class CommunityRepository {
         return db.collection("community").document(postId);
     }
 
-    // --- 1) Toggle Like ---
+    // =============================
+    // 1️⃣ Toggle Like (field likedBy)
+    // =============================
     public Task<Void> toggleLike(String postId) {
         if (auth.getCurrentUser() == null) return Tasks.forException(new Exception("Not signed in"));
         String uid = auth.getCurrentUser().getUid();
 
         DocumentReference likeRef = postRef(postId).collection("likes").document(uid);
-        DocumentReference pRef    = postRef(postId);
+        DocumentReference pRef = postRef(postId);
 
         return db.runTransaction(trx -> {
             DocumentSnapshot likeSnap = trx.get(likeRef);
             DocumentSnapshot postSnap = trx.get(pRef);
             long likes = postSnap.contains("likesCount") ? postSnap.getLong("likesCount") : 0L;
 
+            Map<String, Object> updates = new HashMap<>();
+
             if (likeSnap.exists()) {
                 trx.delete(likeRef);
-                trx.update(pRef, "likesCount", Math.max(0, likes - 1));
+                updates.put("likesCount", Math.max(0, likes - 1));
             } else {
                 Map<String, Object> like = new HashMap<>();
                 like.put("uid", uid);
                 like.put("createdAt", FieldValue.serverTimestamp());
                 trx.set(likeRef, like);
-                trx.update(pRef, "likesCount", likes + 1);
+                updates.put("likesCount", likes + 1);
             }
+
+            // ⚠️ Rule yêu cầu có updatedAt
+            updates.put("updatedAt", FieldValue.serverTimestamp());
+            trx.update(pRef, updates);
+
             return null;
         });
     }
 
-    // --- 2) Kiểm tra đã like chưa (1 lần) ---
+
+    // =============================
+    // 2️⃣ Kiểm tra user đã like chưa
+    // =============================
     public Task<Boolean> isLikedByMe(String postId) {
-        if (auth.getCurrentUser() == null) return Tasks.forResult(false);
-        String uid = auth.getCurrentUser().getUid();
-        return postRef(postId).collection("likes").document(uid).get()
-                .continueWith(t -> t.isSuccessful() && t.getResult().exists());
+        FirebaseUser user = auth.getCurrentUser();
+        if (user == null) return Tasks.forResult(false);
+
+        String uid = user.getUid();
+        return postRef(postId).get().continueWith(task -> {
+            if (!task.isSuccessful() || task.getResult() == null) return false;
+            List<String> likedBy = (List<String>) task.getResult().get("likedBy");
+            return likedBy != null && likedBy.contains(uid);
+        });
     }
 
-    // --- 3) Thêm Comment ---
+    // =============================
+    // 3️⃣ Thêm Comment
+    // =============================
     public Task<Void> addComment(String postId, String text) {
-        if (auth.getCurrentUser() == null) return Tasks.forException(new Exception("Not signed in"));
-        String uid = auth.getCurrentUser().getUid();
-        String displayName = auth.getCurrentUser().getDisplayName() != null
-                ? auth.getCurrentUser().getDisplayName()
-                : (auth.getCurrentUser().getEmail() != null ? auth.getCurrentUser().getEmail() : "User");
-        String photoURL = auth.getCurrentUser().getPhotoUrl() != null
-                ? auth.getCurrentUser().getPhotoUrl().toString() : "";
+        FirebaseUser user = auth.getCurrentUser();
+        if (user == null) return Tasks.forException(new Exception("Not signed in"));
+
+        String uid = user.getUid();
+        String displayName = user.getDisplayName() != null ? user.getDisplayName()
+                : (user.getEmail() != null ? user.getEmail() : "User");
+        String photoURL = user.getPhotoUrl() != null ? user.getPhotoUrl().toString() : "";
 
         DocumentReference pRef = postRef(postId);
         DocumentReference cRef = pRef.collection("comments").document();
+
         Map<String, Object> cmt = new HashMap<>();
         cmt.put("id", cRef.getId());
         cmt.put("postId", postId);
@@ -73,11 +97,11 @@ public class CommunityRepository {
 
         return db.runTransaction(trx -> {
             DocumentSnapshot postSnap = trx.get(pRef);
-            long count = postSnap.contains("commentsCount") ? postSnap.getLong("commentsCount") : 0L;
+            Long count = postSnap.getLong("commentsCount");
+            if (count == null) count = 0L;
             trx.set(cRef, cmt);
             trx.update(pRef, "commentsCount", count + 1);
             return null;
         });
     }
 }
-
