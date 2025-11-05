@@ -209,6 +209,10 @@ public class CommunityFragment extends Fragment {
         private final TextView tvAuthor, tvContent, tvCounts, tvTime, tvLike, tvComment;
         private final ImageView ivImage, iconLike, iconComment;
         private final LinearLayout btnLike, btnComment;
+        private boolean isLiked = false; // Trạng thái like hiện tại
+        private String currentPostId = null; // ID bài viết hiện tại
+        private long currentLikesCount = 0; // Số lượng like hiện tại
+        private long currentCommentsCount = 0; // Số lượng comment hiện tại
 
         public PostVH(@NonNull View itemView) {
             super(itemView);
@@ -243,22 +247,48 @@ public class CommunityFragment extends Fragment {
                 ivImage.setVisibility(View.VISIBLE);
             } else ivImage.setVisibility(View.GONE);
 
-            // --- Hiển thị trạng thái like realtime ---
-            boolean liked = currentUser != null && p.likedBy != null && p.likedBy.contains(currentUser.getUid());
-            renderLike(liked);
+            // --- Cập nhật trạng thái like từ Firestore ---
+            isLiked = currentUser != null && p.likedBy != null && p.likedBy.contains(currentUser.getUid());
+            currentPostId = p.id;
+            currentLikesCount = p.likesCount;
+            currentCommentsCount = p.commentsCount;
+            renderLike(isLiked);
 
-            // --- Xử lý Like / Unlike ---
+            // --- Xử lý Like / Unlike với optimistic update ---
             btnLike.setOnClickListener(v -> {
                 if (currentUser == null) {
                     Toast.makeText(itemView.getContext(), "Bạn cần đăng nhập để thích bài viết", Toast.LENGTH_SHORT).show();
                     return;
                 }
 
-                // 🔹 Dùng repository chung
+                // Lưu giá trị ban đầu để rollback nếu có lỗi
+                boolean previousLiked = isLiked;
+                long previousLikesCount = currentLikesCount;
+
+                // Toggle trạng thái ngay lập tức (optimistic update)
+                isLiked = !isLiked;
+                renderLike(isLiked);
+                
+                // Cập nhật số lượng like tạm thời
+                if (isLiked) {
+                    currentLikesCount++;
+                    tvCounts.setText("❤ " + currentLikesCount + "   💬 " + currentCommentsCount);
+                } else {
+                    currentLikesCount = Math.max(0, currentLikesCount - 1);
+                    tvCounts.setText("❤ " + currentLikesCount + "   💬 " + currentCommentsCount);
+                }
+
+                // 🔹 Đồng bộ với Firestore
                 new fpt.fall2025.posetrainer.Data.CommunityRepository()
-                        .toggleLike(p.id)
-                        .addOnFailureListener(e ->
-                                Log.e("LIKE", "Error toggling like: " + e.getMessage()));
+                        .toggleLike(currentPostId)
+                        .addOnFailureListener(e -> {
+                            // Nếu có lỗi, rollback lại trạng thái ban đầu
+                            isLiked = previousLiked;
+                            currentLikesCount = previousLikesCount;
+                            renderLike(isLiked);
+                            tvCounts.setText("❤ " + currentLikesCount + "   💬 " + currentCommentsCount);
+                            Log.e("LIKE", "Error toggling like: " + e.getMessage());
+                        });
             });
 
             // --- Mở chi tiết bài viết ---
@@ -274,10 +304,12 @@ public class CommunityFragment extends Fragment {
                 iconLike.setImageResource(R.drawable.ic_favorite_filled);
                 iconLike.setColorFilter(android.graphics.Color.parseColor("#E0245E"));
                 tvLike.setTextColor(android.graphics.Color.parseColor("#E0245E"));
+                tvLike.setText("Đã thích");
             } else {
                 iconLike.setImageResource(R.drawable.ic_favorite_border);
                 iconLike.setColorFilter(android.graphics.Color.parseColor("#606770"));
                 tvLike.setTextColor(android.graphics.Color.parseColor("#606770"));
+                tvLike.setText("Thích");
             }
         }
     }
