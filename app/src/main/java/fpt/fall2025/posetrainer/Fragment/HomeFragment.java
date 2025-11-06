@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.*;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -24,13 +25,19 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.bumptech.glide.Glide;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class HomeFragment extends Fragment {
     private static final String TAG = "HomeFragment";
     private FragmentHomeBinding binding;
     private ArrayList<WorkoutTemplate> workoutTemplates;
+    private ArrayList<WorkoutTemplate> filteredWorkoutTemplates;
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
+    
+    // Filter states
+    private String selectedCategory = "Latest Updates";
+    private String selectedDuration = null;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
@@ -47,14 +54,20 @@ public class HomeFragment extends Fragment {
 
         initBodyPartsListeners();
         workoutTemplates = new ArrayList<>();
+        filteredWorkoutTemplates = new ArrayList<>();
 
         binding.view1.setLayoutManager(
                 new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false)
         );
 
         setupSearchListeners();
+        setupFilterListeners();
         loadCurrentUserInfo();
         loadWorkoutTemplates();
+        
+        // Initialize chip states
+        updateCategoryChipStates();
+        updateDurationChipStates();
     }
 
     private void setupSearchListeners() {
@@ -68,7 +81,7 @@ public class HomeFragment extends Fragment {
                 (androidx.appcompat.app.AppCompatActivity) getActivity(),
                 templates -> {
                     workoutTemplates = templates;
-                    binding.view1.setAdapter(new WorkoutTemplateAdapter(workoutTemplates));
+                    applyFilters();
                 }
         );
     }
@@ -162,6 +175,156 @@ public class HomeFragment extends Fragment {
         Intent intent = new Intent(getActivity(), fpt.fall2025.posetrainer.Activity.ChallengeDetailActivity.class);
         intent.putExtra("body_part", bodyPart);
         startActivity(intent);
+    }
+
+    /**
+     * Setup click listeners for category and duration filter chips
+     */
+    private void setupFilterListeners() {
+        // Category chips
+        binding.chipLatest.setOnClickListener(v -> selectCategory("Latest Updates"));
+        binding.chipBeginner.setOnClickListener(v -> selectCategory("Beginner"));
+        binding.chipIntermediate.setOnClickListener(v -> selectCategory("Intermediate"));
+        binding.chipAdvanced.setOnClickListener(v -> selectCategory("Advanced"));
+
+        // Duration chips
+        binding.chip17min.setOnClickListener(v -> selectDuration("1-7 min"));
+        binding.chip815min.setOnClickListener(v -> selectDuration("8-15 min"));
+        binding.chip15minPlus.setOnClickListener(v -> selectDuration(">15 min"));
+        binding.chipStretching.setOnClickListener(v -> selectDuration("Stretching & Warm-up"));
+    }
+
+    /**
+     * Handle category chip selection
+     */
+    private void selectCategory(String category) {
+        selectedCategory = category;
+        updateCategoryChipStates();
+        applyFilters();
+    }
+
+    /**
+     * Handle duration chip selection
+     */
+    private void selectDuration(String duration) {
+        if (selectedDuration != null && selectedDuration.equals(duration)) {
+            // Deselect if same duration is clicked again
+            selectedDuration = null;
+        } else {
+            selectedDuration = duration;
+        }
+        updateDurationChipStates();
+        applyFilters();
+    }
+
+    /**
+     * Update visual states of category chips
+     */
+    private void updateCategoryChipStates() {
+        // Reset all chips to unselected state
+        binding.chipLatest.setBackgroundResource(R.drawable.chip_bg);
+        binding.chipBeginner.setBackgroundResource(R.drawable.chip_bg);
+        binding.chipIntermediate.setBackgroundResource(R.drawable.chip_bg);
+        binding.chipAdvanced.setBackgroundResource(R.drawable.chip_bg);
+
+        // Set selected chip
+        switch (selectedCategory) {
+            case "Latest Updates":
+                binding.chipLatest.setBackgroundResource(R.drawable.chip_selected_bg);
+                break;
+            case "Beginner":
+                binding.chipBeginner.setBackgroundResource(R.drawable.chip_selected_bg);
+                break;
+            case "Intermediate":
+                binding.chipIntermediate.setBackgroundResource(R.drawable.chip_selected_bg);
+                break;
+            case "Advanced":
+                binding.chipAdvanced.setBackgroundResource(R.drawable.chip_selected_bg);
+                break;
+        }
+    }
+
+    /**
+     * Update visual states of duration chips
+     */
+    private void updateDurationChipStates() {
+        // Reset all chips to unselected state
+        binding.chip17min.setBackgroundResource(R.drawable.chip_bg);
+        binding.chip815min.setBackgroundResource(R.drawable.chip_bg);
+        binding.chip15minPlus.setBackgroundResource(R.drawable.chip_bg);
+        binding.chipStretching.setBackgroundResource(R.drawable.chip_bg);
+
+        // Set selected chip if any
+        if (selectedDuration != null) {
+            switch (selectedDuration) {
+                case "1-7 min":
+                    binding.chip17min.setBackgroundResource(R.drawable.chip_selected_bg);
+                    break;
+                case "8-15 min":
+                    binding.chip815min.setBackgroundResource(R.drawable.chip_selected_bg);
+                    break;
+                case ">15 min":
+                    binding.chip15minPlus.setBackgroundResource(R.drawable.chip_selected_bg);
+                    break;
+                case "Stretching & Warm-up":
+                    binding.chipStretching.setBackgroundResource(R.drawable.chip_selected_bg);
+                    break;
+            }
+        }
+    }
+
+    /**
+     * Apply filters based on selected category and duration
+     */
+    private void applyFilters() {
+        filteredWorkoutTemplates.clear();
+
+        for (WorkoutTemplate template : workoutTemplates) {
+            boolean matchesCategory = false;
+            boolean matchesDuration = false;
+
+            // Check category filter
+            if (selectedCategory.equals("Latest Updates")) {
+                matchesCategory = true; // Show all for latest updates
+            } else {
+                matchesCategory = template.getLevel() != null && 
+                    template.getLevel().equalsIgnoreCase(selectedCategory);
+            }
+
+            // Check duration filter
+            if (selectedDuration == null) {
+                matchesDuration = true; // No duration filter
+            } else {
+                int duration = template.getEstDurationMin();
+                switch (selectedDuration) {
+                    case "1-7 min":
+                        matchesDuration = duration >= 1 && duration <= 7;
+                        break;
+                    case "8-15 min":
+                        matchesDuration = duration >= 8 && duration <= 15;
+                        break;
+                    case ">15 min":
+                        matchesDuration = duration > 15;
+                        break;
+                    case "Stretching & Warm-up":
+                        // For stretching, we might want to check focus or title
+                        matchesDuration = template.getFocus() != null && 
+                            template.getFocus().contains("Stretching") ||
+                            template.getTitle() != null && 
+                            template.getTitle().toLowerCase().contains("stretch");
+                        break;
+                }
+            }
+
+            if (matchesCategory && matchesDuration) {
+                filteredWorkoutTemplates.add(template);
+            }
+        }
+
+        // Update RecyclerView
+        binding.view1.setAdapter(new WorkoutTemplateAdapter(filteredWorkoutTemplates));
+        
+        Log.d(TAG, "Filtered workouts: " + filteredWorkoutTemplates.size() + " out of " + workoutTemplates.size());
     }
 
     @Override

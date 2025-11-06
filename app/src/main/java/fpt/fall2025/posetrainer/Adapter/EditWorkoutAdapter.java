@@ -115,7 +115,7 @@ public class EditWorkoutAdapter extends RecyclerView.Adapter<EditWorkoutAdapter.
         }
 
         public void bind(Exercise exercise, int position) {
-            // Set exercise name
+            // Set exercise name (no duplicate counting)
             titleTxt.setText(exercise.getName());
             
             // Set level/difficulty
@@ -172,21 +172,29 @@ public class EditWorkoutAdapter extends RecyclerView.Adapter<EditWorkoutAdapter.
          * Load exercise image using Glide
          */
         private void loadExerciseImage(Exercise exercise) {
-            if (exercise.getMedia() != null) {
-                // Try to load thumbnail first
-                if (exercise.getMedia().getThumbnailUrl() != null && !exercise.getMedia().getThumbnailUrl().isEmpty()) {
+            if (exercise.getMedia() != null && exercise.getMedia().getThumbnailUrl() != null) {
+                // Check if it's a local drawable resource
+                String thumbnailUrl = exercise.getMedia().getThumbnailUrl();
+                if (thumbnailUrl.startsWith("pic_")) {
+                    // It's a local drawable resource
+                    int resId = itemView.getContext().getResources().getIdentifier(thumbnailUrl, "drawable", itemView.getContext().getPackageName());
                     Glide.with(itemView.getContext())
-                            .load(exercise.getMedia().getThumbnailUrl())
-                            .placeholder(R.drawable.ic_favorite_border)
-                            .error(R.drawable.ic_favorite_border)
+                            .load(resId)
                             .into(pic);
                 } else {
-                    // No thumbnail available, use default icon
-                    pic.setImageResource(R.drawable.ic_favorite_border);
+                    // It's a remote URL
+                    Glide.with(itemView.getContext())
+                            .load(thumbnailUrl)
+                            .placeholder(R.drawable.pic_1_1)
+                            .error(R.drawable.pic_1_1)
+                            .into(pic);
                 }
             } else {
-                // No media object, use default icon
-                pic.setImageResource(R.drawable.ic_favorite_border);
+                // Fallback to default image (same as WorkoutActivity)
+                int resId = itemView.getContext().getResources().getIdentifier("pic_1_1", "drawable", itemView.getContext().getPackageName());
+                Glide.with(itemView.getContext())
+                        .load(resId)
+                        .into(pic);
             }
         }
     }

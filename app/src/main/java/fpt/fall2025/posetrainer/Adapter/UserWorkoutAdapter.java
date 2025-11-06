@@ -71,8 +71,8 @@ public class UserWorkoutAdapter extends RecyclerView.Adapter<UserWorkoutAdapter.
             if (context != null) {
                 Intent intent = new Intent(context, WorkoutActivity.class);
                 intent.putExtra("userWorkoutId", userWorkout.getId());
-                intent.putExtra("fromFavoriteFragment", true); // Flag để biết từ FavoriteFragment
-                System.out.println("UserWorkoutAdapter: Starting WorkoutActivity with ID: " + userWorkout.getId() + " from FavoriteFragment");
+                intent.putExtra("fromMyWorkoutFragment", true); // Flag để biết từ MyWorkoutFragment
+                System.out.println("UserWorkoutAdapter: Starting WorkoutActivity with ID: " + userWorkout.getId() + " from MyWorkoutFragment");
                 context.startActivity(intent);
             } else {
                 System.out.println("UserWorkoutAdapter: Context is null, cannot start activity");

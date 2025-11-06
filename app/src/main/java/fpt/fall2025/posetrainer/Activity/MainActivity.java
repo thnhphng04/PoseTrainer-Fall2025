@@ -8,7 +8,7 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 
 import fpt.fall2025.posetrainer.Fragment.HomeFragment;
-import fpt.fall2025.posetrainer.Fragment.FavoriteFragment;
+import fpt.fall2025.posetrainer.Fragment.MyWorkoutFragment;
 import fpt.fall2025.posetrainer.Fragment.DailyFragment;
 import fpt.fall2025.posetrainer.Fragment.ProfileFragment;
 import fpt.fall2025.posetrainer.Fragment.CommunityFragment;
@@ -35,7 +35,7 @@ public class MainActivity extends AppCompatActivity {
     private void setupBottomNavigation() {
         binding.homeBtn.setOnClickListener(v -> loadFragment(new HomeFragment()));
         binding.personalBtn.setOnClickListener(v -> {
-            loadFragment(new FavoriteFragment());
+            loadFragment(new MyWorkoutFragment());
         });
         binding.dailyBtn.setOnClickListener(v -> {
             loadFragment(new DailyFragment());

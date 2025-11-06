@@ -11,7 +11,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
-import fpt.fall2025.posetrainer.Activity.WorkoutActivity;
+import fpt.fall2025.posetrainer.Activity.UserWorkoutDetailActivity;
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
@@ -74,10 +74,10 @@ public class UserWorkoutCardAdapter extends RecyclerView.Adapter<UserWorkoutCard
         // Set click listener on the root view to start workout
         holder.binding.getRoot().setOnClickListener(v -> {
             if (context != null) {
-                Intent intent = new Intent(context, WorkoutActivity.class);
+                Intent intent = new Intent(context, UserWorkoutDetailActivity.class);
                 intent.putExtra("userWorkoutId", userWorkout.getId());
-                intent.putExtra("fromFavoriteFragment", true);
-                System.out.println("UserWorkoutCardAdapter: Starting WorkoutActivity with ID: " + userWorkout.getId() + " from FavoriteFragment");
+                intent.putExtra("fromMyWorkoutFragment", true);
+                System.out.println("UserWorkoutCardAdapter: Starting UserWorkoutDetailActivity with ID: " + userWorkout.getId() + " from MyWorkoutFragment");
                 context.startActivity(intent);
             } else {
                 System.out.println("UserWorkoutCardAdapter: Context is null, cannot start activity");

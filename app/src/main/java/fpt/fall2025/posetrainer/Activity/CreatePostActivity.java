@@ -14,25 +14,26 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
+import com.bumptech.glide.Glide;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.*;
 import com.google.firebase.storage.*;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import fpt.fall2025.posetrainer.Domain.Community; // dùng domain gộp
 import fpt.fall2025.posetrainer.R;
 
 public class CreatePostActivity extends AppCompatActivity {
 
     private EditText edtContent;
-    private ImageView ivPreview;
+    private ImageView ivPreview, ivUserAvatar;
     private ProgressBar progress;
     private Button btnPickImage, btnPost;
+    private ImageButton btnBack;
+    private TextView tvUserName;
 
     private Uri pickedImage = null;
 
@@ -46,6 +47,7 @@ public class CreatePostActivity extends AppCompatActivity {
                         if (uri != null) {
                             pickedImage = uri;
                             ivPreview.setImageURI(uri);
+                            ivPreview.setVisibility(ImageView.VISIBLE);
                         }
                     });
 
@@ -58,14 +60,34 @@ public class CreatePostActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
         storage = FirebaseStorage.getInstance();
 
+        initViews();
+        setupUserInfo();
+
+        btnPickImage.setOnClickListener(v -> selectImage());
+        btnPost.setOnClickListener(v -> createPost());
+        btnBack.setOnClickListener(v -> onBackPressed());
+    }
+
+    private void initViews() {
         edtContent = findViewById(R.id.edtContent);
         ivPreview = findViewById(R.id.ivPreview);
         progress = findViewById(R.id.progress);
         btnPickImage = findViewById(R.id.btnPickImage);
         btnPost = findViewById(R.id.btnPost);
+        btnBack = findViewById(R.id.btnBack);
+        ivUserAvatar = findViewById(R.id.ivUserAvatar);
+        tvUserName = findViewById(R.id.tvUserName);
+    }
 
-        btnPickImage.setOnClickListener(v -> selectImage());
-        btnPost.setOnClickListener(v -> createPost());
+    private void setupUserInfo() {
+        FirebaseUser user = auth.getCurrentUser();
+        if (user != null) {
+            tvUserName.setText(user.getDisplayName() != null ? user.getDisplayName()
+                    : (user.getEmail() != null ? user.getEmail() : "Người dùng"));
+            if (user.getPhotoUrl() != null) {
+                Glide.with(this).load(user.getPhotoUrl()).into(ivUserAvatar);
+            }
+        }
     }
 
     private void selectImage() {
@@ -92,11 +114,14 @@ public class CreatePostActivity extends AppCompatActivity {
             return;
         }
         String content = edtContent.getText().toString().trim();
+        if (content.isEmpty() && pickedImage == null) {
+            Toast.makeText(this, "Vui lòng nhập nội dung hoặc chọn ảnh!", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         setUiEnabled(false);
         progress.setVisibility(ProgressBar.VISIBLE);
 
-        // 1) Tạo doc post trống (khởi tạo counters & timestamps)
         DocumentReference postRef = db.collection("community").document();
         String postId = postRef.getId();
 
@@ -108,7 +133,7 @@ public class CreatePostActivity extends AppCompatActivity {
 
         Map<String, Object> post = new HashMap<>();
         post.put("id", postId);
-        post.put("uid", user.getUid());           // quan trọng để query "bài của tôi"
+        post.put("uid", user.getUid());
         post.put("author", author);
         post.put("content", content);
         post.put("imageUrl", "");
@@ -120,7 +145,6 @@ public class CreatePostActivity extends AppCompatActivity {
 
         Task<Void> chain = postRef.set(post);
 
-        // 2) Nếu có ảnh: upload ảnh + update imageUrl / imagePath
         if (pickedImage != null) {
             String path = "community/" + user.getUid() + "/" + postId + "/image.jpg";
             StorageReference ref = storage.getReference().child(path);
@@ -150,4 +174,3 @@ public class CreatePostActivity extends AppCompatActivity {
                 });
     }
 }
-

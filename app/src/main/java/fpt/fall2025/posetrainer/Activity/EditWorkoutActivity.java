@@ -12,6 +12,7 @@ import com.google.firebase.auth.FirebaseUser;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.FragmentManager;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -22,7 +23,7 @@ import java.util.UUID;
 
 import fpt.fall2025.posetrainer.Adapter.EditWorkoutAdapter;
 import fpt.fall2025.posetrainer.Adapter.ExerciseItemTouchHelper;
-import fpt.fall2025.posetrainer.Activity.ExerciseSelectionActivity;
+import fpt.fall2025.posetrainer.Dialog.ExerciseSelectionDialog;
 import fpt.fall2025.posetrainer.Domain.Exercise;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
@@ -168,8 +169,11 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
     private void updateWorkoutTemplateUI() {
         if (originalWorkoutTemplate == null) return;
 
+        // Set editable text fields
         binding.titleTxt.setText(originalWorkoutTemplate.getTitle());
         binding.descriptionTxt.setText(originalWorkoutTemplate.getDescription());
+        
+        // Set read-only display fields
         binding.levelTxt.setText(originalWorkoutTemplate.getLevel());
         binding.durationTxt.setText(originalWorkoutTemplate.getEstDurationMin() + " min");
     }
@@ -227,76 +231,16 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
     }
 
     /**
-     * Open exercise selection dialog/activity
+     * Open exercise selection dialog
      */
     private void openExerciseSelection() {
-        // Load all available exercises from Firebase
-        loadAllExercises();
-    }
-    
-    /**
-     * Load all available exercises from Firebase
-     */
-    private void loadAllExercises() {
-        Log.d(TAG, "Loading all exercises from Firebase for selection");
-        
-        // Show loading indicator
-        Toast.makeText(this, "Loading exercises...", Toast.LENGTH_SHORT).show();
-        
-        // Load all exercises from Firebase
-        FirebaseService.getInstance().loadAllExercises(this, new FirebaseService.OnExercisesLoadedListener() {
-            @Override
-            public void onExercisesLoaded(ArrayList<Exercise> availableExercises) {
-                if (availableExercises != null && !availableExercises.isEmpty()) {
-                    Log.d(TAG, "Loaded " + availableExercises.size() + " exercises from Firebase");
-                    // Filter out exercises that are already in the workout
-                    ArrayList<Exercise> filteredExercises = filterAvailableExercises(availableExercises);
-                    showExerciseSelectionDialog(filteredExercises);
-                } else {
-                    Log.e(TAG, "No exercises loaded from Firebase");
-                    Toast.makeText(EditWorkoutActivity.this, "No exercises available", Toast.LENGTH_SHORT).show();
-                }
-            }
+        ExerciseSelectionDialog dialog = new ExerciseSelectionDialog();
+        dialog.setOnExerciseSelectedListener(exercise -> {
+            addExerciseToWorkout(exercise);
         });
-    }
-    
-    /**
-     * Filter out exercises that are already in the workout
-     */
-    private ArrayList<Exercise> filterAvailableExercises(ArrayList<Exercise> allExercises) {
-        ArrayList<Exercise> filteredExercises = new ArrayList<>();
         
-        for (Exercise exercise : allExercises) {
-            boolean alreadyInWorkout = false;
-            for (Exercise workoutExercise : exercises) {
-                if (exercise.getId().equals(workoutExercise.getId())) {
-                    alreadyInWorkout = true;
-                    break;
-                }
-            }
-            if (!alreadyInWorkout) {
-                filteredExercises.add(exercise);
-            }
-        }
-        
-        Log.d(TAG, "Filtered " + filteredExercises.size() + " available exercises (removed " + (allExercises.size() - filteredExercises.size()) + " duplicates)");
-        return filteredExercises;
-    }
-    
-    /**
-     * Show exercise selection activity
-     */
-    private void showExerciseSelectionDialog(ArrayList<Exercise> availableExercises) {
-        // Get current exercise IDs to filter out
-        ArrayList<String> currentExerciseIds = new ArrayList<>();
-        for (Exercise exercise : exercises) {
-            currentExerciseIds.add(exercise.getId());
-        }
-        
-        // Start ExerciseSelectionActivity
-        Intent intent = new Intent(this, ExerciseSelectionActivity.class);
-        intent.putStringArrayListExtra("currentWorkoutExerciseIds", currentExerciseIds);
-        startActivityForResult(intent, 1001); // Request code for exercise selection
+        FragmentManager fragmentManager = getSupportFragmentManager();
+        dialog.show(fragmentManager, "ExerciseSelectionDialog");
     }
     
     /**
@@ -322,6 +266,14 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
     private void saveWorkout() {
         if (exercises == null || exercises.isEmpty()) {
             Toast.makeText(this, "No exercises to save", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Validate title input
+        String workoutTitle = binding.titleTxt.getText().toString().trim();
+        if (workoutTitle.isEmpty()) {
+            Toast.makeText(this, "Please enter a workout title", Toast.LENGTH_SHORT).show();
+            binding.titleTxt.requestFocus();
             return;
         }
 
@@ -366,8 +318,21 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
         // Generate unique ID for user workout
         userWorkout.setId(generateUserWorkoutId());
         userWorkout.setUid(userId);
-        userWorkout.setTitle(originalWorkoutTemplate.getTitle());
-        userWorkout.setDescription(originalWorkoutTemplate.getDescription());
+        
+        // Get title and description from EditText fields
+        String workoutTitle = binding.titleTxt.getText().toString().trim();
+        String workoutDescription = binding.descriptionTxt.getText().toString().trim();
+        
+        // Use original values as fallback if fields are empty
+        if (workoutTitle.isEmpty()) {
+            workoutTitle = originalWorkoutTemplate.getTitle();
+        }
+        if (workoutDescription.isEmpty()) {
+            workoutDescription = originalWorkoutTemplate.getDescription();
+        }
+        
+        userWorkout.setTitle(workoutTitle);
+        userWorkout.setDescription(workoutDescription);
         userWorkout.setSource("custom");
         
         // Set timestamps in seconds
@@ -400,18 +365,6 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
         userWorkout.setItems(newItems);
         
         return userWorkout;
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        
-        if (requestCode == 1001 && resultCode == RESULT_OK && data != null) {
-            Exercise selectedExercise = (Exercise) data.getSerializableExtra("selectedExercise");
-            if (selectedExercise != null) {
-                addExerciseToWorkout(selectedExercise);
-            }
-        }
     }
 
     @Override
