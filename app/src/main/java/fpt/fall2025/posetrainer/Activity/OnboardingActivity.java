@@ -12,6 +12,9 @@ import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import fpt.fall2025.posetrainer.Adapter.OnboardingPagerAdapter;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.ViewModel.OnboardingViewModel;
@@ -23,7 +26,7 @@ public class OnboardingActivity extends AppCompatActivity {
     private OnboardingViewModel viewModel;
     private OnboardingPagerAdapter adapter;
     private int currentPage = 0;
-    private static final int TOTAL_PAGES = 7;
+    private static final int TOTAL_PAGES = 5;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,10 +65,10 @@ public class OnboardingActivity extends AppCompatActivity {
         });
 
         binding.btnSkip.setOnClickListener(v -> {
-            // Skip to main activity with default values
             goToMainActivity();
         });
     }
+
 
     private void updateUI() {
         // Update progress
@@ -83,16 +86,27 @@ public class OnboardingActivity extends AppCompatActivity {
         String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
+        // Tạo goals map
+        Map<String, Object> goals = new HashMap<>();
+        goals.put("targetWeightKg", (int) viewModel.getData().getTargetWeight());
+        goals.put("targetBodyType", viewModel.getData().getTargetBodyType());  // NEW
+
         db.collection("users").document(userId)
                 .update(
                         "gender", viewModel.getData().getGender(),
-                        "bodyPart", viewModel.getData().getBodyPart(),
+                        "currentBodyType", viewModel.getData().getCurrentBodyType(),
+                        "targetBodyType", viewModel.getData().getTargetBodyType(),  // NEW - Optional: nếu muốn lưu ở root level
                         "goal", viewModel.getData().getGoal(),
                         "activityLevel", viewModel.getData().getActivityLevel(),
                         "weeklyGoal", viewModel.getData().getWeeklyGoal(),
-                        "weight", viewModel.getData().getWeight(),
-                        "height", viewModel.getData().getHeight(),
-                        "onboardingCompleted", true
+                        "weightKg", (int) viewModel.getData().getWeight(),
+                        "heightCm", (int) viewModel.getData().getHeight(),
+                        "birthday", viewModel.getData().getBirthday(),
+                        "dailyTrainingMinutes", viewModel.getData().getDailyMinutes(),
+                        "experienceLevel", viewModel.getData().getExperienceLevel(),
+                        "goals", goals,
+                        "onboardingCompleted", true,
+                        "lastUpdatedAt", System.currentTimeMillis()
                 )
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, "Đã lưu thông tin!", Toast.LENGTH_SHORT).show();

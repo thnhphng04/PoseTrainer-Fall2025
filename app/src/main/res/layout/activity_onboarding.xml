@@ -11,7 +11,7 @@
         android:id="@+id/progress_indicator"
         android:layout_width="0dp"
         android:layout_height="4dp"
-        android:max="7"
+        android:max="5"
         android:progress="1"
         app:indicatorColor="#4285F4"
         app:trackColor="#2A2D3E"

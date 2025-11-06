@@ -1,9 +1,6 @@
 package fpt.fall2025.posetrainer.ViewModel;
 
 import androidx.lifecycle.ViewModel;
-
-import java.util.Date;
-
 import fpt.fall2025.posetrainer.Domain.OnboardingData;
 
 public class OnboardingViewModel extends ViewModel {
@@ -19,6 +16,10 @@ public class OnboardingViewModel extends ViewModel {
 
     public void setBodyPart(String bodyPart) {
         data.setBodyPart(bodyPart);
+    }
+
+    public void setTargetBodyType(String targetBodyType) {  // NEW
+        data.setTargetBodyType(targetBodyType);
     }
 
     public void setGoal(String goal) {
@@ -40,8 +41,20 @@ public class OnboardingViewModel extends ViewModel {
     public void setHeight(float height) {
         data.setHeight(height);
     }
-    public void setBirthdate(Date birthdate) {
-        data.setBirthdate(birthdate);
+
+    public void setBirthday(String birthday) {
+        data.setBirthday(birthday);
     }
 
+    public void setDailyMinutes(int dailyMinutes) {
+        data.setDailyMinutes(dailyMinutes);
+    }
+
+    public void setExperienceLevel(String experienceLevel) {
+        data.setExperienceLevel(experienceLevel);
+    }
+
+    public void setTargetWeight(float targetWeight) {
+        data.setTargetWeight(targetWeight);
+    }
 }

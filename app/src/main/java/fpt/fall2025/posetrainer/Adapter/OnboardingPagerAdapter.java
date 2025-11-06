@@ -18,18 +18,18 @@ public class OnboardingPagerAdapter extends FragmentStateAdapter {
     public Fragment createFragment(int position) {
         switch (position) {
             case 0: return new GenderSelectionFragment();
-            case 1: return new BodyPartSelectionFragment();
-            case 2: return new GoalSelectionFragment();
-            case 3: return new ActivityLevelFragment();
-            case 4: return new WeeklyGoalFragment();
-            case 5: return new BodyInfoFragment();
-            case 6: return new PlanReadyFragment();
+            case 1: return new BodyCurrentSelectionFragment();
+            case 2: return new BodyTargetSelectionFragment();
+//            case 3: return new GoalSelectionFragment();
+//            case 4: return new ActivityLevelFragment();
+            case 3: return new BodyInfoFragment();
+            case 4: return new PlanReadyFragment();
             default: return new GenderSelectionFragment();
         }
     }
 
     @Override
     public int getItemCount() {
-        return 7;
+        return 5;
     }
 }
