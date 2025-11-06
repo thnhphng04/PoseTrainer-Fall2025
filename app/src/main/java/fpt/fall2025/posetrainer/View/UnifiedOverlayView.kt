@@ -4,9 +4,9 @@ import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
 import android.view.View
+import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult
 import fpt.fall2025.posetrainer.Analyzer.ExerciseFeedback
-import com.google.mediapipe.tasks.vision.core.RunningMode
 import kotlin.math.max
 import kotlin.math.min
 
@@ -75,12 +75,18 @@ class UnifiedOverlayView @JvmOverloads constructor(
         poseResult?.let { result ->
             val landmarkList = result.landmarks().firstOrNull()
             if (landmarkList != null) {
-                /*
+
                 fun lm(idx: Int): Pair<Float, Float> {
                     val pt = landmarkList.getOrNull(idx)
                     return if (pt != null) Pair(pt.x() * imageWidth * scaleFactor, pt.y() * imageHeight * scaleFactor) else Pair(0f, 0f)
                 }
-                
+
+                // Hàm lấy visibility cho một landmark (giá trị từ 0.0 đến 1.0)
+                fun getVisibility(idx: Int): Float {
+                    val pt = landmarkList.getOrNull(idx)
+                    return pt?.visibility()?.orElse(0.0f) ?: 0.0f
+                }
+
                 // Lấy các điểm cơ bản cho vẽ skeleton
                 val nose = lm(0)
                 val leftEar = lm(7)
@@ -100,71 +106,6 @@ class UnifiedOverlayView @JvmOverloads constructor(
                 val leftFoot = lm(31)
                 val rightFoot = lm(32)
 
-                // Vẽ skeleton đầy đủ
-                val jointPaint = Paint(linePaint).apply {
-                    strokeWidth = 8f
-                    color = Color.parseColor("#66ccff")
-                }
-                
-                // Vẽ đường nối tai - vai - khuỷu tay - cổ tay (cánh tay)
-                canvas.drawLine(leftEar.first, leftEar.second, leftShoulder.first, leftShoulder.second, jointPaint)
-                canvas.drawLine(leftShoulder.first, leftShoulder.second, leftElbow.first, leftElbow.second, jointPaint)
-                canvas.drawLine(leftElbow.first, leftElbow.second, leftWrist.first, leftWrist.second, jointPaint)
-                canvas.drawLine(rightEar.first, rightEar.second, rightShoulder.first, rightShoulder.second, jointPaint)
-                canvas.drawLine(rightShoulder.first, rightShoulder.second, rightElbow.first, rightElbow.second, jointPaint)
-                canvas.drawLine(rightElbow.first, rightElbow.second, rightWrist.first, rightWrist.second, jointPaint)
-                
-                // Vẽ đường nối vai - hông
-                canvas.drawLine(leftShoulder.first, leftShoulder.second, leftHip.first, leftHip.second, jointPaint)
-                canvas.drawLine(rightShoulder.first, rightShoulder.second, rightHip.first, rightHip.second, jointPaint)
-                
-                // Vẽ đường nối hông - đầu gối - mắt cá chân - bàn chân (chân)
-                canvas.drawLine(leftHip.first, leftHip.second, leftKnee.first, leftKnee.second, jointPaint)
-                canvas.drawLine(leftKnee.first, leftKnee.second, leftAnkle.first, leftAnkle.second, jointPaint)
-                canvas.drawLine(leftAnkle.first, leftAnkle.second, leftFoot.first, leftFoot.second, jointPaint)
-                canvas.drawLine(rightHip.first, rightHip.second, rightKnee.first, rightKnee.second, jointPaint)
-                canvas.drawLine(rightKnee.first, rightKnee.second, rightAnkle.first, rightAnkle.second, jointPaint)
-                canvas.drawLine(rightAnkle.first, rightAnkle.second, rightFoot.first, rightFoot.second, jointPaint)
-                
-                // Vẽ đường nối vai trái - vai phải
-                val shoulderLinePaint = Paint(linePaint).apply {
-                    strokeWidth = 6f
-                    color = Color.parseColor("#FF6B6B")
-                }
-                canvas.drawLine(leftShoulder.first, leftShoulder.second, rightShoulder.first, rightShoulder.second, shoulderLinePaint)
-                
-                // Vẽ đường nối hông trái - hông phải
-                val hipLinePaint = Paint(linePaint).apply {
-                    strokeWidth = 6f
-                    color = Color.parseColor("#FF6B6B")
-                }
-                canvas.drawLine(leftHip.first, leftHip.second, rightHip.first, rightHip.second, hipLinePaint)
-
-                // Vẽ các điểm landmark
-                val leftPaint = Paint(pointPaint).apply { color = Color.YELLOW }
-                val rightPaint = Paint(pointPaint).apply { color = Color.CYAN }
-                val earPaint = Paint(pointPaint).apply { color = Color.GREEN }
-                val footPaint = Paint(pointPaint).apply { color = Color.MAGENTA }
-                
-                // Vẽ điểm tai
-                canvas.drawCircle(leftEar.first, leftEar.second, 12f, earPaint)
-                canvas.drawCircle(rightEar.first, rightEar.second, 12f, earPaint)
-                
-                // Vẽ điểm bên trái
-                listOf(leftShoulder, leftElbow, leftWrist, leftHip, leftKnee, leftAnkle).forEach {
-                    canvas.drawCircle(it.first, it.second, 14f, leftPaint)
-                }
-                
-                // Vẽ điểm bên phải
-                listOf(rightShoulder, rightElbow, rightWrist, rightHip, rightKnee, rightAnkle).forEach {
-                    canvas.drawCircle(it.first, it.second, 14f, rightPaint)
-                }
-                
-                // Vẽ điểm bàn chân
-                canvas.drawCircle(leftFoot.first, leftFoot.second, 12f, footPaint)
-                canvas.drawCircle(rightFoot.first, rightFoot.second, 12f, footPaint)
-                */
-
                 // Hiển thị cảnh báo camera nếu cần
                 if (feedback?.isCameraWarning() == true) {
                     val warningPaint = Paint().apply {
@@ -178,14 +119,14 @@ class UnifiedOverlayView @JvmOverloads constructor(
                         color = Color.argb(180, 255, 0, 0)
                         style = Paint.Style.FILL
                     }
-                    
+
                     // Vẽ nền cảnh báo
                     val warningText = "Vui lòng vào tư thế"
                     val warningY = height / 2f
                     val warningPadding = 40f
                     val warningWidth = warningPaint.measureText(warningText) + 2 * warningPadding
                     val warningHeight = 120f
-                    
+
                     canvas.drawRoundRect(
                         width/2f - warningWidth/2f,
                         warningY - warningHeight/2f,
@@ -194,10 +135,157 @@ class UnifiedOverlayView @JvmOverloads constructor(
                         20f, 20f,
                         warningBg
                     )
-                    
+
                     // Vẽ text cảnh báo
                     canvas.drawText(warningText, width/2f, warningY + 20f, warningPaint)
                 }
+
+                else if (feedback?.getOffsetAngle()?.let { it > 35 } == true) {
+
+
+                    // Vẽ skeleton đầy đủ
+                    val jointPaint = Paint(linePaint).apply {
+                        strokeWidth = 8f
+                        color = Color.parseColor("#66ccff")
+                    }
+
+                    // Vẽ đường nối tai - vai - khuỷu tay - cổ tay (cánh tay)
+                    canvas.drawLine(leftEar.first, leftEar.second, leftShoulder.first, leftShoulder.second, jointPaint)
+                    canvas.drawLine(leftShoulder.first, leftShoulder.second, leftElbow.first, leftElbow.second, jointPaint)
+                    canvas.drawLine(leftElbow.first, leftElbow.second, leftWrist.first, leftWrist.second, jointPaint)
+                    canvas.drawLine(rightEar.first, rightEar.second, rightShoulder.first, rightShoulder.second, jointPaint)
+                    canvas.drawLine(rightShoulder.first, rightShoulder.second, rightElbow.first, rightElbow.second, jointPaint)
+                    canvas.drawLine(rightElbow.first, rightElbow.second, rightWrist.first, rightWrist.second, jointPaint)
+
+                    // Vẽ đường nối vai - hông
+                    canvas.drawLine(leftShoulder.first, leftShoulder.second, leftHip.first, leftHip.second, jointPaint)
+                    canvas.drawLine(rightShoulder.first, rightShoulder.second, rightHip.first, rightHip.second, jointPaint)
+
+                    // Vẽ đường nối hông - đầu gối - mắt cá chân - bàn chân (chân)
+                    canvas.drawLine(leftHip.first, leftHip.second, leftKnee.first, leftKnee.second, jointPaint)
+                    canvas.drawLine(leftKnee.first, leftKnee.second, leftAnkle.first, leftAnkle.second, jointPaint)
+                    canvas.drawLine(leftAnkle.first, leftAnkle.second, leftFoot.first, leftFoot.second, jointPaint)
+                    canvas.drawLine(rightHip.first, rightHip.second, rightKnee.first, rightKnee.second, jointPaint)
+                    canvas.drawLine(rightKnee.first, rightKnee.second, rightAnkle.first, rightAnkle.second, jointPaint)
+                    canvas.drawLine(rightAnkle.first, rightAnkle.second, rightFoot.first, rightFoot.second, jointPaint)
+
+                    // Vẽ đường nối vai trái - vai phải
+                    val shoulderLinePaint = Paint(linePaint).apply {
+                        strokeWidth = 6f
+                        color = Color.parseColor("#FF6B6B")
+                    }
+                    canvas.drawLine(leftShoulder.first, leftShoulder.second, rightShoulder.first, rightShoulder.second, shoulderLinePaint)
+
+                    // Vẽ đường nối hông trái - hông phải
+                    val hipLinePaint = Paint(linePaint).apply {
+                        strokeWidth = 6f
+                        color = Color.parseColor("#FF6B6B")
+                    }
+                    canvas.drawLine(leftHip.first, leftHip.second, rightHip.first, rightHip.second, hipLinePaint)
+
+                    // Vẽ các điểm landmark
+                    val leftPaint = Paint(pointPaint).apply { color = Color.YELLOW }
+                    val rightPaint = Paint(pointPaint).apply { color = Color.CYAN }
+                    val earPaint = Paint(pointPaint).apply { color = Color.GREEN }
+                    val footPaint = Paint(pointPaint).apply { color = Color.MAGENTA }
+
+                    // Vẽ điểm tai
+                    canvas.drawCircle(leftEar.first, leftEar.second, 12f, earPaint)
+                    canvas.drawCircle(rightEar.first, rightEar.second, 12f, earPaint)
+
+                    // Vẽ điểm bên trái
+                    listOf(leftShoulder, leftElbow, leftWrist, leftHip, leftKnee, leftAnkle).forEach {
+                        canvas.drawCircle(it.first, it.second, 14f, leftPaint)
+                    }
+
+                    // Vẽ điểm bên phải
+                    listOf(rightShoulder, rightElbow, rightWrist, rightHip, rightKnee, rightAnkle).forEach {
+                        canvas.drawCircle(it.first, it.second, 14f, rightPaint)
+                    }
+
+                    // Vẽ điểm bàn chân
+                    canvas.drawCircle(leftFoot.first, leftFoot.second, 12f, footPaint)
+                    canvas.drawCircle(rightFoot.first, rightFoot.second, 12f, footPaint)
+                }
+
+                else {
+
+
+                    // Chọn bên để phân tích dựa trên visibility score
+                    // Tính average visibility cho mỗi bên
+                    // Sử dụng getVisibility() với index tương ứng của landmark
+                    val leftAvgVis = ((getVisibility(11) +  // leftShoulder
+                            getVisibility(13) +  // leftElbow
+                            getVisibility(23) +  // leftHip
+                            getVisibility(25)     // leftKnee
+                            ) / 4.0f)
+
+                    val rightAvgVis = ((getVisibility(12) +  // rightShoulder
+                            getVisibility(14) +  // rightElbow
+                            getVisibility(24) +  // rightHip
+                            getVisibility(26)    // rightKnee
+                            ) / 4.0f)
+
+                    // Vẽ skeleton và points của bên nhìn rõ hơn
+                    val jointPaint = Paint(linePaint).apply {
+                        strokeWidth = 8f
+                        color = Color.parseColor("#66ccff")
+                    }
+                    
+                    val leftPaint = Paint(pointPaint).apply { color = Color.YELLOW }
+                    val earPaint = Paint(pointPaint).apply { color = Color.GREEN }
+                    val footPaint = Paint(pointPaint).apply { color = Color.MAGENTA }
+
+                    if (leftAvgVis > rightAvgVis) {
+                        // Bên trái nhìn rõ hơn - chỉ vẽ bên trái
+                        // Vẽ skeleton bên trái
+                        canvas.drawLine(leftEar.first, leftEar.second, leftShoulder.first, leftShoulder.second, jointPaint)
+                        canvas.drawLine(leftShoulder.first, leftShoulder.second, leftElbow.first, leftElbow.second, jointPaint)
+                        canvas.drawLine(leftElbow.first, leftElbow.second, leftWrist.first, leftWrist.second, jointPaint)
+                        canvas.drawLine(leftShoulder.first, leftShoulder.second, leftHip.first, leftHip.second, jointPaint)
+                        canvas.drawLine(leftHip.first, leftHip.second, leftKnee.first, leftKnee.second, jointPaint)
+                        canvas.drawLine(leftKnee.first, leftKnee.second, leftAnkle.first, leftAnkle.second, jointPaint)
+                        canvas.drawLine(leftAnkle.first, leftAnkle.second, leftFoot.first, leftFoot.second, jointPaint)
+                        
+                        // Vẽ các điểm landmark bên trái
+                        canvas.drawCircle(leftEar.first, leftEar.second, 12f, earPaint)
+                        canvas.drawCircle(leftShoulder.first, leftShoulder.second, 14f, leftPaint)
+                        canvas.drawCircle(leftElbow.first, leftElbow.second, 14f, leftPaint)
+                        canvas.drawCircle(leftWrist.first, leftWrist.second, 14f, leftPaint)
+                        canvas.drawCircle(leftHip.first, leftHip.second, 14f, leftPaint)
+                        canvas.drawCircle(leftKnee.first, leftKnee.second, 14f, leftPaint)
+                        canvas.drawCircle(leftAnkle.first, leftAnkle.second, 14f, leftPaint)
+                        canvas.drawCircle(leftFoot.first, leftFoot.second, 12f, footPaint)
+                    } else {
+                        // Bên phải nhìn rõ hơn - chỉ vẽ bên phải
+                        val rightPaint = Paint(pointPaint).apply { color = Color.CYAN }
+                        
+                        // Vẽ skeleton bên phải
+                        canvas.drawLine(rightEar.first, rightEar.second, rightShoulder.first, rightShoulder.second, jointPaint)
+                        canvas.drawLine(rightShoulder.first, rightShoulder.second, rightElbow.first, rightElbow.second, jointPaint)
+                        canvas.drawLine(rightElbow.first, rightElbow.second, rightWrist.first, rightWrist.second, jointPaint)
+                        canvas.drawLine(rightShoulder.first, rightShoulder.second, rightHip.first, rightHip.second, jointPaint)
+                        canvas.drawLine(rightHip.first, rightHip.second, rightKnee.first, rightKnee.second, jointPaint)
+                        canvas.drawLine(rightKnee.first, rightKnee.second, rightAnkle.first, rightAnkle.second, jointPaint)
+                        canvas.drawLine(rightAnkle.first, rightAnkle.second, rightFoot.first, rightFoot.second, jointPaint)
+                        
+                        // Vẽ các điểm landmark bên phải
+                        canvas.drawCircle(rightEar.first, rightEar.second, 12f, earPaint)
+                        canvas.drawCircle(rightShoulder.first, rightShoulder.second, 14f, rightPaint)
+                        canvas.drawCircle(rightElbow.first, rightElbow.second, 14f, rightPaint)
+                        canvas.drawCircle(rightWrist.first, rightWrist.second, 14f, rightPaint)
+                        canvas.drawCircle(rightHip.first, rightHip.second, 14f, rightPaint)
+                        canvas.drawCircle(rightKnee.first, rightKnee.second, 14f, rightPaint)
+                        canvas.drawCircle(rightAnkle.first, rightAnkle.second, 14f, rightPaint)
+                        canvas.drawCircle(rightFoot.first, rightFoot.second, 12f, footPaint)
+                    }
+                }
+
+                
+
+                
+
+                //////////////////////############################################
 
                 // Hiển thị feedbackList (các cảnh báo động tác)
                 val feedbacks = feedback?.feedbackList ?: emptyList()
