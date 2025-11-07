@@ -10,8 +10,10 @@ import android.os.Build;
 import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
+import androidx.core.app.TaskStackBuilder;
 import androidx.core.content.ContextCompat;
 
+import fpt.fall2025.posetrainer.Activity.MainActivity;
 import fpt.fall2025.posetrainer.Activity.WorkoutActivity;
 import fpt.fall2025.posetrainer.R;
 
@@ -67,15 +69,25 @@ public class NotificationHelper {
         createNotificationChannel(context);
 
         // Create intent to open WorkoutActivity
-        Intent intent = new Intent(context, WorkoutActivity.class);
-        intent.putExtra("workoutId", workoutId);
-        intent.putExtra("fromSchedule", true);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        // WorkoutActivity will handle both WorkoutTemplate and UserWorkout
+        Intent workoutIntent = new Intent(context, WorkoutActivity.class);
+        workoutIntent.putExtra("workoutId", workoutId);
+        workoutIntent.putExtra("fromSchedule", true);
+        
+        // Create task stack builder to ensure proper navigation
+        // MainActivity will be in the back stack, so user can navigate back
+        TaskStackBuilder stackBuilder = TaskStackBuilder.create(context);
+        // Add MainActivity as parent activity
+        stackBuilder.addNextIntent(new Intent(context, MainActivity.class));
+        // Add WorkoutActivity as the activity to open
+        stackBuilder.addNextIntent(workoutIntent);
 
-        PendingIntent pendingIntent = PendingIntent.getActivity(
-            context,
-            (int) System.currentTimeMillis(),
-            intent,
+        // Create unique request code based on workoutId, dayOfWeek, and minutesBefore
+        // This ensures each notification has a unique PendingIntent
+        int requestCode = generateRequestCode(workoutId, dayOfWeek, minutesBefore);
+
+        PendingIntent pendingIntent = stackBuilder.getPendingIntent(
+            requestCode,
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
@@ -123,10 +135,12 @@ public class NotificationHelper {
             (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         
         if (notificationManager != null) {
-            // Use unique notification ID based on dayOfWeek and minutesBefore
-            int notificationId = NOTIFICATION_ID_BASE + (dayOfWeek * 10) + minutesBefore;
+            // Use unique notification ID based on workoutId, dayOfWeek, and minutesBefore
+            // This ensures each notification for different workouts has a unique ID
+            int notificationId = generateNotificationId(workoutId, dayOfWeek, minutesBefore);
             notificationManager.notify(notificationId, builder.build());
-            Log.d(TAG, "Notification shown with ID: " + notificationId + " (" + minutesBefore + " min before)");
+            Log.d(TAG, "Notification shown with ID: " + notificationId + 
+                " for workoutId: " + workoutId + " (" + minutesBefore + " min before)");
         }
     }
 
@@ -188,6 +202,27 @@ public class NotificationHelper {
             notificationManager.cancel(notificationId);
             Log.d(TAG, "Notification cancelled with ID: " + notificationId);
         }
+    }
+
+    /**
+     * Generate unique request code for PendingIntent based on workoutId, dayOfWeek, and minutesBefore
+     */
+    private static int generateRequestCode(String workoutId, int dayOfWeek, int minutesBefore) {
+        // Use hash of workoutId combined with dayOfWeek and minutesBefore
+        // This ensures unique request codes for different workouts, days, and reminder times
+        int hash = workoutId != null ? workoutId.hashCode() : 0;
+        return Math.abs(hash) % 1000000 + (dayOfWeek * 1000) + minutesBefore;
+    }
+    
+    /**
+     * Generate unique notification ID based on workoutId, dayOfWeek, and minutesBefore
+     */
+    private static int generateNotificationId(String workoutId, int dayOfWeek, int minutesBefore) {
+        // Use hash of workoutId combined with dayOfWeek and minutesBefore
+        // This ensures unique notification IDs for different workouts, days, and reminder times
+        int hash = workoutId != null ? workoutId.hashCode() : 0;
+        // Use modulo to keep ID within reasonable range, add base offset
+        return NOTIFICATION_ID_BASE + (Math.abs(hash) % 10000) + (dayOfWeek * 100) + minutesBefore;
     }
 }
 

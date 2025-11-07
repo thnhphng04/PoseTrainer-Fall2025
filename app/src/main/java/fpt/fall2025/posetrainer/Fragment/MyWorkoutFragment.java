@@ -58,6 +58,7 @@ public class MyWorkoutFragment extends Fragment {
         
         // Load user info and workouts
         loadUserFromFirestore();
+        isDataLoaded = true;
     }
 
     /**
@@ -185,19 +186,36 @@ public class MyWorkoutFragment extends Fragment {
         binding.userWorkoutsRecyclerView.setVisibility(View.VISIBLE);
     }
 
+    private boolean isDataLoaded = false;
+    
     /**
      * Refresh the list when returning to this fragment
      */
     @Override
     public void onResume() {
         super.onResume();
-        // Reload user info and workouts when returning to this fragment
-        loadUserFromFirestore();
+        // Chỉ load data một lần ban đầu để tránh reload không cần thiết
+        if (!isDataLoaded && isVisible() && isAdded()) {
+            loadUserFromFirestore();
+            isDataLoaded = true;
+        }
+    }
+    
+    @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        // Reload khi fragment trở nên visible (phòng trường hợp data đã thay đổi)
+        // Chỉ refresh nếu fragment đã resumed và added
+        if (!hidden && isAdded() && isResumed()) {
+            loadUserFromFirestore();
+        }
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        // Reset flag khi view bị destroy
+        isDataLoaded = false;
         binding = null;
     }
 }

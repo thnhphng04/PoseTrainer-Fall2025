@@ -60,13 +60,20 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
             exerciseDifficulties[i] = "beginner"; // Default beginner
         }
 
-        // Get workout template ID from intent
+        // Get workout ID from intent (could be workoutTemplateId or workoutId from notification)
         String workoutTemplateId = getIntent().getStringExtra("workoutTemplateId");
+        String workoutId = getIntent().getStringExtra("workoutId");
+        boolean fromSchedule = getIntent().getBooleanExtra("fromSchedule", false);
         
         if (workoutTemplateId != null) {
+            // Direct workout template ID provided
             loadWorkoutTemplateById(workoutTemplateId);
+        } else if (workoutId != null) {
+            // workoutId from notification - try to load as WorkoutTemplate first
+            // If not found, will try to load as UserWorkout
+            loadWorkoutById(workoutId, fromSchedule);
         } else {
-            Toast.makeText(this, "No workout template ID provided", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "No workout ID provided", Toast.LENGTH_SHORT).show();
             finish();
         }
 
@@ -468,6 +475,89 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
                 }
             });
         }
+    }
+
+    /**
+     * Load workout by ID - tries WorkoutTemplate first, then UserWorkout
+     */
+    private void loadWorkoutById(String workoutId, boolean fromSchedule) {
+        Log.d(TAG, "Loading workout by ID: " + workoutId + " (fromSchedule: " + fromSchedule + ")");
+        
+        // Try to load as WorkoutTemplate first
+        FirebaseService.getInstance().loadWorkoutTemplateById(workoutId, this, new FirebaseService.OnWorkoutTemplateLoadedListener() {
+            @Override
+            public void onWorkoutTemplateLoaded(WorkoutTemplate template) {
+                if (template != null) {
+                    // Successfully loaded as WorkoutTemplate
+                    Log.d(TAG, "Workout loaded as WorkoutTemplate: " + template.getTitle());
+                    workoutTemplate = template;
+                    
+                    // Update UI
+                    updateWorkoutTemplateUI();
+                    
+                    // Load exercises for this template
+                    loadExercises();
+                    
+                    // If from schedule, always show "Start Workout" button
+                    if (fromSchedule) {
+                        hasActiveSession = false;
+                        updateButtonUI();
+                        Log.d(TAG, "From schedule: Always show 'Start Workout' button");
+                    } else {
+                        // Check for existing session to determine button state
+                        loadExistingSession();
+                    }
+                } else {
+                    // Not a WorkoutTemplate, try as UserWorkout
+                    Log.d(TAG, "Not a WorkoutTemplate, trying as UserWorkout...");
+                    tryLoadAsUserWorkout(workoutId);
+                }
+            }
+        });
+    }
+    
+    /**
+     * Try to load workout as UserWorkout and navigate to UserWorkoutDetailActivity
+     */
+    private void tryLoadAsUserWorkout(String workoutId) {
+        Log.d(TAG, "Trying to load as UserWorkout: " + workoutId);
+        
+        FirebaseService.getInstance().loadUserWorkoutById(workoutId, this, new FirebaseService.OnUserWorkoutLoadedListener() {
+            @Override
+            public void onUserWorkoutLoaded(fpt.fall2025.posetrainer.Domain.UserWorkout userWorkout) {
+                if (userWorkout != null) {
+                    // Successfully loaded as UserWorkout - navigate to UserWorkoutDetailActivity
+                    Log.d(TAG, "Workout loaded as UserWorkout: " + userWorkout.getTitle() + ", navigating to UserWorkoutDetailActivity");
+                    
+                    Intent intent = new Intent(WorkoutActivity.this, UserWorkoutDetailActivity.class);
+                    intent.putExtra("userWorkoutId", workoutId);
+                    intent.putExtra("fromSchedule", true);
+                    // Don't clear task stack - keep MainActivity in back stack for proper navigation
+                    startActivity(intent);
+                    finish();
+                } else {
+                    // Not found as either WorkoutTemplate or UserWorkout - workout may have been deleted
+                    Log.e(TAG, "Workout not found as either WorkoutTemplate or UserWorkout: " + workoutId);
+                    
+                    // Check if from schedule notification
+                    boolean fromSchedule = getIntent().getBooleanExtra("fromSchedule", false);
+                    if (fromSchedule) {
+                        // If from schedule notification, show message and navigate back to MainActivity
+                        Toast.makeText(WorkoutActivity.this, 
+                            "Bài tập đã bị xóa hoặc không tồn tại. Lịch tập sẽ được cập nhật tự động.", 
+                            Toast.LENGTH_LONG).show();
+                    } else {
+                        Toast.makeText(WorkoutActivity.this, "Không tìm thấy bài tập", Toast.LENGTH_SHORT).show();
+                    }
+                    
+                    // Navigate back to MainActivity
+                    Intent mainIntent = new Intent(WorkoutActivity.this, MainActivity.class);
+                    mainIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(mainIntent);
+                    finish();
+                }
+            }
+        });
     }
 
     /**

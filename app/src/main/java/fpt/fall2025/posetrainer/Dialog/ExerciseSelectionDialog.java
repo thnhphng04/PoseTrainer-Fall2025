@@ -15,11 +15,14 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.SearchView;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 import fpt.fall2025.posetrainer.Adapter.ExerciseSelectionAdapter;
 import fpt.fall2025.posetrainer.Domain.Exercise;
@@ -36,6 +39,7 @@ public class ExerciseSelectionDialog extends DialogFragment {
     private SearchView searchView;
     private ProgressBar progressBar;
     private LinearLayout layoutEmptyState;
+    private LinearLayout layoutCategoryChips;
     private TextView tvEmptyState;
     private ImageButton btnClose;
     private ExerciseSelectionAdapter adapter;
@@ -43,6 +47,9 @@ public class ExerciseSelectionDialog extends DialogFragment {
     private ArrayList<Exercise> allExercises;
     private ArrayList<Exercise> filteredExercises;
     private OnExerciseSelectedListener listener;
+    private String selectedCategory = null;
+    private String currentSearchQuery = "";
+    private ArrayList<TextView> categoryChips = new ArrayList<>();
 
     /**
      * Interface for exercise selection callback
@@ -80,6 +87,7 @@ public class ExerciseSelectionDialog extends DialogFragment {
         searchView = view.findViewById(R.id.search_view);
         progressBar = view.findViewById(R.id.progress_bar);
         layoutEmptyState = view.findViewById(R.id.layout_empty_state);
+        layoutCategoryChips = view.findViewById(R.id.layout_category_chips);
         tvEmptyState = view.findViewById(R.id.tv_empty_state);
         btnClose = view.findViewById(R.id.btn_close);
 
@@ -101,13 +109,15 @@ public class ExerciseSelectionDialog extends DialogFragment {
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
-                filterExercises(query);
+                currentSearchQuery = query;
+                applyFilters();
                 return true;
             }
 
             @Override
             public boolean onQueryTextChange(String newText) {
-                filterExercises(newText);
+                currentSearchQuery = newText;
+                applyFilters();
                 return true;
             }
         });
@@ -146,6 +156,9 @@ public class ExerciseSelectionDialog extends DialogFragment {
                 allExercises = exercises;
                 filteredExercises = new ArrayList<>(exercises);
                 
+                // Setup category chips
+                setupCategoryChips();
+                
                 recyclerViewExercises.setVisibility(View.VISIBLE);
                 layoutEmptyState.setVisibility(View.GONE);
                 
@@ -160,36 +173,153 @@ public class ExerciseSelectionDialog extends DialogFragment {
     }
 
     /**
-     * Filter exercises based on search query
+     * Setup category filter chips
      */
-    private void filterExercises(String query) {
-        if (query == null || query.trim().isEmpty()) {
-            filteredExercises = new ArrayList<>(allExercises);
-        } else {
-            filteredExercises = new ArrayList<>();
-            String lowerQuery = query.toLowerCase().trim();
-            
-            for (Exercise exercise : allExercises) {
-                if (exercise == null || exercise.getName() == null) {
-                    continue;
+    private void setupCategoryChips() {
+        layoutCategoryChips.removeAllViews();
+        categoryChips.clear();
+        
+        // Extract unique categories from exercises
+        Set<String> uniqueCategories = new HashSet<>();
+        for (Exercise exercise : allExercises) {
+            if (exercise.getCategory() != null) {
+                for (String category : exercise.getCategory()) {
+                    if (category != null && !category.trim().isEmpty()) {
+                        uniqueCategories.add(category.trim());
+                    }
                 }
-                
-                boolean matchesName = exercise.getName().toLowerCase().contains(lowerQuery);
-                boolean matchesLevel = exercise.getLevel() != null && exercise.getLevel().toLowerCase().contains(lowerQuery);
-                boolean matchesCategory = false;
-                
+            }
+        }
+        
+        // Create "Tất cả" (All) chip
+        TextView allChip = createCategoryChip("Tất cả", true);
+        layoutCategoryChips.addView(allChip);
+        categoryChips.add(allChip);
+        
+        // Create chips for each unique category
+        ArrayList<String> sortedCategories = new ArrayList<>(uniqueCategories);
+        java.util.Collections.sort(sortedCategories);
+        
+        for (String category : sortedCategories) {
+            TextView chip = createCategoryChip(category, false);
+            layoutCategoryChips.addView(chip);
+            categoryChips.add(chip);
+        }
+    }
+    
+    /**
+     * Create a category chip TextView
+     */
+    private TextView createCategoryChip(String categoryName, boolean isSelected) {
+        TextView chip = new TextView(getContext());
+        chip.setText(categoryName);
+        chip.setPadding(
+            (int) (16 * getResources().getDisplayMetrics().density),
+            (int) (8 * getResources().getDisplayMetrics().density),
+            (int) (16 * getResources().getDisplayMetrics().density),
+            (int) (8 * getResources().getDisplayMetrics().density)
+        );
+        chip.setTextColor(ContextCompat.getColor(getContext(), android.R.color.white));
+        chip.setTextSize(14);
+        
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        params.setMargins(0, 0, (int) (8 * getResources().getDisplayMetrics().density), 0);
+        chip.setLayoutParams(params);
+        
+        // Set background based on selection
+        if (isSelected && categoryName.equals("Tất cả")) {
+            chip.setBackgroundResource(R.drawable.chip_selected_bg);
+        } else {
+            chip.setBackgroundResource(R.drawable.chip_bg);
+        }
+        
+        // Set click listener
+        chip.setOnClickListener(v -> {
+            if (categoryName.equals("Tất cả")) {
+                selectedCategory = null;
+            } else {
+                selectedCategory = categoryName;
+            }
+            updateCategoryChipStates();
+            applyFilters();
+        });
+        
+        chip.setClickable(true);
+        chip.setFocusable(true);
+        
+        return chip;
+    }
+    
+    /**
+     * Update visual states of category chips
+     */
+    private void updateCategoryChipStates() {
+        for (TextView chip : categoryChips) {
+            String chipText = chip.getText().toString();
+            if (chipText.equals("Tất cả") && selectedCategory == null) {
+                chip.setBackgroundResource(R.drawable.chip_selected_bg);
+            } else if (chipText.equals(selectedCategory)) {
+                chip.setBackgroundResource(R.drawable.chip_selected_bg);
+            } else {
+                chip.setBackgroundResource(R.drawable.chip_bg);
+            }
+        }
+    }
+    
+    /**
+     * Apply both search and category filters
+     */
+    private void applyFilters() {
+        filteredExercises = new ArrayList<>();
+        String lowerQuery = (currentSearchQuery != null) ? currentSearchQuery.toLowerCase().trim() : "";
+        
+        for (Exercise exercise : allExercises) {
+            if (exercise == null || exercise.getName() == null) {
+                continue;
+            }
+            
+            // Check category filter
+            boolean matchesCategory = true;
+            if (selectedCategory != null && !selectedCategory.isEmpty()) {
+                matchesCategory = false;
                 if (exercise.getCategory() != null) {
                     for (String category : exercise.getCategory()) {
-                        if (category != null && category.toLowerCase().contains(lowerQuery)) {
+                        if (category != null && category.equals(selectedCategory)) {
                             matchesCategory = true;
                             break;
                         }
                     }
                 }
+            }
+            
+            // Check search query filter
+            boolean matchesSearch = true;
+            if (!lowerQuery.isEmpty()) {
+                matchesSearch = false;
                 
-                if (matchesName || matchesLevel || matchesCategory) {
-                    filteredExercises.add(exercise);
+                boolean matchesName = exercise.getName().toLowerCase().contains(lowerQuery);
+                boolean matchesLevel = exercise.getLevel() != null && 
+                    exercise.getLevel().toLowerCase().contains(lowerQuery);
+                boolean matchesCategoryInSearch = false;
+                
+                if (exercise.getCategory() != null) {
+                    for (String category : exercise.getCategory()) {
+                        if (category != null && category.toLowerCase().contains(lowerQuery)) {
+                            matchesCategoryInSearch = true;
+                            break;
+                        }
+                    }
                 }
+                
+                matchesSearch = matchesName || matchesLevel || matchesCategoryInSearch;
+            }
+            
+            // Add if matches both filters
+            if (matchesCategory && matchesSearch) {
+                filteredExercises.add(exercise);
             }
         }
         

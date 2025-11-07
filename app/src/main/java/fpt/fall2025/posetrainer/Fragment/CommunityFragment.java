@@ -192,16 +192,49 @@ public class CommunityFragment extends Fragment {
         }
     }
 
+    private boolean isFragmentVisible = false;
+    
     @Override
     public void onStart() {
         super.onStart();
-        if (adapter != null) adapter.startListening();
+        // Chỉ start listening nếu fragment visible
+        // onHiddenChanged sẽ xử lý thay đổi visibility
+        if (adapter != null && !isHidden()) {
+            adapter.startListening();
+            isFragmentVisible = true;
+        }
     }
 
     @Override
     public void onStop() {
         super.onStop();
-        if (adapter != null) adapter.stopListening();
+        // Luôn stop listening khi fragment stops
+        if (adapter != null) {
+            adapter.stopListening();
+        }
+        isFragmentVisible = false;
+    }
+    
+    @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        // Quản lý adapter listening dựa trên visibility
+        // Chỉ quản lý nếu fragment đã started (giữa onStart và onStop)
+        if (adapter != null && isResumed()) {
+            if (hidden) {
+                // Fragment bị ẩn, stop listening để tiết kiệm tài nguyên
+                if (isFragmentVisible) {
+                    adapter.stopListening();
+                    isFragmentVisible = false;
+                }
+            } else {
+                // Fragment visible, start listening
+                if (!isFragmentVisible) {
+                    adapter.startListening();
+                    isFragmentVisible = true;
+                }
+            }
+        }
     }
 
     // ---------------- ViewHolder ----------------
