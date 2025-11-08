@@ -63,11 +63,12 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
             exerciseDifficulties[i] = "beginner"; // Default beginner
         }
 
-        // Get user workout ID from intent
+        // Get user workout ID from intent (could be from notification or direct navigation)
         String userWorkoutId = getIntent().getStringExtra("userWorkoutId");
+        boolean fromSchedule = getIntent().getBooleanExtra("fromSchedule", false);
         
         if (userWorkoutId != null) {
-            loadUserWorkoutById(userWorkoutId);
+            loadUserWorkoutById(userWorkoutId, fromSchedule);
         } else {
             Toast.makeText(this, "No user workout ID provided", Toast.LENGTH_SHORT).show();
             finish();
@@ -206,10 +207,14 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
             return;
         }
         
-        // Check if coming from MyWorkoutFragment
+        // Check if coming from MyWorkoutFragment or from schedule
         boolean isFromMyWorkoutFragment = getIntent().getBooleanExtra("fromMyWorkoutFragment", true);
+        boolean fromSchedule = getIntent().getBooleanExtra("fromSchedule", false);
         
-        if (hasActiveSession && !isFromMyWorkoutFragment) {
+        // If from schedule, always create new session
+        if (fromSchedule) {
+            createWorkoutSession();
+        } else if (hasActiveSession && !isFromMyWorkoutFragment) {
             // Có session đang diễn ra VÀ không phải từ MyWorkoutFragment - resume workout
             resumeWorkout();
         } else {
@@ -504,22 +509,48 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
     /**
      * Load user workout from Firebase Firestore
      */
-    private void loadUserWorkoutById(String userWorkoutId) {
-        Log.d(TAG, "Loading user workout: " + userWorkoutId);
+    private void loadUserWorkoutById(String userWorkoutId, boolean fromSchedule) {
+        Log.d(TAG, "Loading user workout: " + userWorkoutId + " (fromSchedule: " + fromSchedule + ")");
         
         FirebaseService.getInstance().loadUserWorkoutById(userWorkoutId, this, new FirebaseService.OnUserWorkoutLoadedListener() {
             @Override
             public void onUserWorkoutLoaded(UserWorkout workout) {
-                userWorkout = workout;
-                
-                // Update UI
-                updateUserWorkoutUI();
-                
-                // Load exercises for this workout
-                loadExercises();
-                
-                // Check for existing session to determine button state
-                loadExistingSession();
+                if (workout != null) {
+                    userWorkout = workout;
+                    
+                    // Update UI
+                    updateUserWorkoutUI();
+                    
+                    // Load exercises for this workout
+                    loadExercises();
+                    
+                    // Check if from schedule - if so, always show "Start Workout" button
+                    if (fromSchedule) {
+                        hasActiveSession = false;
+                        updateButtonUI();
+                        Log.d(TAG, "From schedule: Always show 'Start Workout' button");
+                    } else {
+                        // Check for existing session to determine button state
+                        loadExistingSession();
+                    }
+                } else {
+                    // UserWorkout not found - may have been deleted
+                    Log.e(TAG, "UserWorkout not found: " + userWorkoutId);
+                    
+                    if (fromSchedule) {
+                        // If from schedule notification, show message and navigate back
+                        Toast.makeText(UserWorkoutDetailActivity.this, 
+                            "Bài tập đã bị xóa hoặc không tồn tại. Lịch tập sẽ được cập nhật tự động.", 
+                            Toast.LENGTH_LONG).show();
+                        // Navigate back to MainActivity
+                        Intent mainIntent = new Intent(UserWorkoutDetailActivity.this, MainActivity.class);
+                        mainIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(mainIntent);
+                    } else {
+                        Toast.makeText(UserWorkoutDetailActivity.this, "Không tìm thấy bài tập", Toast.LENGTH_SHORT).show();
+                    }
+                    finish();
+                }
             }
         });
     }

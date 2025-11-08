@@ -55,6 +55,7 @@ public class ProfileFragment extends Fragment {
         setupClicks();
         loadUserFromFirestore();
         loadUserStats();
+        isDataLoaded = true;
     }
 
     private void setupClicks() {
@@ -316,16 +317,35 @@ public class ProfileFragment extends Fragment {
         requireActivity().finish();
     }
 
+    private boolean isDataLoaded = false;
+    
     @Override
     public void onResume() {
         super.onResume();
-        loadUserFromFirestore();
-        loadUserStats();
+        // Chỉ load data một lần ban đầu để tránh reload không cần thiết
+        if (!isDataLoaded && isVisible() && isAdded()) {
+            loadUserFromFirestore();
+            loadUserStats();
+            isDataLoaded = true;
+        }
+    }
+    
+    @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        // Reload khi fragment trở nên visible (phòng trường hợp user đã chỉnh sửa profile)
+        // Chỉ refresh nếu fragment đã resumed và added
+        if (!hidden && isAdded() && isResumed()) {
+            loadUserFromFirestore();
+            loadUserStats();
+        }
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        // Reset flag khi view bị destroy
+        isDataLoaded = false;
         binding = null;
     }
 }

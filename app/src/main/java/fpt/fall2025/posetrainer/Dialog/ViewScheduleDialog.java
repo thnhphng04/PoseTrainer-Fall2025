@@ -192,9 +192,66 @@ public class ViewScheduleDialog extends DialogFragment {
         // Load workout names and update adapter again
         loadWorkoutNames(items, workoutNames -> {
             Log.d(TAG, "Workout names loaded: " + workoutNames.size());
-            allWorkoutNames = new ArrayList<>(workoutNames);
-            adapter.updateSchedules(items, workoutNames);
-            Log.d(TAG, "Adapter updated with workout names");
+            
+            // Filter out schedule items with deleted workouts
+            List<Schedule.ScheduleItem> validItems = new ArrayList<>();
+            List<String> validNames = new ArrayList<>();
+            int deletedCount = 0;
+            
+            for (int i = 0; i < items.size() && i < workoutNames.size(); i++) {
+                String workoutName = workoutNames.get(i);
+                // Bỏ qua các schedule items có workout đã bị xóa hoặc không xác định
+                if ("Bài tập đã bị xóa".equals(workoutName) || 
+                    "Bài tập không xác định".equals(workoutName) ||
+                    "Không xác định".equals(workoutName)) {
+                    deletedCount++;
+                    Log.d(TAG, "Filtering out schedule item at index " + i + " with deleted/invalid workout: " + workoutName);
+                } else {
+                    validItems.add(items.get(i));
+                    validNames.add(workoutName);
+                }
+            }
+            
+            // Nếu có workout đã bị xóa, cập nhật schedule trong database để cleanup
+            // Create final variables for use in lambda
+            final int finalDeletedCount = deletedCount;
+            final List<Schedule.ScheduleItem> finalValidItems = new ArrayList<>(validItems);
+            final List<String> finalValidNames = new ArrayList<>(validNames);
+            
+            if (finalDeletedCount > 0 && userSchedule != null && finalValidItems.size() != items.size()) {
+                Log.d(TAG, "Found " + finalDeletedCount + " deleted/invalid workout(s), cleaning up schedule...");
+                userSchedule.setScheduleItems(finalValidItems);
+                FirebaseService.getInstance().saveSchedule(userSchedule, success -> {
+                    if (success) {
+                        Log.d(TAG, "Schedule cleaned up successfully, removed " + finalDeletedCount + " deleted workout items");
+                        // Reload schedule to reflect changes
+                        loadUserSchedule();
+                    } else {
+                        Log.e(TAG, "Failed to clean up schedule, but still filtering display");
+                        // Still update adapter with valid items only
+                        allScheduleItems = finalValidItems;
+                        allWorkoutNames = finalValidNames;
+                        adapter.updateSchedules(finalValidItems, finalValidNames);
+                        
+                        // Check if we need to show empty state
+                        if (finalValidItems.isEmpty()) {
+                            showEmptyState();
+                        }
+                    }
+                });
+                return; // Don't update adapter here, wait for reload
+            }
+            
+            // Update adapter with valid items only (không hiển thị bài tập đã xóa)
+            allScheduleItems = validItems;
+            allWorkoutNames = validNames;
+            adapter.updateSchedules(validItems, validNames);
+            Log.d(TAG, "Adapter updated with " + validItems.size() + " valid workout names (filtered out " + deletedCount + " deleted/invalid workouts)");
+            
+            // Check if we need to show empty state
+            if (validItems.isEmpty()) {
+                showEmptyState();
+            }
         });
     }
 
@@ -256,33 +313,61 @@ public class ViewScheduleDialog extends DialogFragment {
 
     /**
      * Load workout name by ID from WorkoutTemplate or UserWorkout
+     * Tries to load from workout_templates collection first, then falls back to user_workouts collection
+     * Hiển thị title từ cả hai bảng: workouts_templates.title và user_workouts.title
      */
     private void loadWorkoutNameById(String workoutId, OnWorkoutNameLoadedListener listener) {
+        if (workoutId == null || workoutId.isEmpty()) {
+            Log.w(TAG, "WorkoutId is null or empty");
+            listener.onWorkoutNameLoaded("Không xác định");
+            return;
+        }
+        
         if (getActivity() == null || !(getActivity() instanceof androidx.appcompat.app.AppCompatActivity)) {
-            Log.w(TAG, "Activity is null, returning workoutId");
-            listener.onWorkoutNameLoaded(workoutId);
+            Log.w(TAG, "Activity is null, returning default name");
+            listener.onWorkoutNameLoaded("Không xác định");
             return;
         }
         
         androidx.appcompat.app.AppCompatActivity activity = 
             (androidx.appcompat.app.AppCompatActivity) getActivity();
         
-        // Try to load from WorkoutTemplate first
+        Log.d(TAG, "Loading workout name (title) for ID: " + workoutId + 
+            " (trying workouts_templates.title first, then user_workouts.title)");
+        
+        // Bước 1: Thử load từ workouts_templates collection (lấy field title)
         FirebaseService.getInstance().loadWorkoutTemplateById(workoutId, activity, template -> {
             if (template != null && template.getTitle() != null && !template.getTitle().isEmpty()) {
-                Log.d(TAG, "Loaded workout template: " + template.getTitle());
-                listener.onWorkoutNameLoaded(template.getTitle());
+                // Thành công: Đã tìm thấy trong workouts_templates, lấy title
+                String title = template.getTitle();
+                Log.d(TAG, "✓ Loaded workout title from workouts_templates: \"" + title + "\"");
+                listener.onWorkoutNameLoaded(title);
             } else {
-                // Try to load from UserWorkout
-                Log.d(TAG, "Template not found or null, trying UserWorkout for ID: " + workoutId);
+                // Không tìm thấy trong workouts_templates hoặc title rỗng
+                // Bước 2: Thử load từ user_workouts collection (lấy field title)
+                Log.d(TAG, "✗ WorkoutTemplate not found or title empty for ID: " + workoutId + 
+                    ", trying user_workouts collection...");
+                
                 FirebaseService.getInstance().loadUserWorkoutById(workoutId, activity, userWorkout -> {
                     if (userWorkout != null && userWorkout.getTitle() != null && !userWorkout.getTitle().isEmpty()) {
-                        Log.d(TAG, "Loaded user workout: " + userWorkout.getTitle());
-                        listener.onWorkoutNameLoaded(userWorkout.getTitle());
+                        // Thành công: Đã tìm thấy trong user_workouts, lấy title
+                        String title = userWorkout.getTitle();
+                        Log.d(TAG, "✓ Loaded workout title from user_workouts: \"" + title + "\"");
+                        listener.onWorkoutNameLoaded(title);
                     } else {
-                        Log.w(TAG, "Could not load workout name for ID: " + workoutId + ", using ID as fallback");
-                        // Always call listener even if not found
-                        listener.onWorkoutNameLoaded(workoutId); // Fallback to ID
+                        // Không tìm thấy trong cả hai bảng - có thể workout đã bị xóa
+                        // Kiểm tra xem workoutId có prefix "uw_" (UserWorkout) không để hiển thị thông báo phù hợp
+                        String displayName;
+                        if (workoutId != null && workoutId.startsWith("uw_")) {
+                            // Đây là UserWorkout đã bị xóa
+                            displayName = "Bài tập đã bị xóa";
+                            Log.w(TAG, "✗ UserWorkout không tồn tại (có thể đã bị xóa): " + workoutId);
+                        } else {
+                            // Đây là WorkoutTemplate không tồn tại
+                            displayName = "Bài tập không xác định";
+                            Log.w(TAG, "✗ WorkoutTemplate không tồn tại: " + workoutId);
+                        }
+                        listener.onWorkoutNameLoaded(displayName);
                     }
                 });
             }

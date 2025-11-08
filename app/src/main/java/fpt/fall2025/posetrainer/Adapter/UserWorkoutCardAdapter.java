@@ -62,14 +62,21 @@ public class UserWorkoutCardAdapter extends RecyclerView.Adapter<UserWorkoutCard
 
         // Set exercise count
         int exerciseCount = userWorkout.getItems() != null ? userWorkout.getItems().size() : 0;
-        holder.binding.excerciseTxt.setText(exerciseCount + " Exercise" + (exerciseCount != 1 ? "s" : ""));
+        if (exerciseCount == 0) {
+            holder.binding.excerciseTxt.setText("Chưa có bài tập");
+        } else if (exerciseCount == 1) {
+            holder.binding.excerciseTxt.setText("1 bài tập");
+        } else {
+            holder.binding.excerciseTxt.setText(exerciseCount + " bài tập");
+        }
         
         // Set source badge
         String source = userWorkout.getSource() != null ? userWorkout.getSource() : "custom";
-        holder.binding.sourceBadge.setText(capitalizeFirst(source));
+        String sourceText = getSourceText(source);
+        holder.binding.sourceBadge.setText(sourceText);
         
         // Set creation date
-        holder.binding.durationTxt.setText("Created " + formatRelativeDate(userWorkout.getCreatedAt()));
+        holder.binding.durationTxt.setText("Tạo " + formatRelativeDateVietnamese(userWorkout.getCreatedAt()));
 
         // Set click listener on the root view to start workout
         holder.binding.getRoot().setOnClickListener(v -> {
@@ -101,12 +108,12 @@ public class UserWorkoutCardAdapter extends RecyclerView.Adapter<UserWorkoutCard
      */
     private void showDeleteDialog(UserWorkout userWorkout, int position) {
         new AlertDialog.Builder(context)
-                .setTitle("Delete Workout")
-                .setMessage("Are you sure you want to delete \"" + userWorkout.getTitle() + "\"?")
-                .setPositiveButton("Delete", (dialog, which) -> {
+                .setTitle("Xóa bài tập")
+                .setMessage("Bạn có chắc chắn muốn xóa \"" + userWorkout.getTitle() + "\"?")
+                .setPositiveButton("Xóa", (dialog, which) -> {
                     deleteUserWorkout(userWorkout.getId(), position);
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton("Hủy", null)
                 .show();
     }
 
@@ -123,14 +130,14 @@ public class UserWorkoutCardAdapter extends RecyclerView.Adapter<UserWorkoutCard
                     notifyItemRemoved(position);
                     notifyItemRangeChanged(position, list.size());
                     
-                    Toast.makeText(context, "Workout deleted successfully", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(context, "Đã xóa bài tập thành công", Toast.LENGTH_SHORT).show();
                     
                     // Notify parent fragment
                     if (onUserWorkoutDeletedListener != null) {
                         onUserWorkoutDeletedListener.onUserWorkoutDeleted();
                     }
                 } else {
-                    Toast.makeText(context, "Failed to delete workout", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(context, "Không thể xóa bài tập", Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -159,37 +166,49 @@ public class UserWorkoutCardAdapter extends RecyclerView.Adapter<UserWorkoutCard
     }
 
     /**
-     * Format timestamp to relative date (e.g., "2 days ago")
+     * Format timestamp to relative date in Vietnamese (e.g., "2 ngày trước")
      */
-    private String formatRelativeDate(long timestamp) {
-        if (timestamp == 0) return "unknown";
+    private String formatRelativeDateVietnamese(long timestamp) {
+        if (timestamp == 0) return "Không xác định";
         
         long now = System.currentTimeMillis() / 1000;
         long diff = now - timestamp;
         
         if (diff < 60) {
-            return "just now";
+            return "vừa xong";
         } else if (diff < 3600) {
             long minutes = diff / 60;
-            return minutes + " minute" + (minutes != 1 ? "s" : "") + " ago";
+            return minutes + " phút trước";
         } else if (diff < 86400) {
             long hours = diff / 3600;
-            return hours + " hour" + (hours != 1 ? "s" : "") + " ago";
+            return hours + " giờ trước";
         } else if (diff < 2592000) {
             long days = diff / 86400;
-            return days + " day" + (days != 1 ? "s" : "") + " ago";
-        } else {
+            return days + " ngày trước";
+        } else if (diff < 31104000) {
             long months = diff / 2592000;
-            return months + " month" + (months != 1 ? "s" : "") + " ago";
+            return months + " tháng trước";
+        } else {
+            long years = diff / 31104000;
+            return years + " năm trước";
         }
     }
 
     /**
-     * Capitalize first letter of string
+     * Get Vietnamese text for source
      */
-    private String capitalizeFirst(String str) {
-        if (str == null || str.isEmpty()) return str;
-        return str.substring(0, 1).toUpperCase() + str.substring(1);
+    private String getSourceText(String source) {
+        if (source == null) return "Tùy chỉnh";
+        
+        switch (source.toLowerCase()) {
+            case "template":
+                return "Mẫu";
+            case "ai":
+                return "AI";
+            case "custom":
+            default:
+                return "Tùy chỉnh";
+        }
     }
 
     public class Viewholder extends RecyclerView.ViewHolder {

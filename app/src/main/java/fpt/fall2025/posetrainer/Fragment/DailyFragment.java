@@ -606,19 +606,42 @@ public class DailyFragment extends Fragment {
     }
 
     /**
-     * Load workout name by ID
+     * Load workout name by ID from WorkoutTemplate or UserWorkout
+     * Tries to load from workout_templates collection first, then falls back to user_workouts collection
      */
     private void loadWorkoutName(String workoutId, OnWorkoutNameLoadedListener listener) {
-        // Try to load from WorkoutTemplate first
+        if (workoutId == null || workoutId.isEmpty()) {
+            Log.w(TAG, "WorkoutId is null or empty");
+            listener.onWorkoutNameLoaded("Bài tập");
+            return;
+        }
+        
+        if (getActivity() == null || !(getActivity() instanceof androidx.appcompat.app.AppCompatActivity)) {
+            Log.w(TAG, "Activity is null, returning default name");
+            listener.onWorkoutNameLoaded("Bài tập");
+            return;
+        }
+        
+        Log.d(TAG, "Loading workout name for ID: " + workoutId + " (trying WorkoutTemplate first, then UserWorkout)");
+        
+        // Try to load from WorkoutTemplate first (workout_templates collection)
         FirebaseService.getInstance().loadWorkoutTemplateById(workoutId, (androidx.appcompat.app.AppCompatActivity) getActivity(), template -> {
-            if (template != null) {
+            if (template != null && template.getTitle() != null && !template.getTitle().isEmpty()) {
+                // Successfully loaded from WorkoutTemplate
+                Log.d(TAG, "✓ Loaded workout name from WorkoutTemplate: " + template.getTitle());
                 listener.onWorkoutNameLoaded(template.getTitle());
             } else {
-                // Try to load from UserWorkout
+                // WorkoutTemplate not found or invalid - try UserWorkout (user_workouts collection)
+                Log.d(TAG, "✗ WorkoutTemplate not found for ID: " + workoutId + ", trying UserWorkout...");
                 FirebaseService.getInstance().loadUserWorkoutById(workoutId, (androidx.appcompat.app.AppCompatActivity) getActivity(), userWorkout -> {
-                    if (userWorkout != null) {
+                    if (userWorkout != null && userWorkout.getTitle() != null && !userWorkout.getTitle().isEmpty()) {
+                        // Successfully loaded from UserWorkout
+                        Log.d(TAG, "✓ Loaded workout name from UserWorkout: " + userWorkout.getTitle());
                         listener.onWorkoutNameLoaded(userWorkout.getTitle());
                     } else {
+                        // Neither WorkoutTemplate nor UserWorkout found
+                        Log.w(TAG, "✗ Could not load workout name from either WorkoutTemplate or UserWorkout for ID: " + workoutId);
+                        // Fallback to default name
                         listener.onWorkoutNameLoaded("Bài tập");
                     }
                 });
@@ -762,24 +785,153 @@ public class DailyFragment extends Fragment {
             public void onScheduleLoaded(Schedule schedule) {
                 Log.d(TAG, "=== SCHEDULE LOADED ===");
                 
-                userSchedule = schedule;
-                
                 if (schedule != null) {
                     Log.d(TAG, "Loaded schedule: " + schedule.getTitle() + 
                             " with " + (schedule.getScheduleItems() != null ? schedule.getScheduleItems().size() : 0) + " items");
                     
-                    // Update UI with schedule
-                    updateScheduleUI();
-                    
-                    // Schedule alarms for notifications
-                    scheduleAlarms();
+                    // Validate and cleanup schedule items (remove deleted workouts)
+                    validateAndCleanupSchedule(schedule, cleanedSchedule -> {
+                        userSchedule = cleanedSchedule;
+                        
+                        // Update UI with cleaned schedule
+                        updateScheduleUI();
+                        
+                        // Schedule alarms for notifications (only for valid workouts)
+                        scheduleAlarms();
+                    });
                 } else {
                     Log.d(TAG, "No schedule found for user");
+                    userSchedule = null;
                 }
                 
                 Log.d(TAG, "=== END LOADING SCHEDULE ===");
             }
         });
+    }
+
+    /**
+     * Validate and cleanup schedule items - remove items with deleted workouts
+     */
+    private void validateAndCleanupSchedule(Schedule schedule, OnScheduleValidatedListener listener) {
+        if (schedule == null || schedule.getScheduleItems() == null || schedule.getScheduleItems().isEmpty()) {
+            listener.onScheduleValidated(schedule);
+            return;
+        }
+        
+        List<Schedule.ScheduleItem> items = schedule.getScheduleItems();
+        final List<Schedule.ScheduleItem> validItems = new ArrayList<>();
+        final int[] checkedCount = {0};
+        final int totalCount = items.size();
+        
+        if (totalCount == 0) {
+            listener.onScheduleValidated(schedule);
+            return;
+        }
+        
+        // Check each schedule item's workout
+        for (Schedule.ScheduleItem item : items) {
+            String workoutId = item.getWorkoutId();
+            if (workoutId == null || workoutId.isEmpty()) {
+                checkedCount[0]++;
+                if (checkedCount[0] == totalCount) {
+                    // All items checked, cleanup if needed
+                    cleanupScheduleIfNeeded(schedule, validItems, listener);
+                }
+                continue;
+            }
+            
+            // Check if workout exists
+            checkWorkoutExists(workoutId, exists -> {
+                synchronized (validItems) {
+                    if (exists) {
+                        validItems.add(item);
+                        Log.d(TAG, "Workout exists: " + workoutId);
+                    } else {
+                        Log.d(TAG, "Workout does not exist (deleted): " + workoutId);
+                    }
+                    
+                    checkedCount[0]++;
+                    if (checkedCount[0] == totalCount) {
+                        // All items checked, cleanup if needed
+                        cleanupScheduleIfNeeded(schedule, validItems, listener);
+                    }
+                }
+            });
+        }
+    }
+    
+    /**
+     * Check if workout exists in either workouts_templates or user_workouts
+     */
+    private void checkWorkoutExists(String workoutId, OnWorkoutExistsListener listener) {
+        if (getActivity() == null || !(getActivity() instanceof androidx.appcompat.app.AppCompatActivity)) {
+            listener.onWorkoutExists(false);
+            return;
+        }
+        
+        androidx.appcompat.app.AppCompatActivity activity = 
+            (androidx.appcompat.app.AppCompatActivity) getActivity();
+        
+        // Try WorkoutTemplate first
+        FirebaseService.getInstance().loadWorkoutTemplateById(workoutId, activity, template -> {
+            if (template != null && template.getTitle() != null && !template.getTitle().isEmpty()) {
+                listener.onWorkoutExists(true);
+            } else {
+                // Try UserWorkout
+                FirebaseService.getInstance().loadUserWorkoutById(workoutId, activity, userWorkout -> {
+                    listener.onWorkoutExists(userWorkout != null && 
+                                           userWorkout.getTitle() != null && 
+                                           !userWorkout.getTitle().isEmpty());
+                });
+            }
+        });
+    }
+    
+    /**
+     * Cleanup schedule if there are deleted workouts
+     */
+    private void cleanupScheduleIfNeeded(Schedule schedule, List<Schedule.ScheduleItem> validItems, 
+                                        OnScheduleValidatedListener listener) {
+        if (validItems.size() == schedule.getScheduleItems().size()) {
+            // No items were removed, schedule is valid
+            listener.onScheduleValidated(schedule);
+        } else {
+            // Some items were removed, update schedule in database
+            Log.d(TAG, "Cleaning up schedule: removing " + 
+                (schedule.getScheduleItems().size() - validItems.size()) + " deleted workout items");
+            
+            Schedule cleanedSchedule = new Schedule();
+            cleanedSchedule.setId(schedule.getId());
+            cleanedSchedule.setUid(schedule.getUid());
+            cleanedSchedule.setTitle(schedule.getTitle());
+            cleanedSchedule.setTimezone(schedule.getTimezone());
+            cleanedSchedule.setScheduleItems(validItems);
+            cleanedSchedule.setNotification(schedule.getNotification());
+            
+            FirebaseService.getInstance().saveSchedule(cleanedSchedule, success -> {
+                if (success) {
+                    Log.d(TAG, "Schedule cleaned up successfully");
+                    listener.onScheduleValidated(cleanedSchedule);
+                } else {
+                    Log.e(TAG, "Failed to cleanup schedule, using original schedule");
+                    listener.onScheduleValidated(schedule);
+                }
+            });
+        }
+    }
+    
+    /**
+     * Interface for workout exists check callback
+     */
+    private interface OnWorkoutExistsListener {
+        void onWorkoutExists(boolean exists);
+    }
+    
+    /**
+     * Interface for schedule validated callback
+     */
+    private interface OnScheduleValidatedListener {
+        void onScheduleValidated(Schedule schedule);
     }
 
     /**
@@ -796,6 +948,7 @@ public class DailyFragment extends Fragment {
 
         List<Schedule.ScheduleItem> itemsForSelectedDay = new ArrayList<>();
         
+        // Only show valid schedule items (deleted workouts already filtered out)
         for (Schedule.ScheduleItem item : userSchedule.getScheduleItems()) {
             if (item.getDayOfWeek() != null && item.getDayOfWeek().contains(scheduleDayOfWeek)) {
                 itemsForSelectedDay.add(item);

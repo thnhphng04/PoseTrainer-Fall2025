@@ -64,6 +64,7 @@ public class HomeFragment extends Fragment {
         setupFilterListeners();
         loadCurrentUserInfo();
         loadWorkoutTemplates();
+        isDataLoaded = true;
         
         // Initialize chip states
         updateCategoryChipStates();
@@ -152,11 +153,26 @@ public class HomeFragment extends Fragment {
         updateUserUI(name, photoUrl);
     }
 
+    private boolean isDataLoaded = false;
+    
     @Override
     public void onResume() {
         super.onResume();
-        // Cập nhật lại khi người dùng quay lại Home sau khi chỉnh sửa
-        loadCurrentUserInfo();
+        // Chỉ load data một lần ban đầu để tránh reload không cần thiết
+        if (!isDataLoaded && isVisible() && isAdded()) {
+            loadCurrentUserInfo();
+            isDataLoaded = true;
+        }
+    }
+    
+    @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        // Khi fragment trở nên visible lại, refresh user info (phòng trường hợp user đã chỉnh sửa profile)
+        // Chỉ refresh nếu fragment đã resumed và added
+        if (!hidden && isAdded() && isResumed()) {
+            loadCurrentUserInfo();
+        }
     }
 
     private void initBodyPartsListeners() {
@@ -330,6 +346,8 @@ public class HomeFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        // Reset flag khi view bị destroy
+        isDataLoaded = false;
         binding = null;
     }
 }
