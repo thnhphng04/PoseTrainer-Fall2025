@@ -312,26 +312,30 @@
                 android:focusable="true">
 
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:id="@+id/areaMyWorkouts"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:background="?android:attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true">
+
+                <TextView
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:text="My Workouts"
+                    android:textColor="@color/white"
+                    android:textSize="15sp"/>
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="My Workouts"
-                        android:textColor="@color/white"
-                        android:textSize="15sp"/>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Lịch sử - Gần đây - Yêu thích"
-                        android:textColor="#666666"
-                        android:textSize="11sp"
-                        android:layout_marginTop="2dp"/>
-                </LinearLayout>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Lịch sử - Gần đây - Yêu thích"
+                    android:textColor="#666666"
+                    android:textSize="11sp"
+                    android:layout_marginTop="2dp"/>
+            </LinearLayout>
 
                 <TextView
                     android:layout_width="wrap_content"

@@ -20,6 +20,7 @@ import fpt.fall2025.posetrainer.Activity.EditGoalsActivity;
 import fpt.fall2025.posetrainer.Activity.EditProfileActivity;
 import fpt.fall2025.posetrainer.Activity.LoginActivity;
 import fpt.fall2025.posetrainer.Activity.OnboardingActivity;
+import fpt.fall2025.posetrainer.Activity.PlanPreviewActivity;
 import fpt.fall2025.posetrainer.Domain.User;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.databinding.FragmentProfileBinding;
@@ -73,11 +74,13 @@ public class ProfileFragment extends Fragment {
         binding.menuSupport.setOnClickListener(v ->
                 startActivity(new Intent(requireContext(), OnboardingActivity.class))
         );
+        View.OnClickListener openPlanPreview = v ->
+                startActivity(new Intent(requireContext(), PlanPreviewActivity.class));
 
-        // Menu Workouts
-        binding.menuWorkouts.setOnClickListener(v ->
-                Toast.makeText(requireContext(), "My Workouts - Coming soon!", Toast.LENGTH_SHORT).show()
-        );
+        // ✅ mở màn PlanPreviewActivity
+        binding.menuWorkouts.setOnClickListener(openPlanPreview);   // bấm cả hàng
+        binding.areaMyWorkouts.setOnClickListener(openPlanPreview); // bấm vùng chữ
+
 
         // Menu Sync
         binding.menuSync.setOnClickListener(v ->
