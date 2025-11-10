@@ -20,18 +20,23 @@ import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import fpt.fall2025.posetrainer.Adapter.UserWorkoutExerciseAdapter;
+import fpt.fall2025.posetrainer.Adapter.EditWorkoutAdapter;
+import fpt.fall2025.posetrainer.Adapter.ExerciseItemTouchHelper;
+import fpt.fall2025.posetrainer.Dialog.ExerciseSelectionDialog;
 import fpt.fall2025.posetrainer.Domain.Exercise;
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
 import fpt.fall2025.posetrainer.Domain.Session;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.databinding.ActivityUserWorkoutDetailBinding;
+import androidx.fragment.app.FragmentManager;
+import androidx.recyclerview.widget.ItemTouchHelper;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class UserWorkoutDetailActivity extends AppCompatActivity implements UserWorkoutExerciseAdapter.OnSetsRepsChangedListener, UserWorkoutExerciseAdapter.OnDifficultyChangedListener {
+public class UserWorkoutDetailActivity extends AppCompatActivity implements UserWorkoutExerciseAdapter.OnSetsRepsChangedListener, UserWorkoutExerciseAdapter.OnDifficultyChangedListener, EditWorkoutAdapter.OnExerciseRemovedListener {
     private static final String TAG = "UserWorkoutDetailActivity";
     ActivityUserWorkoutDetailBinding binding;
     private UserWorkout userWorkout;
@@ -41,6 +46,9 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
     private String[] exerciseDifficulties;
     private Session currentSession;
     private boolean hasActiveSession = false;
+    private boolean isEditMode = false;
+    private UserWorkoutExerciseAdapter userWorkoutExerciseAdapter;
+    private EditWorkoutAdapter editWorkoutAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -176,7 +184,11 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
             @Override
             public boolean onMenuItemClick(MenuItem item) {
                 if (item.getItemId() == R.id.action_edit_workout) {
-                    openEditUserWorkoutActivity();
+                    if (isEditMode) {
+                        exitEditMode();
+                    } else {
+                        enterEditMode();
+                    }
                     return true;
                 }
                 return false;
@@ -188,17 +200,197 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
     }
     
     /**
-     * Open EditWorkoutActivity for user workout
+     * Enter edit mode - enable editing
      */
-    private void openEditUserWorkoutActivity() {
-        if (userWorkout == null) {
-            Toast.makeText(this, "User workout not loaded", Toast.LENGTH_SHORT).show();
+    private void enterEditMode() {
+        isEditMode = true;
+        
+        // Show EditText fields, hide TextView fields
+        binding.titleTxt.setVisibility(View.GONE);
+        binding.titleEditTxt.setVisibility(View.VISIBLE);
+        binding.descriptionTxt.setVisibility(View.GONE);
+        binding.descriptionEditTxt.setVisibility(View.VISIBLE);
+        
+        // Set values to EditText
+        binding.titleEditTxt.setText(userWorkout.getTitle());
+        binding.descriptionEditTxt.setText(userWorkout.getDescription());
+        
+        // Show Add Exercise button
+        binding.addExerciseBtn.setVisibility(View.VISIBLE);
+        binding.addExerciseBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openExerciseSelection();
+            }
+        });
+        
+        // Hide Start Workout button, show Save button
+        binding.button.setVisibility(View.GONE);
+        binding.saveBtn.setVisibility(View.VISIBLE);
+        binding.saveBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                updateUserWorkout();
+            }
+        });
+        
+        // Switch to EditWorkoutAdapter for editing
+        switchToEditAdapter();
+        
+        Toast.makeText(this, "Chế độ chỉnh sửa", Toast.LENGTH_SHORT).show();
+    }
+    
+    /**
+     * Exit edit mode - disable editing
+     */
+    private void exitEditMode() {
+        isEditMode = false;
+        
+        // Show TextView fields, hide EditText fields
+        binding.titleTxt.setVisibility(View.VISIBLE);
+        binding.titleEditTxt.setVisibility(View.GONE);
+        binding.descriptionTxt.setVisibility(View.VISIBLE);
+        binding.descriptionEditTxt.setVisibility(View.GONE);
+        
+        // Hide Add Exercise button
+        binding.addExerciseBtn.setVisibility(View.GONE);
+        
+        // Show Start Workout button, hide Save button
+        binding.button.setVisibility(View.VISIBLE);
+        binding.saveBtn.setVisibility(View.GONE);
+        
+        // Switch back to UserWorkoutExerciseAdapter
+        switchToViewAdapter();
+        
+        Toast.makeText(this, "Thoát chế độ chỉnh sửa", Toast.LENGTH_SHORT).show();
+    }
+    
+    /**
+     * Switch to EditWorkoutAdapter for editing
+     */
+    private void switchToEditAdapter() {
+        if (exercises == null || exercises.isEmpty()) {
             return;
         }
         
-        Intent intent = new Intent(this, EditWorkoutActivity.class);
-        intent.putExtra("userWorkoutId", userWorkout.getId());
-        startActivity(intent);
+        editWorkoutAdapter = new EditWorkoutAdapter(exercises, this);
+        editWorkoutAdapter.setOnExerciseReorderListener(new EditWorkoutAdapter.OnExerciseReorderListener() {
+            @Override
+            public void onExerciseMoved(int fromPosition, int toPosition) {
+                // Not needed
+            }
+            
+            @Override
+            public void onExercisesReordered() {
+                // Update duration when exercises are reordered
+                updateDuration();
+            }
+        });
+        
+        // Setup drag & drop
+        ExerciseItemTouchHelper callback = new ExerciseItemTouchHelper(editWorkoutAdapter);
+        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(callback);
+        itemTouchHelper.attachToRecyclerView(binding.view3);
+        
+        binding.view3.setAdapter(editWorkoutAdapter);
+    }
+    
+    /**
+     * Switch back to UserWorkoutExerciseAdapter for viewing
+     */
+    private void switchToViewAdapter() {
+        if (exercises == null || exercises.isEmpty()) {
+            return;
+        }
+        
+        // Reinitialize configs from updated UserWorkout
+        initializeExerciseConfigsFromUserWorkout();
+        
+        userWorkoutExerciseAdapter = new UserWorkoutExerciseAdapter(exercises, userWorkout);
+        userWorkoutExerciseAdapter.setOnSetsRepsChangedListener(this);
+        userWorkoutExerciseAdapter.setOnDifficultyChangedListener(this);
+        
+        binding.view3.setAdapter(userWorkoutExerciseAdapter);
+        userWorkoutExerciseAdapter.notifyDataSetChanged();
+    }
+    
+    /**
+     * Open exercise selection dialog
+     */
+    private void openExerciseSelection() {
+        ExerciseSelectionDialog dialog = new ExerciseSelectionDialog();
+        dialog.setOnExerciseSelectedListener(exercise -> {
+            addExerciseToWorkout(exercise);
+        });
+        
+        FragmentManager fragmentManager = getSupportFragmentManager();
+        dialog.show(fragmentManager, "ExerciseSelectionDialog");
+    }
+    
+    /**
+     * Add selected exercise to workout
+     */
+    private void addExerciseToWorkout(Exercise exercise) {
+        // Add exercise to the end of the list
+        exercises.add(exercise);
+        
+        // Update adapter
+        if (editWorkoutAdapter != null) {
+            editWorkoutAdapter.notifyItemInserted(exercises.size() - 1);
+            editWorkoutAdapter.notifyDataSetChanged();
+        }
+        
+        // Update duration
+        updateDuration();
+        
+        Log.d(TAG, "Đã thêm bài tập: " + exercise.getName());
+        Toast.makeText(this, "Đã thêm " + exercise.getName() + " vào bài tập", Toast.LENGTH_SHORT).show();
+    }
+    
+    /**
+     * Update duration text based on current exercises
+     */
+    private void updateDuration() {
+        int totalMinutes = calculateDurationFromExercises();
+        if (totalMinutes > 0) {
+            binding.durationTxt.setText(totalMinutes + " min");
+        } else {
+            binding.durationTxt.setText("0 min");
+        }
+    }
+    
+    /**
+     * Calculate total duration from exercises array
+     */
+    private int calculateDurationFromExercises() {
+        if (exercises == null || exercises.isEmpty()) {
+            return 0;
+        }
+        
+        int totalSeconds = 0;
+        final int TIME_PER_REP_SECONDS = 2;
+        
+        for (int i = 0; i < exercises.size() && i < 10; i++) {
+            int sets = exerciseSets[i];
+            int reps = exerciseReps[i];
+            int restSec = 30; // Default
+            
+            // Try to get restSec from UserWorkoutItem config
+            if (userWorkout != null && userWorkout.getItems() != null) {
+                for (UserWorkout.UserWorkoutItem item : userWorkout.getItems()) {
+                    if (item.getExerciseId().equals(exercises.get(i).getId()) && item.getConfig() != null) {
+                        restSec = item.getConfig().getRestSec();
+                        break;
+                    }
+                }
+            }
+            
+            int exerciseTime = sets * reps * TIME_PER_REP_SECONDS;
+            int restTime = (sets - 1) * restSec;
+            totalSeconds += exerciseTime + restTime;
+        }
+        
+        return (int) Math.ceil(totalSeconds / 60.0);
     }
     
     private void startWorkout() {
@@ -610,8 +802,8 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
         // Set exercise count
         binding.excerciseTxt.setText(userWorkout.getItems().size() + " Exercise");
         
-        // Calculate estimated duration (rough estimate: 2 minutes per exercise)
-        int estimatedDuration = userWorkout.getItems().size() * 2;
+        // Calculate estimated duration from UserWorkout items
+        int estimatedDuration = calculateDurationFromUserWorkout();
         binding.durationTxt.setText(estimatedDuration + " min");
 
         // Set image based on source or default
@@ -619,6 +811,50 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
         Glide.with(this)
                 .load(resId)
                 .into(binding.pic);
+    }
+    
+    /**
+     * Calculate total duration from UserWorkout items
+     * Formula: For each item: (sets * reps * timePerRep) + (sets - 1) * restSec
+     * Time per rep is estimated as 2 seconds
+     */
+    private int calculateDurationFromUserWorkout() {
+        if (userWorkout == null || userWorkout.getItems() == null || userWorkout.getItems().isEmpty()) {
+            return 0;
+        }
+        
+        int totalSeconds = 0;
+        final int TIME_PER_REP_SECONDS = 2; // Estimated 2 seconds per rep
+        
+        for (UserWorkout.UserWorkoutItem item : userWorkout.getItems()) {
+            int sets = 3; // Default
+            int reps = 12; // Default
+            int restSec = 30; // Default
+            
+            // Get config from UserWorkoutItem if available
+            if (item.getConfig() != null) {
+                sets = item.getConfig().getSets();
+                reps = item.getConfig().getReps();
+                restSec = item.getConfig().getRestSec();
+                
+                // Validate values
+                if (sets <= 0) sets = 3;
+                if (reps <= 0) reps = 12;
+                if (restSec <= 0) restSec = 30;
+            }
+            
+            // Calculate time for this exercise
+            // Exercise time = sets * reps * timePerRep
+            int exerciseTime = sets * reps * TIME_PER_REP_SECONDS;
+            
+            // Rest time = (sets - 1) * restSec (rest between sets, not after last set)
+            int restTime = (sets - 1) * restSec;
+            
+            totalSeconds += exerciseTime + restTime;
+        }
+        
+        // Convert to minutes (round up)
+        return (int) Math.ceil(totalSeconds / 60.0);
     }
 
     /**
@@ -701,20 +937,20 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
         // Set layout manager
         binding.view3.setLayoutManager(new LinearLayoutManager(UserWorkoutDetailActivity.this, LinearLayoutManager.VERTICAL, false));
         
-        // Create and set adapter
-        UserWorkoutExerciseAdapter adapter = new UserWorkoutExerciseAdapter(exercises, userWorkout);
-        adapter.setOnSetsRepsChangedListener(UserWorkoutDetailActivity.this);
-        adapter.setOnDifficultyChangedListener(UserWorkoutDetailActivity.this);
+        // Create and set adapter (view mode by default)
+        userWorkoutExerciseAdapter = new UserWorkoutExerciseAdapter(exercises, userWorkout);
+        userWorkoutExerciseAdapter.setOnSetsRepsChangedListener(UserWorkoutDetailActivity.this);
+        userWorkoutExerciseAdapter.setOnDifficultyChangedListener(UserWorkoutDetailActivity.this);
         
         // Debug adapter state
-        adapter.debugAdapterState();
+        userWorkoutExerciseAdapter.debugAdapterState();
         
-        binding.view3.setAdapter(adapter);
+        binding.view3.setAdapter(userWorkoutExerciseAdapter);
         
         Log.d(TAG, "RecyclerView setup completed with adapter");
         
         // Force notify adapter
-        adapter.notifyDataSetChanged();
+        userWorkoutExerciseAdapter.notifyDataSetChanged();
         Log.d(TAG, "Adapter notifyDataSetChanged() called");
         
         // Debug: Log each exercise in the adapter
@@ -1040,6 +1276,119 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
         if (exerciseIndex < exerciseDifficulties.length) {
             exerciseDifficulties[exerciseIndex] = difficulty;
             Log.d(TAG, "Exercise " + exerciseIndex + " difficulty updated: " + difficulty);
+        }
+    }
+    
+    /**
+     * Update UserWorkout to Firebase
+     */
+    private void updateUserWorkout() {
+        if (exercises == null || exercises.isEmpty()) {
+            Toast.makeText(this, "Không có bài tập để lưu", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Validate title input
+        String workoutTitle = binding.titleEditTxt.getText().toString().trim();
+        if (workoutTitle.isEmpty()) {
+            Toast.makeText(this, "Vui lòng nhập tên bài tập", Toast.LENGTH_SHORT).show();
+            binding.titleEditTxt.requestFocus();
+            return;
+        }
+
+        Log.d(TAG, "Đang cập nhật user workout với " + exercises.size() + " bài tập");
+        
+        // Update userWorkout object
+        userWorkout.setTitle(workoutTitle);
+        userWorkout.setDescription(binding.descriptionEditTxt.getText().toString().trim());
+        
+        // Update updatedAt timestamp
+        userWorkout.setUpdatedAt(System.currentTimeMillis() / 1000);
+        
+        // Create new workout items based on current exercises
+        List<UserWorkout.UserWorkoutItem> newItems = new ArrayList<>();
+        for (int i = 0; i < exercises.size(); i++) {
+            Exercise exercise = exercises.get(i);
+            
+            UserWorkout.UserWorkoutItem item = new UserWorkout.UserWorkoutItem();
+            item.setOrder(i + 1);
+            item.setExerciseId(exercise.getId());
+            
+            // Create config from current exerciseSets, exerciseReps, exerciseDifficulties
+            UserWorkout.ExerciseConfig config = new UserWorkout.ExerciseConfig();
+            config.setSets(exerciseSets[i]);
+            config.setReps(exerciseReps[i]);
+            config.setDifficulty(exerciseDifficulties[i]);
+            
+            // Get restSec from original config or use default
+            int restSec = 30; // Default
+            if (exercise.getDefaultConfig() != null && exercise.getDefaultConfig().getRestSec() > 0) {
+                restSec = exercise.getDefaultConfig().getRestSec();
+            }
+            config.setRestSec(restSec);
+            
+            item.setConfig(config);
+            newItems.add(item);
+        }
+        
+        userWorkout.setItems(newItems);
+        
+        Log.d(TAG, "Đã cập nhật user workout: " + userWorkout.getTitle() + " (ID: " + userWorkout.getId() + ")");
+        
+        // Update to Firebase (saveUserWorkout uses .set() which will update if document exists)
+        FirebaseService.getInstance().saveUserWorkout(userWorkout, new FirebaseService.OnUserWorkoutSavedListener() {
+            @Override
+            public void onUserWorkoutSaved(boolean success) {
+                if (success) {
+                    Log.d(TAG, "Đã cập nhật user workout thành công: " + userWorkout.toString());
+                    Toast.makeText(UserWorkoutDetailActivity.this, "Cập nhật bài tập thành công!", Toast.LENGTH_SHORT).show();
+                    
+                    // Update UI with new data
+                    updateUserWorkoutUI();
+                    
+                    // Exit edit mode
+                    exitEditMode();
+                } else {
+                    Log.e(TAG, "Lỗi khi cập nhật user workout");
+                    Toast.makeText(UserWorkoutDetailActivity.this, "Lỗi khi cập nhật bài tập", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+    }
+    
+    /**
+     * Handle exercise removal in edit mode
+     */
+    @Override
+    public void onExerciseRemoved(int position) {
+        if (position >= 0 && position < exercises.size()) {
+            Exercise removedExercise = exercises.remove(position);
+            
+            // Update arrays - shift remaining items
+            if (position < exerciseSets.length - 1) {
+                System.arraycopy(exerciseSets, position + 1, exerciseSets, position, exercises.size() - position);
+                System.arraycopy(exerciseReps, position + 1, exerciseReps, position, exercises.size() - position);
+                System.arraycopy(exerciseDifficulties, position + 1, exerciseDifficulties, position, exercises.size() - position);
+            }
+            
+            // Reset last element
+            if (exercises.size() < exerciseSets.length) {
+                exerciseSets[exercises.size()] = 3;
+                exerciseReps[exercises.size()] = 12;
+                exerciseDifficulties[exercises.size()] = "beginner";
+            }
+            
+            // Update adapter
+            if (editWorkoutAdapter != null) {
+                editWorkoutAdapter.notifyItemRemoved(position);
+                editWorkoutAdapter.notifyDataSetChanged();
+            }
+            
+            // Update duration
+            updateDuration();
+            
+            Log.d(TAG, "Đã xóa bài tập: " + removedExercise.getName());
+            Toast.makeText(this, "Đã xóa " + removedExercise.getName(), Toast.LENGTH_SHORT).show();
         }
     }
 }

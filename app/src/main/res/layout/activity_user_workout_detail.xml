@@ -127,7 +127,7 @@
                         android:textStyle="bold" />
                 </LinearLayout>
 
-                <!-- Title -->
+                <!-- Title - TextView (View Mode) -->
                 <TextView
                     android:id="@+id/titleTxt"
                     android:layout_width="match_parent"
@@ -137,6 +137,23 @@
                     android:textSize="26sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.01"
+                    android:layout_marginBottom="12dp" />
+
+                <!-- Title - EditText (Edit Mode) -->
+                <EditText
+                    android:id="@+id/titleEditTxt"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Abs - Advanced"
+                    android:textColor="@color/white"
+                    android:textColorHint="#B3FFFFFF"
+                    android:textSize="26sp"
+                    android:textStyle="bold"
+                    android:background="@drawable/edit_text_background"
+                    android:padding="12dp"
+                    android:hint="Nhập tên bài tập"
+                    android:maxLines="1"
+                    android:visibility="gone"
                     android:layout_marginBottom="12dp" />
 
                 <!-- Duration & Exercise Count -->
@@ -189,7 +206,7 @@
                         android:textSize="14sp" />
                 </LinearLayout>
 
-                <!-- Description -->
+                <!-- Description - TextView (View Mode) -->
                 <TextView
                     android:id="@+id/descriptionTxt"
                     android:layout_width="match_parent"
@@ -198,6 +215,26 @@
                     android:textColor="#99FFFFFF"
                     android:textSize="14sp"
                     android:lineSpacingExtra="4dp"
+                    android:layout_marginBottom="24dp" />
+
+                <!-- Description - EditText (Edit Mode) -->
+                <EditText
+                    android:id="@+id/descriptionEditTxt"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="100dp"
+                    android:text="Advanced core workout combining all ab exercises for maximum results"
+                    android:textColor="@color/white"
+                    android:textColorHint="#B3FFFFFF"
+                    android:textSize="14sp"
+                    android:background="@drawable/edit_text_background"
+                    android:inputType="textMultiLine"
+                    android:lines="3"
+                    android:maxLines="5"
+                    android:padding="12dp"
+                    android:hint="Nhập mô tả bài tập"
+                    android:gravity="top|start"
+                    android:visibility="gone"
                     android:layout_marginBottom="24dp" />
 
                 <!-- Exercise Section Header -->
@@ -218,7 +255,18 @@
                         android:textSize="20sp"
                         android:textStyle="bold" />
 
-                    <!-- Optional: Add filter or sort button here -->
+                    <!-- Add Exercise Button (Edit Mode Only) -->
+                    <androidx.appcompat.widget.AppCompatButton
+                        android:id="@+id/addExerciseBtn"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="➕ Thêm"
+                        android:textColor="@color/orange"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:background="@android:color/transparent"
+                        android:visibility="gone"
+                        android:padding="8dp" />
                 </LinearLayout>
 
                 <!-- Exercise List -->
@@ -250,6 +298,7 @@
             android:orientation="vertical"
             android:padding="16dp">
 
+            <!-- Start Workout Button (View Mode) -->
             <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/button"
                 android:layout_width="match_parent"
@@ -260,6 +309,21 @@
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:elevation="4dp"
+                style="@android:style/Widget.Button" />
+
+            <!-- Save Button (Edit Mode) -->
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/saveBtn"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="💾 Lưu bài tập"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:background="@drawable/orange_bg"
+                android:elevation="4dp"
+                android:visibility="gone"
                 style="@android:style/Widget.Button" />
         </LinearLayout>
     </androidx.cardview.widget.CardView>

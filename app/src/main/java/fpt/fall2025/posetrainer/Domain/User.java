@@ -1,8 +1,11 @@
 package fpt.fall2025.posetrainer.Domain;
 
+import com.google.firebase.firestore.IgnoreExtraProperties;
+
 import java.io.Serializable;
 import java.util.List;
 
+@IgnoreExtraProperties
 public class User implements Serializable {
     private String uid;
     private String email;

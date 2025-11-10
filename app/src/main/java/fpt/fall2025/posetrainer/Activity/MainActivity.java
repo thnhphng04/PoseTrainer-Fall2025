@@ -13,6 +13,7 @@ import fpt.fall2025.posetrainer.Fragment.MyWorkoutFragment;
 import fpt.fall2025.posetrainer.Fragment.DailyFragment;
 import fpt.fall2025.posetrainer.Fragment.ProfileFragment;
 import fpt.fall2025.posetrainer.Fragment.CommunityFragment;
+import fpt.fall2025.posetrainer.Helper.AppStateHelper;
 import fpt.fall2025.posetrainer.databinding.ActivityMainBinding;
 
 public class MainActivity extends AppCompatActivity {
@@ -44,6 +45,30 @@ public class MainActivity extends AppCompatActivity {
         
         // Load fragment mặc định (Home)
         showFragment(homeFragment);
+    }
+    
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Track app state: app đang ở foreground
+        AppStateHelper.setAppInForeground(true);
+        Log.d(TAG, "MainActivity onResume: Ứng dụng ở foreground");
+    }
+    
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // Track app state: app có thể đang ở background
+        // Note: Không set false ngay vì có thể đang chuyển sang Activity khác trong cùng app
+        Log.d(TAG, "MainActivity onPause");
+    }
+    
+    @Override
+    protected void onStop() {
+        super.onStop();
+        // Track app state: app đang ở background
+        AppStateHelper.setAppInForeground(false);
+        Log.d(TAG, "MainActivity onStop: Ứng dụng ở background");
     }
 
     /**
@@ -118,10 +143,19 @@ public class MainActivity extends AppCompatActivity {
             transaction.commit();
             
             currentFragment = fragment;
-            Log.d(TAG, "Switched to fragment: " + fragment.getClass().getSimpleName());
+            
+            // Track DailyFragment visibility để suppress notification khi user đang xem schedule
+            if (fragment instanceof DailyFragment) {
+                AppStateHelper.setDailyFragmentVisible(true);
+                Log.d(TAG, "DailyFragment hiện đang HIỂN THỊ - thông báo sẽ bị ẩn");
+            } else {
+                AppStateHelper.setDailyFragmentVisible(false);
+            }
+            
+            Log.d(TAG, "Đã chuyển sang fragment: " + fragment.getClass().getSimpleName());
         } catch (IllegalStateException e) {
             // Xử lý trường hợp activity đang save state
-            Log.w(TAG, "Cannot commit fragment transaction: " + e.getMessage());
+            Log.w(TAG, "Không thể commit fragment transaction: " + e.getMessage());
             // Fallback: sử dụng commitAllowingStateLoss() như giải pháp cuối cùng
             try {
                 FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
@@ -137,7 +171,7 @@ public class MainActivity extends AppCompatActivity {
                 transaction.commitAllowingStateLoss();
                 currentFragment = fragment;
             } catch (Exception ex) {
-                Log.e(TAG, "Failed to commit fragment transaction: " + ex.getMessage());
+                Log.e(TAG, "Không thể commit fragment transaction: " + ex.getMessage());
             }
         }
     }

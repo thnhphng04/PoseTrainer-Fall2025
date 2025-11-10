@@ -59,6 +59,8 @@ public class HomeFragment extends Fragment {
         binding.view1.setLayoutManager(
                 new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false)
         );
+        // Set adapter immediately to avoid "No adapter attached" warning
+        binding.view1.setAdapter(new WorkoutTemplateAdapter(filteredWorkoutTemplates));
 
         setupSearchListeners();
         setupFilterListeners();
@@ -93,7 +95,7 @@ public class HomeFragment extends Fragment {
     private void loadCurrentUserInfo() {
         FirebaseUser current = mAuth.getCurrentUser();
         if (current == null) {
-            Log.w(TAG, "No current user found");
+            Log.w(TAG, "Không tìm thấy người dùng hiện tại");
             return;
         }
 
@@ -124,7 +126,7 @@ public class HomeFragment extends Fragment {
                     }
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Failed to load user info", e);
+                    Log.e(TAG, "Lỗi: Không thể tải thông tin người dùng", e);
                     updateUserUIFromAuth(current);
                 });
     }
@@ -340,7 +342,7 @@ public class HomeFragment extends Fragment {
         // Update RecyclerView
         binding.view1.setAdapter(new WorkoutTemplateAdapter(filteredWorkoutTemplates));
         
-        Log.d(TAG, "Filtered workouts: " + filteredWorkoutTemplates.size() + " out of " + workoutTemplates.size());
+        Log.d(TAG, "Đã lọc bài tập: " + filteredWorkoutTemplates.size() + " / " + workoutTemplates.size());
     }
 
     @Override
