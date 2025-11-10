@@ -45,6 +45,7 @@ import fpt.fall2025.posetrainer.Helper.PermissionHelper;
 import fpt.fall2025.posetrainer.Service.AlarmScheduler;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.Service.NotificationHelper;
+import fpt.fall2025.posetrainer.Helper.AppStateHelper;
 import fpt.fall2025.posetrainer.databinding.FragmentDailyBinding;
 
 public class DailyFragment extends Fragment {
@@ -72,11 +73,11 @@ public class DailyFragment extends Fragment {
             new ActivityResultContracts.RequestPermission(),
             isGranted -> {
                 if (isGranted) {
-                    Log.d(TAG, "Notification permission granted");
+                    Log.d(TAG, "Quyền thông báo đã được cấp");
                     // Re-schedule alarms now that permission is granted
                     scheduleAlarms();
                 } else {
-                    Log.w(TAG, "Notification permission denied");
+                    Log.w(TAG, "Quyền thông báo bị từ chối");
                     Toast.makeText(getContext(), 
                         "Cần quyền thông báo để nhắc nhở tập luyện. Vui lòng cấp quyền trong cài đặt.", 
                         Toast.LENGTH_LONG).show();
@@ -114,6 +115,22 @@ public class DailyFragment extends Fragment {
         
         // Load user schedule from Firestore
         loadUserSchedule();
+    }
+    
+    @Override
+    public void onResume() {
+        super.onResume();
+        // Track DailyFragment visibility: đang visible
+        AppStateHelper.setDailyFragmentVisible(true);
+        Log.d(TAG, "DailyFragment onResume: Fragment đang hiển thị - thông báo sẽ bị ẩn");
+    }
+    
+    @Override
+    public void onPause() {
+        super.onPause();
+        // Track DailyFragment visibility: không còn visible
+        AppStateHelper.setDailyFragmentVisible(false);
+        Log.d(TAG, "DailyFragment onPause: Fragment đã ẩn - thông báo sẽ được hiển thị");
     }
 
     /**
@@ -566,7 +583,7 @@ public class DailyFragment extends Fragment {
     private void createNotificationsForScheduleItem(Schedule.ScheduleItem item, String uid) {
         if (item.getDayOfWeek() == null || item.getDayOfWeek().isEmpty() || 
             item.getTimeLocal() == null || item.getWorkoutId() == null) {
-            Log.w(TAG, "Cannot create notifications: schedule item missing required fields");
+            Log.w(TAG, "Không thể tạo thông báo: schedule item thiếu các trường bắt buộc");
             return;
         }
 
@@ -595,9 +612,9 @@ public class DailyFragment extends Fragment {
                     // Save notification to Firestore
                     FirebaseService.getInstance().saveNotification(notification, success -> {
                         if (success) {
-                            Log.d(TAG, "Notification created for day " + dayOfWeek + " at " + item.getTimeLocal());
+                            Log.d(TAG, "Đã tạo thông báo cho ngày " + dayOfWeek + " lúc " + item.getTimeLocal());
                         } else {
-                            Log.w(TAG, "Failed to create notification for day " + dayOfWeek);
+                            Log.w(TAG, "Không thể tạo thông báo cho ngày " + dayOfWeek);
                         }
                     });
                 }
@@ -611,36 +628,36 @@ public class DailyFragment extends Fragment {
      */
     private void loadWorkoutName(String workoutId, OnWorkoutNameLoadedListener listener) {
         if (workoutId == null || workoutId.isEmpty()) {
-            Log.w(TAG, "WorkoutId is null or empty");
+            Log.w(TAG, "WorkoutId là null hoặc rỗng");
             listener.onWorkoutNameLoaded("Bài tập");
             return;
         }
         
         if (getActivity() == null || !(getActivity() instanceof androidx.appcompat.app.AppCompatActivity)) {
-            Log.w(TAG, "Activity is null, returning default name");
+            Log.w(TAG, "Activity là null, trả về tên mặc định");
             listener.onWorkoutNameLoaded("Bài tập");
             return;
         }
         
-        Log.d(TAG, "Loading workout name for ID: " + workoutId + " (trying WorkoutTemplate first, then UserWorkout)");
+        Log.d(TAG, "Đang tải tên workout cho ID: " + workoutId + " (thử WorkoutTemplate trước, sau đó UserWorkout)");
         
         // Try to load from WorkoutTemplate first (workout_templates collection)
         FirebaseService.getInstance().loadWorkoutTemplateById(workoutId, (androidx.appcompat.app.AppCompatActivity) getActivity(), template -> {
             if (template != null && template.getTitle() != null && !template.getTitle().isEmpty()) {
                 // Successfully loaded from WorkoutTemplate
-                Log.d(TAG, "✓ Loaded workout name from WorkoutTemplate: " + template.getTitle());
+                Log.d(TAG, "✓ Đã tải tên workout từ WorkoutTemplate: " + template.getTitle());
                 listener.onWorkoutNameLoaded(template.getTitle());
             } else {
                 // WorkoutTemplate not found or invalid - try UserWorkout (user_workouts collection)
-                Log.d(TAG, "✗ WorkoutTemplate not found for ID: " + workoutId + ", trying UserWorkout...");
+                Log.d(TAG, "✗ Không tìm thấy WorkoutTemplate cho ID: " + workoutId + ", đang thử UserWorkout...");
                 FirebaseService.getInstance().loadUserWorkoutById(workoutId, (androidx.appcompat.app.AppCompatActivity) getActivity(), userWorkout -> {
                     if (userWorkout != null && userWorkout.getTitle() != null && !userWorkout.getTitle().isEmpty()) {
                         // Successfully loaded from UserWorkout
-                        Log.d(TAG, "✓ Loaded workout name from UserWorkout: " + userWorkout.getTitle());
+                        Log.d(TAG, "✓ Đã tải tên workout từ UserWorkout: " + userWorkout.getTitle());
                         listener.onWorkoutNameLoaded(userWorkout.getTitle());
                     } else {
                         // Neither WorkoutTemplate nor UserWorkout found
-                        Log.w(TAG, "✗ Could not load workout name from either WorkoutTemplate or UserWorkout for ID: " + workoutId);
+                        Log.w(TAG, "✗ Không thể tải tên workout từ WorkoutTemplate hoặc UserWorkout cho ID: " + workoutId);
                         // Fallback to default name
                         listener.onWorkoutNameLoaded("Bài tập");
                     }
@@ -715,7 +732,7 @@ public class DailyFragment extends Fragment {
         // but notifications won't show until permission is granted
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (!PermissionHelper.hasNotificationPermission(context)) {
-                Log.w(TAG, "Notification permission not granted. Alarms will be scheduled but notifications won't show.");
+                Log.w(TAG, "Quyền thông báo chưa được cấp. Alarms sẽ được lên lịch nhưng thông báo sẽ không hiển thị.");
             }
         }
 
@@ -725,7 +742,7 @@ public class DailyFragment extends Fragment {
         // Schedule alarms (will use inexact alarms if exact permission not available)
         AlarmScheduler.getInstance(context).scheduleAlarmsFromSchedule(userSchedule);
         
-        Log.d(TAG, "Alarms scheduled for schedule: " + userSchedule.getTitle());
+        Log.d(TAG, "Đã lên lịch alarms cho schedule: " + userSchedule.getTitle());
     }
 
     /**
@@ -753,7 +770,7 @@ public class DailyFragment extends Fragment {
         // Just show a warning if exact permission is not available
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (!PermissionHelper.canScheduleExactAlarms(getContext())) {
-                Log.w(TAG, "Exact alarm permission not granted. Will use inexact alarms (may have small delay).");
+                Log.w(TAG, "Quyền exact alarm chưa được cấp. Sẽ sử dụng inexact alarms (có thể có độ trễ nhỏ).");
                 // Show informational toast (not blocking)
                 Toast.makeText(getContext(), 
                     "Lưu ý: Thông báo có thể đến muộn vài phút. Để chính xác hơn, vui lòng cấp quyền trong cài đặt.", 
@@ -772,22 +789,22 @@ public class DailyFragment extends Fragment {
     private void loadUserSchedule() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser == null) {
-            Log.w(TAG, "No current user, cannot load schedule");
+            Log.w(TAG, "Không có người dùng hiện tại, không thể tải schedule");
             return;
         }
 
         String userId = currentUser.getUid();
-        Log.d(TAG, "=== LOADING USER SCHEDULE ===");
-        Log.d(TAG, "Loading schedule for userId: " + userId);
+        Log.d(TAG, "=== ĐANG TẢI USER SCHEDULE ===");
+        Log.d(TAG, "Đang tải schedule cho userId: " + userId);
 
         FirebaseService.getInstance().loadUserSchedule(userId, new FirebaseService.OnScheduleLoadedListener() {
             @Override
             public void onScheduleLoaded(Schedule schedule) {
-                Log.d(TAG, "=== SCHEDULE LOADED ===");
+                Log.d(TAG, "=== ĐÃ TẢI SCHEDULE ===");
                 
                 if (schedule != null) {
-                    Log.d(TAG, "Loaded schedule: " + schedule.getTitle() + 
-                            " with " + (schedule.getScheduleItems() != null ? schedule.getScheduleItems().size() : 0) + " items");
+                    Log.d(TAG, "Đã tải schedule: " + schedule.getTitle() + 
+                            " với " + (schedule.getScheduleItems() != null ? schedule.getScheduleItems().size() : 0) + " items");
                     
                     // Validate and cleanup schedule items (remove deleted workouts)
                     validateAndCleanupSchedule(schedule, cleanedSchedule -> {
@@ -800,11 +817,11 @@ public class DailyFragment extends Fragment {
                         scheduleAlarms();
                     });
                 } else {
-                    Log.d(TAG, "No schedule found for user");
+                    Log.d(TAG, "Không tìm thấy schedule cho người dùng");
                     userSchedule = null;
                 }
                 
-                Log.d(TAG, "=== END LOADING SCHEDULE ===");
+                Log.d(TAG, "=== KẾT THÚC TẢI SCHEDULE ===");
             }
         });
     }
@@ -845,9 +862,9 @@ public class DailyFragment extends Fragment {
                 synchronized (validItems) {
                     if (exists) {
                         validItems.add(item);
-                        Log.d(TAG, "Workout exists: " + workoutId);
+                        Log.d(TAG, "Workout tồn tại: " + workoutId);
                     } else {
-                        Log.d(TAG, "Workout does not exist (deleted): " + workoutId);
+                        Log.d(TAG, "Workout không tồn tại (đã bị xóa): " + workoutId);
                     }
                     
                     checkedCount[0]++;
@@ -897,8 +914,8 @@ public class DailyFragment extends Fragment {
             listener.onScheduleValidated(schedule);
         } else {
             // Some items were removed, update schedule in database
-            Log.d(TAG, "Cleaning up schedule: removing " + 
-                (schedule.getScheduleItems().size() - validItems.size()) + " deleted workout items");
+            Log.d(TAG, "Đang dọn dẹp schedule: xóa " + 
+                (schedule.getScheduleItems().size() - validItems.size()) + " workout items đã bị xóa");
             
             Schedule cleanedSchedule = new Schedule();
             cleanedSchedule.setId(schedule.getId());
@@ -910,10 +927,10 @@ public class DailyFragment extends Fragment {
             
             FirebaseService.getInstance().saveSchedule(cleanedSchedule, success -> {
                 if (success) {
-                    Log.d(TAG, "Schedule cleaned up successfully");
+                    Log.d(TAG, "Đã dọn dẹp schedule thành công");
                     listener.onScheduleValidated(cleanedSchedule);
                 } else {
-                    Log.e(TAG, "Failed to cleanup schedule, using original schedule");
+                    Log.e(TAG, "Không thể dọn dẹp schedule, sử dụng schedule gốc");
                     listener.onScheduleValidated(schedule);
                 }
             });
@@ -957,7 +974,7 @@ public class DailyFragment extends Fragment {
 
         // You can display scheduled workouts here
         if (binding != null && !itemsForSelectedDay.isEmpty()) {
-            Log.d(TAG, "Found " + itemsForSelectedDay.size() + " scheduled workouts for selected day");
+            Log.d(TAG, "Tìm thấy " + itemsForSelectedDay.size() + " workout đã lên lịch cho ngày được chọn");
             // TODO: Display scheduled workouts in UI
             // For example, show them in a separate RecyclerView or add indicators
         }

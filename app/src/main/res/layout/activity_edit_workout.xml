@@ -199,10 +199,17 @@
                                 android:id="@+id/levelTxt"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Beginner"
+                                android:text="Người mới bắt đầu"
                                 android:textColor="@color/orange"
                                 android:textSize="14sp"
-                                android:textStyle="bold" />
+                                android:textStyle="bold"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:background="?attr/selectableItemBackground"
+                                android:paddingStart="8dp"
+                                android:paddingEnd="8dp"
+                                android:paddingTop="4dp"
+                                android:paddingBottom="4dp" />
 
                             <TextView
                                 android:layout_width="wrap_content"

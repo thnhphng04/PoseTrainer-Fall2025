@@ -9,6 +9,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
 import fpt.fall2025.posetrainer.Domain.Notification;
+import fpt.fall2025.posetrainer.Helper.AppStateHelper;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.Service.NotificationHelper;
 
@@ -20,16 +21,27 @@ public class WorkoutReminderReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        Log.d(TAG, "Workout reminder alarm received");
+        Log.d(TAG, "=== ĐÃ NHẬN BÁO THỨC NHẮC NHỞ TẬP LUYỆN ===");
         
         String workoutId = intent.getStringExtra("workoutId");
         int dayOfWeek = intent.getIntExtra("dayOfWeek", 0);
         int minutesBefore = intent.getIntExtra("minutesBefore", 0);
         
-        Log.d(TAG, "Showing notification for workoutId: " + workoutId + ", dayOfWeek: " + dayOfWeek + 
-            ", minutesBefore: " + minutesBefore);
+        Log.d(TAG, "WorkoutId: " + workoutId + ", dayOfWeek: " + dayOfWeek + ", minutesBefore: " + minutesBefore);
+        
+        // Kiểm tra xem có nên hiển thị notification không
+        // Không hiển thị nếu app đang ở foreground và DailyFragment đang visible
+        if (!AppStateHelper.shouldShowNotification(context)) {
+            Log.d(TAG, "Thông báo bị ẩn: Người dùng đang xem DailyFragment (lịch tập)");
+            // Vẫn lưu notification vào Firestore để tracking
+            if (minutesBefore == 0) {
+                saveNotificationToFirestore(workoutId, dayOfWeek);
+            }
+            return;
+        }
         
         // Show notification to device
+        Log.d(TAG, "Đang hiển thị thông báo trên thiết bị");
         NotificationHelper.showWorkoutReminderNotification(context, workoutId, dayOfWeek, minutesBefore);
         
         // Save notification to Firestore (only for the actual workout time, not reminders)
@@ -47,7 +59,7 @@ public class WorkoutReminderReceiver extends BroadcastReceiver {
     private void saveNotificationToFirestore(String workoutId, int dayOfWeek) {
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
         if (currentUser == null) {
-            Log.w(TAG, "No user logged in, cannot save notification");
+            Log.w(TAG, "Không có người dùng đăng nhập, không thể lưu thông báo");
             return;
         }
 
@@ -66,9 +78,9 @@ public class WorkoutReminderReceiver extends BroadcastReceiver {
 
         FirebaseService.getInstance().saveNotification(notification, success -> {
             if (success) {
-                Log.d(TAG, "Notification saved to Firestore successfully");
+                Log.d(TAG, "Đã lưu thông báo vào Firestore thành công");
             } else {
-                Log.w(TAG, "Failed to save notification to Firestore");
+                Log.w(TAG, "Không thể lưu thông báo vào Firestore");
             }
         });
     }

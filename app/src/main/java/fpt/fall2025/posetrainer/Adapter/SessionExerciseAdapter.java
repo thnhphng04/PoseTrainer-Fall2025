@@ -20,6 +20,7 @@ import java.util.List;
 import fpt.fall2025.posetrainer.Domain.Exercise;
 import fpt.fall2025.posetrainer.Domain.Session;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
+import fpt.fall2025.posetrainer.Helper.GlideImageLoader;
 import fpt.fall2025.posetrainer.R;
 
 public class SessionExerciseAdapter extends RecyclerView.Adapter<SessionExerciseAdapter.SessionExerciseViewHolder> {
@@ -82,12 +83,11 @@ public class SessionExerciseAdapter extends RecyclerView.Adapter<SessionExercise
             return;
         }
 
-        // Set exercise image
+        // Set exercise image - sử dụng GlideImageLoader để hỗ trợ tất cả các loại URL
         if (exercise.getMedia() != null && exercise.getMedia().getThumbnailUrl() != null) {
-            Glide.with(context)
-                    .load(exercise.getMedia().getThumbnailUrl())
-                    .placeholder(R.drawable.pic_1_1)
-                    .into(holder.exerciseImage);
+            String thumbnailUrl = exercise.getMedia().getThumbnailUrl();
+            // GlideImageLoader tự động xử lý: Google Drive, Google Image Search, direct URLs, local drawables
+            GlideImageLoader.loadImage(context, thumbnailUrl, holder.exerciseImage);
         } else {
             holder.exerciseImage.setImageResource(R.drawable.pic_1_1);
         }
