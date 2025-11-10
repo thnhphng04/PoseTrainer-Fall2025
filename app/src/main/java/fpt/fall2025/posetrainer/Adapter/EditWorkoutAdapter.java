@@ -26,10 +26,15 @@ import fpt.fall2025.posetrainer.R;
 public class EditWorkoutAdapter extends RecyclerView.Adapter<EditWorkoutAdapter.ExerciseViewHolder> {
     private ArrayList<Exercise> exercises;
     private OnExerciseRemovedListener listener;
+    private OnExerciseReorderListener reorderListener;
 
     public EditWorkoutAdapter(ArrayList<Exercise> exercises, OnExerciseRemovedListener listener) {
         this.exercises = exercises;
         this.listener = listener;
+    }
+    
+    public void setOnExerciseReorderListener(OnExerciseReorderListener listener) {
+        this.reorderListener = listener;
     }
 
     @NonNull
@@ -81,6 +86,10 @@ public class EditWorkoutAdapter extends RecyclerView.Adapter<EditWorkoutAdapter.
      */
     public void updateOrderNumbers() {
         notifyDataSetChanged();
+        // Notify listener that exercises have been reordered
+        if (reorderListener != null) {
+            reorderListener.onExercisesReordered();
+        }
     }
 
     /**
@@ -199,6 +208,7 @@ public class EditWorkoutAdapter extends RecyclerView.Adapter<EditWorkoutAdapter.
      */
     public interface OnExerciseReorderListener {
         void onExerciseMoved(int fromPosition, int toPosition);
+        void onExercisesReordered();
     }
 }
 

@@ -51,7 +51,7 @@ public class FirebaseService {
      * Load all public workout templates
      */
     public void loadWorkoutTemplates(AppCompatActivity activity, OnWorkoutTemplatesLoadedListener listener) {
-        Log.d(TAG, "Loading workout templates");
+        Log.d(TAG, "Đang tải mẫu bài tập...");
 
         db.collection("workouts_templates")
                 .whereEqualTo("isPublic", true)
@@ -65,10 +65,10 @@ public class FirebaseService {
                                 if (workoutTemplate != null) {
                                     workoutTemplate.setId(document.getId());
                                     workoutTemplates.add(workoutTemplate);
-                                    Log.d(TAG, "Loaded template: " + workoutTemplate.getTitle());
+                                    Log.d(TAG, "Đã tải mẫu: " + workoutTemplate.getTitle());
                                 }
                             } catch (Exception e) {
-                                Log.e(TAG, "Error parsing template: " + e.getMessage());
+                                Log.e(TAG, "Lỗi: Lỗi phân tích mẫu: " + e.getMessage(), e);
                             }
                         }
 
@@ -76,9 +76,9 @@ public class FirebaseService {
                             listener.onWorkoutTemplatesLoaded(workoutTemplates);
                         });
                     } else {
-                        Log.e(TAG, "Error getting documents: ", task.getException());
+                        Log.e(TAG, "Lỗi: Lỗi lấy tài liệu", task.getException());
                         activity.runOnUiThread(() -> {
-                            Toast.makeText(activity, "Error loading workout templates", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(activity, "Lỗi tải mẫu bài tập", Toast.LENGTH_SHORT).show();
                         });
                     }
                 });
@@ -88,7 +88,7 @@ public class FirebaseService {
      * Load workout template by ID
      */
     public void loadWorkoutTemplateById(String workoutTemplateId, AppCompatActivity activity, OnWorkoutTemplateLoadedListener listener) {
-        Log.d(TAG, "Loading workout template: " + workoutTemplateId);
+        Log.d(TAG, "Đang tải mẫu bài tập với ID: " + workoutTemplateId);
 
         db.collection("workouts_templates")
                 .document(workoutTemplateId)

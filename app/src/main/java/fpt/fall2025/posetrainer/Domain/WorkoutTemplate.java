@@ -1,8 +1,11 @@
 package fpt.fall2025.posetrainer.Domain;
 
+import com.google.firebase.firestore.IgnoreExtraProperties;
+
 import java.io.Serializable;
 import java.util.List;
 
+@IgnoreExtraProperties
 public class WorkoutTemplate implements Serializable {
     private String id;
     private String title;

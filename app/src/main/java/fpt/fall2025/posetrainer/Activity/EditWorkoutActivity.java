@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.ArrayAdapter;
 import android.widget.Toast;
 
 import com.google.firebase.auth.FirebaseAuth;
@@ -18,6 +19,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -43,6 +45,11 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
     private EditWorkoutAdapter adapter;
     private String workoutTemplateId;
     private String userId;
+    private String selectedLevel = "Người mới bắt đầu"; // Default level (Vietnamese)
+    
+    // Level mapping: Vietnamese display <-> English database value
+    private static final String[] LEVELS_VI = {"Người mới bắt đầu", "Trung bình", "Nâng cao"};
+    private static final String[] LEVELS_EN = {"Beginner", "Intermediate", "Advanced"};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,7 +62,7 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
         // Get workout template ID from intent
         workoutTemplateId = getIntent().getStringExtra("workoutTemplateId");
         if (workoutTemplateId == null) {
-            Toast.makeText(this, "No workout template ID provided", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Không có ID workout template", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
@@ -80,10 +87,10 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
         if (currentUser != null) {
             userId = currentUser.getUid();
-            Log.d(TAG, "Current user UID: " + userId);
+            Log.d(TAG, "UID người dùng hiện tại: " + userId);
         } else {
-            Log.e(TAG, "No user logged in");
-            Toast.makeText(this, "No user logged in", Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "Không có người dùng đăng nhập");
+            Toast.makeText(this, "Không có người dùng đăng nhập", Toast.LENGTH_SHORT).show();
             finish();
         }
     }
@@ -126,6 +133,9 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
 
         // Setup RecyclerView
         setupRecyclerView();
+        
+        // Setup level spinner
+        setupLevelSpinner();
     }
 
     /**
@@ -135,6 +145,19 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
         binding.exercisesRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         
         adapter = new EditWorkoutAdapter(exercises, this);
+        // Set reorder listener to update duration when exercises are reordered
+        adapter.setOnExerciseReorderListener(new EditWorkoutAdapter.OnExerciseReorderListener() {
+            @Override
+            public void onExerciseMoved(int fromPosition, int toPosition) {
+                // Not needed for duration update
+            }
+            
+            @Override
+            public void onExercisesReordered() {
+                // Update duration when exercises are reordered (drag & drop complete)
+                updateDuration();
+            }
+        });
         binding.exercisesRecyclerView.setAdapter(adapter);
 
         // Setup drag & drop with ExerciseItemTouchHelper
@@ -147,7 +170,7 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
      * Load workout template from Firebase
      */
     private void loadWorkoutTemplate() {
-        Log.d(TAG, "Loading workout template: " + workoutTemplateId);
+        Log.d(TAG, "Đang tải workout template: " + workoutTemplateId);
         
         FirebaseService.getInstance().loadWorkoutTemplateById(workoutTemplateId, this, new FirebaseService.OnWorkoutTemplateLoadedListener() {
             @Override
@@ -164,6 +187,82 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
     }
 
     /**
+     * Setup level spinner for selecting workout level
+     */
+    private void setupLevelSpinner() {
+        // Set click listener on TextView to show dialog
+        binding.levelTxt.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showLevelSelectionDialog();
+            }
+        });
+    }
+    
+    /**
+     * Show dialog for level selection (Vietnamese)
+     */
+    private void showLevelSelectionDialog() {
+        int currentSelection = Arrays.asList(LEVELS_VI).indexOf(selectedLevel);
+        if (currentSelection < 0) currentSelection = 0;
+        
+        new AlertDialog.Builder(this)
+                .setTitle("Chọn mức độ")
+                .setSingleChoiceItems(LEVELS_VI, currentSelection, (dialog, which) -> {
+                    selectedLevel = LEVELS_VI[which];
+                    binding.levelTxt.setText(selectedLevel);
+                    dialog.dismiss();
+                })
+                .setNegativeButton("Hủy", null)
+                .show();
+    }
+    
+    /**
+     * Convert English level to Vietnamese for display
+     */
+    private String convertLevelToVietnamese(String englishLevel) {
+        if (englishLevel == null || englishLevel.isEmpty()) {
+            return LEVELS_VI[0]; // Default to "Người mới bắt đầu"
+        }
+        
+        for (int i = 0; i < LEVELS_EN.length; i++) {
+            if (LEVELS_EN[i].equalsIgnoreCase(englishLevel)) {
+                return LEVELS_VI[i];
+            }
+        }
+        
+        // If not found, try to match case-insensitive
+        String lowerLevel = englishLevel.toLowerCase();
+        if (lowerLevel.contains("beginner") || lowerLevel.contains("mới")) {
+            return LEVELS_VI[0];
+        } else if (lowerLevel.contains("intermediate") || lowerLevel.contains("trung")) {
+            return LEVELS_VI[1];
+        } else if (lowerLevel.contains("advanced") || lowerLevel.contains("nâng")) {
+            return LEVELS_VI[2];
+        }
+        
+        return LEVELS_VI[0]; // Default
+    }
+    
+    /**
+     * Convert Vietnamese level to English for database
+     */
+    private String convertLevelToEnglish(String vietnameseLevel) {
+        if (vietnameseLevel == null || vietnameseLevel.isEmpty()) {
+            return LEVELS_EN[0]; // Default to "Beginner"
+        }
+        
+        for (int i = 0; i < LEVELS_VI.length; i++) {
+            if (LEVELS_VI[i].equals(vietnameseLevel)) {
+                return LEVELS_EN[i];
+            }
+        }
+        
+        // If not found, return as is (might already be English)
+        return vietnameseLevel;
+    }
+
+    /**
      * Update UI with workout template data
      */
     private void updateWorkoutTemplateUI() {
@@ -173,9 +272,13 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
         binding.titleTxt.setText(originalWorkoutTemplate.getTitle());
         binding.descriptionTxt.setText(originalWorkoutTemplate.getDescription());
         
-        // Set read-only display fields
-        binding.levelTxt.setText(originalWorkoutTemplate.getLevel());
-        binding.durationTxt.setText(originalWorkoutTemplate.getEstDurationMin() + " min");
+        // Set level (use template level as default, convert to Vietnamese for display)
+        String templateLevel = originalWorkoutTemplate.getLevel();
+        selectedLevel = convertLevelToVietnamese(templateLevel);
+        binding.levelTxt.setText(selectedLevel);
+        
+        // Calculate and display duration from exercises
+        updateDuration();
     }
 
     /**
@@ -183,7 +286,7 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
      */
     private void loadExercises() {
         if (originalWorkoutTemplate == null || originalWorkoutTemplate.getItems() == null) {
-            Log.e(TAG, "No workout items to load");
+            Log.e(TAG, "Không có workout items để tải");
             return;
         }
 
@@ -202,7 +305,10 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
                 // Update adapter
                 adapter.updateExercises(exercises);
                 
-                Log.d(TAG, "Loaded " + exercises.size() + " exercises for editing");
+                // Update duration after loading exercises
+                updateDuration();
+                
+                Log.d(TAG, "Đã tải " + exercises.size() + " bài tập để chỉnh sửa");
             }
         });
     }
@@ -256,8 +362,72 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
         // Update order numbers
         adapter.notifyDataSetChanged();
         
-        Log.d(TAG, "Added exercise: " + exercise.getName());
-        Toast.makeText(this, "Added " + exercise.getName() + " to workout", Toast.LENGTH_SHORT).show();
+        // Update duration after adding exercise
+        updateDuration();
+        
+        Log.d(TAG, "Đã thêm bài tập: " + exercise.getName());
+        Toast.makeText(this, "Đã thêm " + exercise.getName() + " vào bài tập", Toast.LENGTH_SHORT).show();
+    }
+    
+    /**
+     * Calculate total duration from all exercises
+     * Formula: For each exercise: (sets * reps * timePerRep) + (sets - 1) * restSec
+     * Time per rep is estimated as 2 seconds
+     */
+    private int calculateTotalDurationMinutes() {
+        if (exercises == null || exercises.isEmpty()) {
+            return 0;
+        }
+        
+        int totalSeconds = 0;
+        final int TIME_PER_REP_SECONDS = 2; // Estimated 2 seconds per rep
+        
+        for (Exercise exercise : exercises) {
+            if (exercise.getDefaultConfig() != null) {
+                int sets = exercise.getDefaultConfig().getSets();
+                int reps = exercise.getDefaultConfig().getReps();
+                int restSec = exercise.getDefaultConfig().getRestSec();
+                
+                // Default values if not set
+                if (sets <= 0) sets = 3;
+                if (reps <= 0) reps = 12;
+                if (restSec <= 0) restSec = 30;
+                
+                // Calculate time for this exercise
+                // Exercise time = sets * reps * timePerRep
+                int exerciseTime = sets * reps * TIME_PER_REP_SECONDS;
+                
+                // Rest time = (sets - 1) * restSec (rest between sets, not after last set)
+                int restTime = (sets - 1) * restSec;
+                
+                totalSeconds += exerciseTime + restTime;
+            } else {
+                // Default values if no config
+                int sets = 3;
+                int reps = 12;
+                int restSec = 30;
+                
+                int exerciseTime = sets * reps * TIME_PER_REP_SECONDS;
+                int restTime = (sets - 1) * restSec;
+                
+                totalSeconds += exerciseTime + restTime;
+            }
+        }
+        
+        // Convert to minutes (round up)
+        return (int) Math.ceil(totalSeconds / 60.0);
+    }
+    
+    /**
+     * Update duration text based on current exercises
+     */
+    private void updateDuration() {
+        int totalMinutes = calculateTotalDurationMinutes();
+        if (totalMinutes > 0) {
+            binding.durationTxt.setText(totalMinutes + " min");
+        } else {
+            binding.durationTxt.setText("0 min");
+        }
     }
 
     /**
@@ -265,36 +435,36 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
      */
     private void saveWorkout() {
         if (exercises == null || exercises.isEmpty()) {
-            Toast.makeText(this, "No exercises to save", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Không có bài tập để lưu", Toast.LENGTH_SHORT).show();
             return;
         }
 
         // Validate title input
         String workoutTitle = binding.titleTxt.getText().toString().trim();
         if (workoutTitle.isEmpty()) {
-            Toast.makeText(this, "Please enter a workout title", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Vui lòng nhập tên bài tập", Toast.LENGTH_SHORT).show();
             binding.titleTxt.requestFocus();
             return;
         }
 
-        Log.d(TAG, "Saving user workout with " + exercises.size() + " exercises for userId: " + userId);
+        Log.d(TAG, "Đang lưu user workout với " + exercises.size() + " bài tập cho userId: " + userId);
         
         // Create user workout in new format
         UserWorkout userWorkout = createUserWorkout();
         
-        Log.d(TAG, "Created user workout: " + userWorkout.getTitle() + " (ID: " + userWorkout.getId() + ", UID: " + userWorkout.getUid() + ")");
+        Log.d(TAG, "Đã tạo user workout: " + userWorkout.getTitle() + " (ID: " + userWorkout.getId() + ", UID: " + userWorkout.getUid() + ")");
         
         // Save to Firebase
         FirebaseService.getInstance().saveUserWorkout(userWorkout, new FirebaseService.OnUserWorkoutSavedListener() {
             @Override
             public void onUserWorkoutSaved(boolean success) {
                 if (success) {
-                    Log.d(TAG, "User workout saved successfully: " + userWorkout.toString());
-                    Toast.makeText(EditWorkoutActivity.this, "Workout saved successfully!", Toast.LENGTH_SHORT).show();
+                    Log.d(TAG, "Đã lưu user workout thành công: " + userWorkout.toString());
+                    Toast.makeText(EditWorkoutActivity.this, "Lưu bài tập thành công!", Toast.LENGTH_SHORT).show();
                     finish();
                 } else {
-                    Log.e(TAG, "Failed to save user workout");
-                    Toast.makeText(EditWorkoutActivity.this, "Failed to save workout", Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "Lỗi khi lưu user workout");
+                    Toast.makeText(EditWorkoutActivity.this, "Lỗi khi lưu bài tập", Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -376,8 +546,11 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
             // Update order numbers for remaining items
             adapter.notifyDataSetChanged();
             
-            Log.d(TAG, "Exercise removed: " + removedExercise.getName());
-            Toast.makeText(this, "Removed " + removedExercise.getName(), Toast.LENGTH_SHORT).show();
+            // Update duration after removing exercise
+            updateDuration();
+            
+            Log.d(TAG, "Đã xóa bài tập: " + removedExercise.getName());
+            Toast.makeText(this, "Đã xóa " + removedExercise.getName(), Toast.LENGTH_SHORT).show();
         }
     }
 }
