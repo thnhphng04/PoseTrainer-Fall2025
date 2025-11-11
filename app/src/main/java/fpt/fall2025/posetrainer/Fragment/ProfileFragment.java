@@ -19,7 +19,6 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import fpt.fall2025.posetrainer.Activity.EditGoalsActivity;
 import fpt.fall2025.posetrainer.Activity.EditProfileActivity;
 import fpt.fall2025.posetrainer.Activity.LoginActivity;
-import fpt.fall2025.posetrainer.Activity.OnboardingActivity;
 import fpt.fall2025.posetrainer.Activity.PlanPreviewActivity;
 import fpt.fall2025.posetrainer.Domain.User;
 import fpt.fall2025.posetrainer.R;
@@ -72,7 +71,7 @@ public class ProfileFragment extends Fragment {
         );
 
         binding.menuSupport.setOnClickListener(v ->
-                startActivity(new Intent(requireContext(), OnboardingActivity.class))
+                startActivity(new Intent(requireContext(), EditGoalsActivity.class))
         );
         View.OnClickListener openPlanPreview = v ->
                 startActivity(new Intent(requireContext(), PlanPreviewActivity.class));
