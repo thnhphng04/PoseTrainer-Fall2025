@@ -60,13 +60,20 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
             exerciseDifficulties[i] = "beginner"; // Default beginner
         }
 
-        // Get workout template ID from intent
+        // Get workout ID from intent (could be workoutTemplateId or workoutId from notification)
         String workoutTemplateId = getIntent().getStringExtra("workoutTemplateId");
+        String workoutId = getIntent().getStringExtra("workoutId");
+        boolean fromSchedule = getIntent().getBooleanExtra("fromSchedule", false);
         
         if (workoutTemplateId != null) {
+            // Direct workout template ID provided
             loadWorkoutTemplateById(workoutTemplateId);
+        } else if (workoutId != null) {
+            // workoutId from notification - try to load as WorkoutTemplate first
+            // If not found, will try to load as UserWorkout
+            loadWorkoutById(workoutId, fromSchedule);
         } else {
-            Toast.makeText(this, "No workout template ID provided", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "No workout ID provided", Toast.LENGTH_SHORT).show();
             finish();
         }
 
@@ -470,6 +477,136 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
         }
     }
 
+    /**
+     * Load workout by ID - tries UserWorkout first if fromSchedule, otherwise WorkoutTemplate first
+     */
+    private void loadWorkoutById(String workoutId, boolean fromSchedule) {
+        Log.d(TAG, "=== LOADING WORKOUT BY ID ===");
+        Log.d(TAG, "WorkoutId: " + workoutId + ", fromSchedule: " + fromSchedule);
+        
+        if (fromSchedule) {
+            // From notification/schedule: Try UserWorkout FIRST (most common case)
+            // User usually creates schedule with their own user_workouts
+            Log.d(TAG, "From schedule: Trying UserWorkout FIRST...");
+            tryLoadAsUserWorkout(workoutId, true);
+        } else {
+            // Not from schedule: Try WorkoutTemplate first (default behavior)
+            Log.d(TAG, "Not from schedule: Trying WorkoutTemplate FIRST...");
+            tryLoadAsWorkoutTemplate(workoutId, false);
+        }
+    }
+    
+    /**
+     * Try to load workout as WorkoutTemplate first
+     */
+    private void tryLoadAsWorkoutTemplate(String workoutId, boolean fromSchedule) {
+        Log.d(TAG, "Trying to load as WorkoutTemplate from workouts_templates collection: " + workoutId);
+        
+        FirebaseService.getInstance().loadWorkoutTemplateById(workoutId, this, new FirebaseService.OnWorkoutTemplateLoadedListener() {
+            @Override
+            public void onWorkoutTemplateLoaded(WorkoutTemplate template) {
+                if (template != null) {
+                    // Successfully loaded as WorkoutTemplate
+                    Log.d(TAG, "✓ Workout loaded as WorkoutTemplate: " + template.getTitle() + " (ID: " + template.getId() + ")");
+                    workoutTemplate = template;
+                    
+                    // Update UI
+                    updateWorkoutTemplateUI();
+                    
+                    // Load exercises for this template
+                    loadExercises();
+                    
+                    // If from schedule, always show "Start Workout" button
+                    if (fromSchedule) {
+                        hasActiveSession = false;
+                        updateButtonUI();
+                        Log.d(TAG, "From schedule: Always show 'Start Workout' button");
+                    } else {
+                        // Check for existing session to determine button state
+                        loadExistingSession();
+                    }
+                } else {
+                    // Not a WorkoutTemplate
+                    Log.w(TAG, "✗ WorkoutTemplate not found in workouts_templates collection: " + workoutId);
+                    
+                    if (fromSchedule) {
+                        // From schedule: Already tried UserWorkout first, now trying WorkoutTemplate as fallback
+                        // If not found, show error
+                        Log.e(TAG, "Workout not found in either user_workouts or workouts_templates: " + workoutId);
+                        showWorkoutNotFoundError(workoutId, true);
+                    } else {
+                        // Not from schedule: Try UserWorkout as fallback
+                        Log.d(TAG, "Trying UserWorkout as fallback...");
+                        tryLoadAsUserWorkout(workoutId, false);
+                    }
+                }
+            }
+        });
+    }
+    
+    /**
+     * Try to load workout as UserWorkout and navigate to UserWorkoutDetailActivity
+     */
+    private void tryLoadAsUserWorkout(String workoutId, boolean fromSchedule) {
+        Log.d(TAG, "Trying to load as UserWorkout from user_workouts collection: " + workoutId);
+        
+        FirebaseService.getInstance().loadUserWorkoutById(workoutId, this, new FirebaseService.OnUserWorkoutLoadedListener() {
+            @Override
+            public void onUserWorkoutLoaded(fpt.fall2025.posetrainer.Domain.UserWorkout userWorkout) {
+                if (userWorkout != null) {
+                    // Successfully loaded as UserWorkout - navigate to UserWorkoutDetailActivity
+                    Log.d(TAG, "✓ Workout loaded as UserWorkout: " + userWorkout.getTitle() + " (ID: " + userWorkout.getId() + ")");
+                    Log.d(TAG, "Navigating to UserWorkoutDetailActivity");
+                    
+                    Intent intent = new Intent(WorkoutActivity.this, UserWorkoutDetailActivity.class);
+                    intent.putExtra("userWorkoutId", workoutId);
+                    intent.putExtra("fromSchedule", fromSchedule);
+                    // Don't clear task stack - keep MainActivity in back stack for proper navigation
+                    startActivity(intent);
+                    finish();
+                } else {
+                    // Not found as UserWorkout
+                    Log.w(TAG, "✗ UserWorkout not found in user_workouts collection: " + workoutId);
+                    
+                    if (fromSchedule) {
+                        // From schedule: Also try WorkoutTemplate as fallback
+                        Log.d(TAG, "From schedule: Trying WorkoutTemplate as fallback...");
+                        tryLoadAsWorkoutTemplate(workoutId, true);
+                    } else {
+                        // Not from schedule: Show error
+                        Log.e(TAG, "Workout not found in user_workouts collection: " + workoutId);
+                        showWorkoutNotFoundError(workoutId, false);
+                    }
+                }
+            }
+        });
+    }
+
+    /**
+     * Show error when workout is not found
+     */
+    private void showWorkoutNotFoundError(String workoutId, boolean fromSchedule) {
+        Log.e(TAG, "=== WORKOUT NOT FOUND ===");
+        Log.e(TAG, "WorkoutId: " + workoutId);
+        Log.e(TAG, "FromSchedule: " + fromSchedule);
+        Log.e(TAG, "Searched in: user_workouts and workouts_templates");
+        
+        if (fromSchedule) {
+            // If from schedule notification, show message and navigate back to MainActivity
+            Toast.makeText(WorkoutActivity.this, 
+                "Bài tập đã bị xóa hoặc không tồn tại. Lịch tập sẽ được cập nhật tự động.", 
+                Toast.LENGTH_LONG).show();
+        } else {
+            Toast.makeText(WorkoutActivity.this, "Không tìm thấy bài tập", Toast.LENGTH_SHORT).show();
+        }
+        
+        // Navigate back to MainActivity
+        Intent mainIntent = new Intent(WorkoutActivity.this, MainActivity.class);
+        mainIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(mainIntent);
+        finish();
+    }
+    
     /**
      * Load workout template from Firebase Firestore
      */

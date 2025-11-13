@@ -16,6 +16,7 @@ import com.bumptech.glide.Glide;
 import java.util.ArrayList;
 
 import fpt.fall2025.posetrainer.Domain.Exercise;
+import fpt.fall2025.posetrainer.Helper.GlideImageLoader;
 import fpt.fall2025.posetrainer.R;
 
 /**
@@ -25,10 +26,15 @@ import fpt.fall2025.posetrainer.R;
 public class EditWorkoutAdapter extends RecyclerView.Adapter<EditWorkoutAdapter.ExerciseViewHolder> {
     private ArrayList<Exercise> exercises;
     private OnExerciseRemovedListener listener;
+    private OnExerciseReorderListener reorderListener;
 
     public EditWorkoutAdapter(ArrayList<Exercise> exercises, OnExerciseRemovedListener listener) {
         this.exercises = exercises;
         this.listener = listener;
+    }
+    
+    public void setOnExerciseReorderListener(OnExerciseReorderListener listener) {
+        this.reorderListener = listener;
     }
 
     @NonNull
@@ -80,6 +86,10 @@ public class EditWorkoutAdapter extends RecyclerView.Adapter<EditWorkoutAdapter.
      */
     public void updateOrderNumbers() {
         notifyDataSetChanged();
+        // Notify listener that exercises have been reordered
+        if (reorderListener != null) {
+            reorderListener.onExercisesReordered();
+        }
     }
 
     /**
@@ -169,28 +179,15 @@ public class EditWorkoutAdapter extends RecyclerView.Adapter<EditWorkoutAdapter.
         }
 
         /**
-         * Load exercise image using Glide
+         * Load exercise image using GlideImageLoader - hỗ trợ tất cả các loại URL
          */
         private void loadExerciseImage(Exercise exercise) {
             if (exercise.getMedia() != null && exercise.getMedia().getThumbnailUrl() != null) {
-                // Check if it's a local drawable resource
                 String thumbnailUrl = exercise.getMedia().getThumbnailUrl();
-                if (thumbnailUrl.startsWith("pic_")) {
-                    // It's a local drawable resource
-                    int resId = itemView.getContext().getResources().getIdentifier(thumbnailUrl, "drawable", itemView.getContext().getPackageName());
-                    Glide.with(itemView.getContext())
-                            .load(resId)
-                            .into(pic);
-                } else {
-                    // It's a remote URL
-                    Glide.with(itemView.getContext())
-                            .load(thumbnailUrl)
-                            .placeholder(R.drawable.pic_1_1)
-                            .error(R.drawable.pic_1_1)
-                            .into(pic);
-                }
+                // GlideImageLoader tự động xử lý: Google Drive, Google Image Search, direct URLs, local drawables
+                GlideImageLoader.loadImage(itemView.getContext(), thumbnailUrl, pic);
             } else {
-                // Fallback to default image (same as WorkoutActivity)
+                // Fallback to default image
                 int resId = itemView.getContext().getResources().getIdentifier("pic_1_1", "drawable", itemView.getContext().getPackageName());
                 Glide.with(itemView.getContext())
                         .load(resId)
@@ -211,6 +208,7 @@ public class EditWorkoutAdapter extends RecyclerView.Adapter<EditWorkoutAdapter.
      */
     public interface OnExerciseReorderListener {
         void onExerciseMoved(int fromPosition, int toPosition);
+        void onExercisesReordered();
     }
 }
 

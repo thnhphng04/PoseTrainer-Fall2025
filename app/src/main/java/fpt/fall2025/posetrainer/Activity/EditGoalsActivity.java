@@ -1,6 +1,5 @@
 package fpt.fall2025.posetrainer.Activity;
 
-import android.app.DatePickerDialog;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
@@ -16,6 +15,9 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.datepicker.MaterialDatePicker;
+import com.google.android.material.datepicker.CalendarConstraints;
+import com.google.android.material.datepicker.DateValidatorPointBackward;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
@@ -26,17 +28,17 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.SetOptions;
 
 import java.util.Calendar;
-import java.util.HashMap;
 import java.util.Map;
 
+import fpt.fall2025.posetrainer.Domain.Profile;
 import fpt.fall2025.posetrainer.R;
 
 public class EditGoalsActivity extends AppCompatActivity {
 
     // ===== Views =====
     private TextInputLayout tilBirthday, tilGender, tilHeight, tilWeight,
-            tilDailyMinutes, tilExperience, tilTargetWeight;
-    private TextInputEditText etBirthday, etHeight, etWeight, etDailyMinutes, etTargetWeight;
+            tilDailyMinutes, tilWeeklyGoal, tilExperience, tilTargetWeight;
+    private TextInputEditText etBirthday, etHeight, etWeight, etDailyMinutes, etWeeklyGoal, etTargetWeight;
     private MaterialAutoCompleteTextView ddGender, ddExperience;
     private ProgressBar progress;
 
@@ -115,6 +117,7 @@ public class EditGoalsActivity extends AppCompatActivity {
         tilHeight       = findViewById(R.id.til_height);
         tilWeight       = findViewById(R.id.til_weight);
         tilDailyMinutes = findViewById(R.id.til_daily_minutes);
+        tilWeeklyGoal   = findViewById(R.id.til_weekly_goal);
         tilExperience   = findViewById(R.id.til_experience);
         tilTargetWeight = findViewById(R.id.til_target_weight);
 
@@ -123,6 +126,7 @@ public class EditGoalsActivity extends AppCompatActivity {
         etHeight       = findViewById(R.id.et_height);
         etWeight       = findViewById(R.id.et_weight);
         etDailyMinutes = findViewById(R.id.et_daily_minutes);
+        etWeeklyGoal   = findViewById(R.id.et_weekly_goal);
         etTargetWeight = findViewById(R.id.et_target_weight);
 
         ddGender     = findViewById(R.id.dd_gender);
@@ -194,14 +198,79 @@ public class EditGoalsActivity extends AppCompatActivity {
     private void setupBirthdayPicker() {
         etBirthday.setOnClickListener(v -> {
             final Calendar c = Calendar.getInstance();
-            int y = c.get(Calendar.YEAR) - 20;
-            int m = c.get(Calendar.MONTH);
-            int d = c.get(Calendar.DAY_OF_MONTH);
-            new DatePickerDialog(this, (view, year, month, dayOfMonth) -> {
-                String mm = String.format("%02d", month + 1);
-                String dd = String.format("%02d", dayOfMonth);
-                etBirthday.setText(year + "-" + mm + "-" + dd);
-            }, y, m, d).show();
+            
+            // Try to parse existing date if available
+            String existingDate = etBirthday.getText() != null ? 
+                    etBirthday.getText().toString() : null;
+            long selectedDate = c.getTimeInMillis();
+            
+            if (existingDate != null && !existingDate.isEmpty()) {
+                try {
+                    String[] parts = existingDate.split("-");
+                    if (parts.length == 3) {
+                        int year = Integer.parseInt(parts[0]);
+                        int month = Integer.parseInt(parts[1]) - 1;
+                        int day = Integer.parseInt(parts[2]);
+                        Calendar existingCal = Calendar.getInstance();
+                        existingCal.set(year, month, day, 0, 0, 0);
+                        existingCal.set(Calendar.MILLISECOND, 0);
+                        selectedDate = existingCal.getTimeInMillis();
+                    }
+                } catch (NumberFormatException e) {
+                    // Use default (20 years ago)
+                    Calendar defaultCal = Calendar.getInstance();
+                    defaultCal.add(Calendar.YEAR, -20);
+                    selectedDate = defaultCal.getTimeInMillis();
+                }
+            } else {
+                // Default to 20 years ago
+                Calendar defaultCal = Calendar.getInstance();
+                defaultCal.add(Calendar.YEAR, -20);
+                selectedDate = defaultCal.getTimeInMillis();
+            }
+            
+            // Set min date (100 years ago)
+            Calendar minDate = Calendar.getInstance();
+            minDate.add(Calendar.YEAR, -100);
+            minDate.set(Calendar.HOUR_OF_DAY, 0);
+            minDate.set(Calendar.MINUTE, 0);
+            minDate.set(Calendar.SECOND, 0);
+            minDate.set(Calendar.MILLISECOND, 0);
+            long minDateMillis = minDate.getTimeInMillis();
+            
+            // Set max date to today
+            Calendar maxDate = Calendar.getInstance();
+            maxDate.set(Calendar.HOUR_OF_DAY, 23);
+            maxDate.set(Calendar.MINUTE, 59);
+            maxDate.set(Calendar.SECOND, 59);
+            maxDate.set(Calendar.MILLISECOND, 999);
+            long maxDateMillis = maxDate.getTimeInMillis();
+            
+            // Create calendar constraints
+            CalendarConstraints.Builder constraintsBuilder = new CalendarConstraints.Builder();
+            constraintsBuilder.setStart(minDateMillis);
+            constraintsBuilder.setEnd(maxDateMillis);
+            constraintsBuilder.setValidator(DateValidatorPointBackward.before(maxDateMillis));
+            CalendarConstraints constraints = constraintsBuilder.build();
+            
+            // Create MaterialDatePicker
+            MaterialDatePicker<Long> datePicker = MaterialDatePicker.Builder.datePicker()
+                    .setTitleText("Chọn ngày sinh")
+                    .setSelection(selectedDate)
+                    .setCalendarConstraints(constraints)
+                    .build();
+            
+            datePicker.addOnPositiveButtonClickListener(selection -> {
+                Calendar selectedCal = Calendar.getInstance();
+                selectedCal.setTimeInMillis(selection);
+                int year = selectedCal.get(Calendar.YEAR);
+                int month = selectedCal.get(Calendar.MONTH) + 1;
+                int day = selectedCal.get(Calendar.DAY_OF_MONTH);
+                String date = String.format("%04d-%02d-%02d", year, month, day);
+                etBirthday.setText(date);
+            });
+            
+            datePicker.show(getSupportFragmentManager(), "DATE_PICKER");
         });
     }
 
@@ -305,6 +374,7 @@ public class EditGoalsActivity extends AppCompatActivity {
         setInt(etHeight, doc.getLong("heightCm"));
         setInt(etWeight, doc.getLong("weightKg"));
         setInt(etDailyMinutes, doc.getLong("dailyTrainingMinutes"));
+        setInt(etWeeklyGoal, doc.getLong("weeklyGoal"));
         setText(ddExperience, doc.getString("experienceLevel"));
 
         // select current body
@@ -342,6 +412,7 @@ public class EditGoalsActivity extends AppCompatActivity {
         String heightStr= txt(etHeight);
         String weightStr= txt(etWeight);
         String dailyStr = txt(etDailyMinutes);
+        String weeklyStr = txt(etWeeklyGoal);
         String exp      = txt(ddExperience);
         String targetWeightStr = txt(etTargetWeight);
 
@@ -352,35 +423,40 @@ public class EditGoalsActivity extends AppCompatActivity {
         if (currentBodyType == null)     { Toast.makeText(this, "Chọn body hiện tại", Toast.LENGTH_SHORT).show(); return; }
         if (targetBodyType == null)      { Toast.makeText(this, "Chọn body mục tiêu", Toast.LENGTH_SHORT).show(); return; }
         if (TextUtils.isEmpty(dailyStr)) { tilDailyMinutes.setError("Nhập phút tập/ngày"); return; }
+        if (TextUtils.isEmpty(weeklyStr)) { tilWeeklyGoal.setError("Nhập số ngày tập/tuần"); return; }
         if (TextUtils.isEmpty(exp))      { tilExperience.setError("Chọn kinh nghiệm"); return; }
         if (TextUtils.isEmpty(targetWeightStr)){ tilTargetWeight.setError("Nhập cân nặng mục tiêu"); return; }
 
         int height = pInt(heightStr), weight = pInt(weightStr),
-                daily = pInt(dailyStr), targetW = pInt(targetWeightStr);
+                daily = pInt(dailyStr), weekly = pInt(weeklyStr), targetW = pInt(targetWeightStr);
         if (height <= 0) { tilHeight.setError("Chiều cao không hợp lệ"); return; }
         if (weight <= 0) { tilWeight.setError("Cân nặng không hợp lệ"); return; }
         if (daily  <= 0) { tilDailyMinutes.setError("Phút tập phải > 0"); return; }
+        if (weekly <= 0 || weekly > 7) { tilWeeklyGoal.setError("Số ngày tập phải từ 1-7"); return; }
         if (targetW<= 0) { tilTargetWeight.setError("Cân nặng mục tiêu không hợp lệ"); return; }
 
-        Map<String, Object> data = new HashMap<>();
-        data.put("uid", uid);
-        data.put("birthday", birthday);
-        data.put("gender", gender);
-        data.put("heightCm", height);
-        data.put("weightKg", weight);
-        data.put("currentBodyType", currentBodyType);
-        data.put("dailyTrainingMinutes", daily);
-        data.put("experienceLevel", exp);
-        data.put("lastUpdatedAt", System.currentTimeMillis());
+        // Tạo Goals object
+        Profile.Goals goals = new Profile.Goals();
+        goals.setTargetWeightKg(targetW);
+        goals.setTargetBodyType(targetBodyType);
 
-        Map<String, Object> goals = new HashMap<>();
-        goals.put("targetWeightKg", targetW);
-        goals.put("targetBodyType", targetBodyType);
-        data.put("goals", goals);
+        // Tạo Profile object
+        Profile profile = new Profile();
+        profile.setUid(uid);
+        profile.setBirthday(birthday);
+        profile.setGender(gender);
+        profile.setHeightCm(height);
+        profile.setWeightKg(weight);
+        profile.setCurrentBodyType(currentBodyType);
+        profile.setDailyTrainingMinutes(daily);
+        profile.setWeeklyGoal(weekly);
+        profile.setExperienceLevel(exp);
+        profile.setGoals(goals);
+        profile.setLastUpdatedAt(System.currentTimeMillis());
 
         setLoading(true);
         db.collection("profiles").document(uid)
-                .set(data, SetOptions.merge())
+                .set(profile, SetOptions.merge())
                 .addOnSuccessListener(unused -> {
                     setLoading(false);
                     Toast.makeText(this, "Cập nhật mục tiêu thành công", Toast.LENGTH_SHORT).show();
@@ -409,6 +485,7 @@ public class EditGoalsActivity extends AppCompatActivity {
         tilHeight.setError(null);
         tilWeight.setError(null);
         tilDailyMinutes.setError(null);
+        tilWeeklyGoal.setError(null);
         tilExperience.setError(null);
         tilTargetWeight.setError(null);
     }

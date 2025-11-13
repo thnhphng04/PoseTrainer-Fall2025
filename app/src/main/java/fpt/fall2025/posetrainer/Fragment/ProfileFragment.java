@@ -19,7 +19,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import fpt.fall2025.posetrainer.Activity.EditGoalsActivity;
 import fpt.fall2025.posetrainer.Activity.EditProfileActivity;
 import fpt.fall2025.posetrainer.Activity.LoginActivity;
-import fpt.fall2025.posetrainer.Activity.OnboardingActivity;
+import fpt.fall2025.posetrainer.Activity.PlanPreviewActivity;
 import fpt.fall2025.posetrainer.Domain.User;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.databinding.FragmentProfileBinding;
@@ -55,6 +55,7 @@ public class ProfileFragment extends Fragment {
         setupClicks();
         loadUserFromFirestore();
         loadUserStats();
+        isDataLoaded = true;
     }
 
     private void setupClicks() {
@@ -70,13 +71,15 @@ public class ProfileFragment extends Fragment {
         );
 
         binding.menuSupport.setOnClickListener(v ->
-                startActivity(new Intent(requireContext(), OnboardingActivity.class))
+                startActivity(new Intent(requireContext(), EditGoalsActivity.class))
         );
+        View.OnClickListener openPlanPreview = v ->
+                startActivity(new Intent(requireContext(), PlanPreviewActivity.class));
 
-        // Menu Workouts
-        binding.menuWorkouts.setOnClickListener(v ->
-                Toast.makeText(requireContext(), "My Workouts - Coming soon!", Toast.LENGTH_SHORT).show()
-        );
+        // ✅ mở màn PlanPreviewActivity
+        binding.menuWorkouts.setOnClickListener(openPlanPreview);   // bấm cả hàng
+        binding.areaMyWorkouts.setOnClickListener(openPlanPreview); // bấm vùng chữ
+
 
         // Menu Sync
         binding.menuSync.setOnClickListener(v ->
@@ -316,16 +319,35 @@ public class ProfileFragment extends Fragment {
         requireActivity().finish();
     }
 
+    private boolean isDataLoaded = false;
+    
     @Override
     public void onResume() {
         super.onResume();
-        loadUserFromFirestore();
-        loadUserStats();
+        // Chỉ load data một lần ban đầu để tránh reload không cần thiết
+        if (!isDataLoaded && isVisible() && isAdded()) {
+            loadUserFromFirestore();
+            loadUserStats();
+            isDataLoaded = true;
+        }
+    }
+    
+    @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        // Reload khi fragment trở nên visible (phòng trường hợp user đã chỉnh sửa profile)
+        // Chỉ refresh nếu fragment đã resumed và added
+        if (!hidden && isAdded() && isResumed()) {
+            loadUserFromFirestore();
+            loadUserStats();
+        }
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        // Reset flag khi view bị destroy
+        isDataLoaded = false;
         binding = null;
     }
 }

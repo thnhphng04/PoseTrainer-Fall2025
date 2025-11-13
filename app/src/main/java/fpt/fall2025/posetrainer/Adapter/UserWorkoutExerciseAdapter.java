@@ -15,6 +15,7 @@ import fpt.fall2025.posetrainer.Activity.ExerciseDetailActivity;
 import fpt.fall2025.posetrainer.Dialog.ExerciseDetailDialog;
 import fpt.fall2025.posetrainer.Domain.Exercise;
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
+import fpt.fall2025.posetrainer.Helper.GlideImageLoader;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.databinding.ViewholderUserWorkoutExerciseBinding;
 
@@ -127,22 +128,11 @@ public class UserWorkoutExerciseAdapter extends RecyclerView.Adapter<UserWorkout
         holder.currentSets = initialSets;
         holder.currentReps = initialReps;
 
-        // Load thumbnail image
+        // Load thumbnail image - sử dụng GlideImageLoader để hỗ trợ tất cả các loại URL
         if (exercise.getMedia() != null && exercise.getMedia().getThumbnailUrl() != null) {
-            // Check if it's a local drawable resource
             String thumbnailUrl = exercise.getMedia().getThumbnailUrl();
-            if (thumbnailUrl.startsWith("pic_")) {
-                // It's a local drawable resource
-                int resId = context.getResources().getIdentifier(thumbnailUrl, "drawable", context.getPackageName());
-                Glide.with(context)
-                        .load(resId)
-                        .into(holder.binding.pic);
-            } else {
-                // It's a remote URL
-                Glide.with(context)
-                        .load(thumbnailUrl)
-                        .into(holder.binding.pic);
-            }
+            // GlideImageLoader tự động xử lý: Google Drive, Google Image Search, direct URLs, local drawables
+            GlideImageLoader.loadImage(context, thumbnailUrl, holder.binding.pic);
         } else {
             // Fallback to default image
             int resId = context.getResources().getIdentifier("pic_1_1", "drawable", context.getPackageName());

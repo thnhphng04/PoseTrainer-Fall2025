@@ -59,11 +59,14 @@ public class HomeFragment extends Fragment {
         binding.view1.setLayoutManager(
                 new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false)
         );
+        // Set adapter immediately to avoid "No adapter attached" warning
+        binding.view1.setAdapter(new WorkoutTemplateAdapter(filteredWorkoutTemplates));
 
         setupSearchListeners();
         setupFilterListeners();
         loadCurrentUserInfo();
         loadWorkoutTemplates();
+        isDataLoaded = true;
         
         // Initialize chip states
         updateCategoryChipStates();
@@ -92,7 +95,7 @@ public class HomeFragment extends Fragment {
     private void loadCurrentUserInfo() {
         FirebaseUser current = mAuth.getCurrentUser();
         if (current == null) {
-            Log.w(TAG, "No current user found");
+            Log.w(TAG, "Không tìm thấy người dùng hiện tại");
             return;
         }
 
@@ -123,7 +126,7 @@ public class HomeFragment extends Fragment {
                     }
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Failed to load user info", e);
+                    Log.e(TAG, "Lỗi: Không thể tải thông tin người dùng", e);
                     updateUserUIFromAuth(current);
                 });
     }
@@ -152,11 +155,26 @@ public class HomeFragment extends Fragment {
         updateUserUI(name, photoUrl);
     }
 
+    private boolean isDataLoaded = false;
+    
     @Override
     public void onResume() {
         super.onResume();
-        // Cập nhật lại khi người dùng quay lại Home sau khi chỉnh sửa
-        loadCurrentUserInfo();
+        // Chỉ load data một lần ban đầu để tránh reload không cần thiết
+        if (!isDataLoaded && isVisible() && isAdded()) {
+            loadCurrentUserInfo();
+            isDataLoaded = true;
+        }
+    }
+    
+    @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        // Khi fragment trở nên visible lại, refresh user info (phòng trường hợp user đã chỉnh sửa profile)
+        // Chỉ refresh nếu fragment đã resumed và added
+        if (!hidden && isAdded() && isResumed()) {
+            loadCurrentUserInfo();
+        }
     }
 
     private void initBodyPartsListeners() {
@@ -324,12 +342,14 @@ public class HomeFragment extends Fragment {
         // Update RecyclerView
         binding.view1.setAdapter(new WorkoutTemplateAdapter(filteredWorkoutTemplates));
         
-        Log.d(TAG, "Filtered workouts: " + filteredWorkoutTemplates.size() + " out of " + workoutTemplates.size());
+        Log.d(TAG, "Đã lọc bài tập: " + filteredWorkoutTemplates.size() + " / " + workoutTemplates.size());
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        // Reset flag khi view bị destroy
+        isDataLoaded = false;
         binding = null;
     }
 }

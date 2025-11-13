@@ -6,6 +6,8 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
@@ -49,7 +51,7 @@ public class FirebaseService {
      * Load all public workout templates
      */
     public void loadWorkoutTemplates(AppCompatActivity activity, OnWorkoutTemplatesLoadedListener listener) {
-        Log.d(TAG, "Loading workout templates");
+        Log.d(TAG, "Đang tải mẫu bài tập...");
 
         db.collection("workouts_templates")
                 .whereEqualTo("isPublic", true)
@@ -63,10 +65,10 @@ public class FirebaseService {
                                 if (workoutTemplate != null) {
                                     workoutTemplate.setId(document.getId());
                                     workoutTemplates.add(workoutTemplate);
-                                    Log.d(TAG, "Loaded template: " + workoutTemplate.getTitle());
+                                    Log.d(TAG, "Đã tải mẫu: " + workoutTemplate.getTitle());
                                 }
                             } catch (Exception e) {
-                                Log.e(TAG, "Error parsing template: " + e.getMessage());
+                                Log.e(TAG, "Lỗi: Lỗi phân tích mẫu: " + e.getMessage(), e);
                             }
                         }
 
@@ -74,9 +76,9 @@ public class FirebaseService {
                             listener.onWorkoutTemplatesLoaded(workoutTemplates);
                         });
                     } else {
-                        Log.e(TAG, "Error getting documents: ", task.getException());
+                        Log.e(TAG, "Lỗi: Lỗi lấy tài liệu", task.getException());
                         activity.runOnUiThread(() -> {
-                            Toast.makeText(activity, "Error loading workout templates", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(activity, "Lỗi tải mẫu bài tập", Toast.LENGTH_SHORT).show();
                         });
                     }
                 });
@@ -86,7 +88,7 @@ public class FirebaseService {
      * Load workout template by ID
      */
     public void loadWorkoutTemplateById(String workoutTemplateId, AppCompatActivity activity, OnWorkoutTemplateLoadedListener listener) {
-        Log.d(TAG, "Loading workout template: " + workoutTemplateId);
+        Log.d(TAG, "Đang tải mẫu bài tập với ID: " + workoutTemplateId);
 
         db.collection("workouts_templates")
                 .document(workoutTemplateId)
@@ -295,9 +297,22 @@ public class FirebaseService {
     public void loadActiveSession(String workoutId, OnSessionLoadedListener listener) {
         Log.d(TAG, "Loading active session for workout: " + workoutId);
 
+        // Get current user UID from FirebaseAuth
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            Log.e(TAG, "No authenticated user found");
+            if (listener != null) {
+                listener.onError("User not authenticated");
+            }
+            return;
+        }
+
+        String uid = currentUser.getUid();
+        Log.d(TAG, "Loading active session for user: " + uid);
+
         db.collection("sessions")
                 .whereEqualTo("workoutId", workoutId)
-                .whereEqualTo("uid", "uid_1") // TODO: Get from authenticated user
+                .whereEqualTo("uid", uid) // Use authenticated user UID
                 .whereEqualTo("endedAt", 0) // Session chưa kết thúc (endedAt = 0)
                 .orderBy("createdAt", Query.Direction.DESCENDING) // Lấy session mới nhất
                 .limit(1)
@@ -311,9 +326,17 @@ public class FirebaseService {
                     } else {
                         DocumentSnapshot document = queryDocumentSnapshots.getDocuments().get(0);
                         Session session = document.toObject(Session.class);
-                        Log.d(TAG, "Loaded active session: " + session.getId());
-                        if (listener != null) {
-                            listener.onSessionLoaded(session);
+                        if (session != null) {
+                            session.setId(document.getId());
+                            Log.d(TAG, "Loaded active session: " + session.getId());
+                            if (listener != null) {
+                                listener.onSessionLoaded(session);
+                            }
+                        } else {
+                            Log.e(TAG, "Failed to parse session object");
+                            if (listener != null) {
+                                listener.onError("Failed to parse session");
+                            }
                         }
                     }
                 })
@@ -728,7 +751,17 @@ public class FirebaseService {
      * Load a specific user workout by ID
      */
     public void loadUserWorkoutById(String userWorkoutId, AppCompatActivity activity, OnUserWorkoutLoadedListener listener) {
-        Log.d(TAG, "Loading user workout by ID: " + userWorkoutId);
+        Log.d(TAG, "=== LOADING USER WORKOUT BY ID ===");
+        Log.d(TAG, "Collection: user_workouts");
+        Log.d(TAG, "Document ID: " + userWorkoutId);
+        
+        if (userWorkoutId == null || userWorkoutId.isEmpty()) {
+            Log.e(TAG, "UserWorkoutId is null or empty!");
+            activity.runOnUiThread(() -> {
+                listener.onUserWorkoutLoaded(null);
+            });
+            return;
+        }
         
         db.collection("user_workouts")
                 .document(userWorkoutId)
@@ -737,38 +770,47 @@ public class FirebaseService {
                     if (task.isSuccessful()) {
                         DocumentSnapshot document = task.getResult();
                         if (document.exists()) {
+                            Log.d(TAG, "✓ Document exists in user_workouts collection");
                             try {
                                 UserWorkout userWorkout = document.toObject(UserWorkout.class);
                                 if (userWorkout != null) {
                                     userWorkout.setId(document.getId());
-                                    Log.d(TAG, "Successfully loaded user workout: " + userWorkout.getTitle());
+                                    Log.d(TAG, "✓ Successfully loaded user workout: " + userWorkout.getTitle());
+                                    Log.d(TAG, "  - ID: " + userWorkout.getId());
+                                    Log.d(TAG, "  - UID: " + userWorkout.getUid());
+                                    Log.d(TAG, "  - Items count: " + (userWorkout.getItems() != null ? userWorkout.getItems().size() : 0));
                                     activity.runOnUiThread(() -> {
                                         listener.onUserWorkoutLoaded(userWorkout);
                                     });
                                 } else {
-                                    Log.e(TAG, "UserWorkout object is null");
+                                    Log.e(TAG, "✗ UserWorkout object is null after parsing");
                                     activity.runOnUiThread(() -> {
                                         listener.onUserWorkoutLoaded(null);
                                     });
                                 }
                             } catch (Exception e) {
-                                Log.e(TAG, "Error parsing user workout: " + e.getMessage());
+                                Log.e(TAG, "✗ Error parsing user workout: " + e.getMessage(), e);
                                 activity.runOnUiThread(() -> {
                                     listener.onUserWorkoutLoaded(null);
                                 });
                             }
                         } else {
-                            Log.e(TAG, "User workout document does not exist");
+                            Log.w(TAG, "✗ User workout document does not exist in user_workouts collection");
+                            Log.w(TAG, "  Document ID: " + userWorkoutId);
                             activity.runOnUiThread(() -> {
                                 listener.onUserWorkoutLoaded(null);
                             });
                         }
                     } else {
-                        Log.e(TAG, "Error loading user workout: ", task.getException());
+                        Log.e(TAG, "✗ Error loading user workout from Firebase: ", task.getException());
+                        if (task.getException() != null) {
+                            Log.e(TAG, "  Exception message: " + task.getException().getMessage());
+                        }
                         activity.runOnUiThread(() -> {
                             listener.onUserWorkoutLoaded(null);
                         });
                     }
+                    Log.d(TAG, "=== END LOADING USER WORKOUT ===");
                 });
     }
     
