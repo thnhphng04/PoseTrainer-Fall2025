@@ -1053,12 +1053,258 @@ public class FirebaseService {
      * Load notifications for a user
      */
     public void loadUserNotifications(String uid, OnNotificationsLoadedListener listener) {
+        Log.d(TAG, "=== LOADING NOTIFICATIONS ===");
         Log.d(TAG, "Loading notifications for userId: " + uid);
         
+        // Query với whereEqualTo + orderBy → Cần Firestore index
         db.collection("notifications")
                 .whereEqualTo("uid", uid)
                 .orderBy("sentAt", Query.Direction.DESCENDING)
                 .limit(50)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    Log.d(TAG, "✓ Query thành công, số documents: " + queryDocumentSnapshots.size());
+                    
+                    ArrayList<Notification> notifications = new ArrayList<>();
+                    for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
+                        try {
+                            Notification notification = document.toObject(Notification.class);
+                            if (notification != null) {
+                                notification.setId(document.getId());
+                                notifications.add(notification);
+                                Log.d(TAG, "✓ Loaded notification: " + notification.getTitle() + " (ID: " + notification.getId() + ")");
+                            } else {
+                                Log.w(TAG, "⚠ Notification object is null cho document: " + document.getId());
+                            }
+                        } catch (Exception e) {
+                            Log.e(TAG, "✗ Error parsing notification: " + e.getMessage(), e);
+                        }
+                    }
+                    
+                    Log.d(TAG, "=== TỔNG KẾT ===");
+                    Log.d(TAG, "Đã load thành công: " + notifications.size() + " notifications");
+                    
+                    if (listener != null) {
+                        listener.onNotificationsLoaded(notifications);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "✗✗✗ LỖI LOAD NOTIFICATIONS ✗✗✗");
+                    Log.e(TAG, "Error message: " + e.getMessage());
+                    Log.e(TAG, "Error class: " + e.getClass().getName());
+                    
+                    // Kiểm tra xem có phải lỗi thiếu index không
+                    if (e.getMessage() != null && e.getMessage().contains("index")) {
+                        Log.e(TAG, "⚠⚠⚠ THIẾU FIRESTORE INDEX ⚠⚠⚠");
+                        Log.e(TAG, "Query cần index: notifications collection với fields: uid + sentAt");
+                        Log.e(TAG, "Truy cập Firebase Console để tạo index hoặc check link trong error message");
+                        
+                        // Thử query đơn giản hơn (không có orderBy) để vẫn load được
+                        Log.d(TAG, "Đang thử load không có orderBy...");
+                        db.collection("notifications")
+                                .whereEqualTo("uid", uid)
+                                .limit(50)
+                                .get()
+                                .addOnSuccessListener(queryDocumentSnapshots -> {
+                                    Log.d(TAG, "✓ Load thành công (không orderBy), số documents: " + queryDocumentSnapshots.size());
+                                    
+                                    ArrayList<Notification> notifications = new ArrayList<>();
+                                    for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
+                                        try {
+                                            Notification notification = document.toObject(Notification.class);
+                                            if (notification != null) {
+                                                notification.setId(document.getId());
+                                                notifications.add(notification);
+                                            }
+                                        } catch (Exception ex) {
+                                            Log.e(TAG, "Error parsing notification: " + ex.getMessage());
+                                        }
+                                    }
+                                    
+                                    // Sort ở client-side
+                                    notifications.sort((n1, n2) -> Long.compare(n2.getSentAt(), n1.getSentAt()));
+                                    
+                                    Log.d(TAG, "✓ Đã load " + notifications.size() + " notifications (sorted client-side)");
+                                    
+                                    if (listener != null) {
+                                        listener.onNotificationsLoaded(notifications);
+                                    }
+                                })
+                                .addOnFailureListener(e2 -> {
+                                    Log.e(TAG, "✗ Lỗi load notifications (fallback): " + e2.getMessage());
+                                    if (listener != null) {
+                                        listener.onNotificationsLoaded(new ArrayList<>());
+                                    }
+                                });
+                    } else {
+                        // Lỗi khác
+                        Log.e(TAG, "✗ Lỗi khác: " + e.getMessage(), e);
+                        if (listener != null) {
+                            listener.onNotificationsLoaded(new ArrayList<>());
+                        }
+                    }
+                });
+    }
+
+    public interface OnNotificationSavedListener {
+        void onNotificationSaved(boolean success);
+    }
+
+    public interface OnNotificationsLoadedListener {
+        void onNotificationsLoaded(ArrayList<Notification> notifications);
+    }
+
+    // ===================== AI NOTIFICATION METHODS =====================
+
+    /**
+     * Đánh dấu thông báo là đã đọc
+     */
+    public void markNotificationAsRead(String notificationId, OnNotificationUpdatedListener listener) {
+        Log.d(TAG, "Đánh dấu thông báo đã đọc: " + notificationId);
+        
+        db.collection("notifications")
+                .document(notificationId)
+                .update("read", true)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "✓ Đã đánh dấu thông báo là đã đọc");
+                    if (listener != null) {
+                        listener.onNotificationUpdated(true);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "✗ Lỗi đánh dấu thông báo: " + e.getMessage(), e);
+                    if (listener != null) {
+                        listener.onNotificationUpdated(false);
+                    }
+                });
+    }
+
+    /**
+     * Đánh dấu tất cả thông báo của user là đã đọc
+     */
+    public void markAllNotificationsAsRead(String uid, OnNotificationUpdatedListener listener) {
+        Log.d(TAG, "Đánh dấu tất cả thông báo đã đọc cho user: " + uid);
+        
+        db.collection("notifications")
+                .whereEqualTo("uid", uid)
+                .whereEqualTo("read", false)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (queryDocumentSnapshots.isEmpty()) {
+                        Log.d(TAG, "Không có thông báo chưa đọc");
+                        if (listener != null) {
+                            listener.onNotificationUpdated(true);
+                        }
+                        return;
+                    }
+                    
+                    // Cập nhật từng thông báo
+                    int totalNotifications = queryDocumentSnapshots.size();
+                    final int[] updatedCount = {0};
+                    
+                    queryDocumentSnapshots.forEach(document -> {
+                        document.getReference().update("read", true)
+                            .addOnCompleteListener(task -> {
+                                updatedCount[0]++;
+                                if (updatedCount[0] == totalNotifications) {
+                                    Log.d(TAG, "✓ Đã đánh dấu " + totalNotifications + " thông báo là đã đọc");
+                                    if (listener != null) {
+                                        listener.onNotificationUpdated(true);
+                                    }
+                                }
+                            });
+                    });
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "✗ Lỗi đánh dấu thông báo: " + e.getMessage(), e);
+                    if (listener != null) {
+                        listener.onNotificationUpdated(false);
+                    }
+                });
+    }
+
+    /**
+     * Gửi feedback cho thông báo AI (accepted, ignored, dismissed)
+     */
+    public void sendNotificationFeedback(String notificationId, String feedback, OnNotificationUpdatedListener listener) {
+        Log.d(TAG, "Gửi feedback cho thông báo: " + notificationId + ", feedback: " + feedback);
+        
+        db.collection("notifications")
+                .document(notificationId)
+                .update("feedback", feedback)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "✓ Đã gửi feedback thành công");
+                    if (listener != null) {
+                        listener.onNotificationUpdated(true);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "✗ Lỗi gửi feedback: " + e.getMessage(), e);
+                    if (listener != null) {
+                        listener.onNotificationUpdated(false);
+                    }
+                });
+    }
+
+    /**
+     * Xóa thông báo
+     */
+    public void deleteNotification(String notificationId, OnNotificationDeletedListener listener) {
+        Log.d(TAG, "Xóa thông báo: " + notificationId);
+        
+        db.collection("notifications")
+                .document(notificationId)
+                .delete()
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "✓ Đã xóa thông báo thành công");
+                    if (listener != null) {
+                        listener.onNotificationDeleted(true);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "✗ Lỗi xóa thông báo: " + e.getMessage(), e);
+                    if (listener != null) {
+                        listener.onNotificationDeleted(false);
+                    }
+                });
+    }
+
+    /**
+     * Đếm số thông báo chưa đọc của user
+     */
+    public void countUnreadNotifications(String uid, OnUnreadCountLoadedListener listener) {
+        Log.d(TAG, "Đếm thông báo chưa đọc cho user: " + uid);
+        
+        db.collection("notifications")
+                .whereEqualTo("uid", uid)
+                .whereEqualTo("read", false)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    int count = queryDocumentSnapshots.size();
+                    Log.d(TAG, "✓ Có " + count + " thông báo chưa đọc");
+                    if (listener != null) {
+                        listener.onUnreadCountLoaded(count);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "✗ Lỗi đếm thông báo: " + e.getMessage(), e);
+                    if (listener != null) {
+                        listener.onUnreadCountLoaded(0);
+                    }
+                });
+    }
+
+    /**
+     * Load thông báo AI (chỉ lấy thông báo do AI tạo)
+     */
+    public void loadAiNotifications(String uid, OnNotificationsLoadedListener listener) {
+        Log.d(TAG, "Loading AI notifications for userId: " + uid);
+        
+        db.collection("notifications")
+                .whereEqualTo("uid", uid)
+                .whereEqualTo("isAiGenerated", true)
+                .orderBy("sentAt", Query.Direction.DESCENDING)
+                .limit(30)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     ArrayList<Notification> notifications = new ArrayList<>();
@@ -1070,27 +1316,84 @@ public class FirebaseService {
                                 notifications.add(notification);
                             }
                         } catch (Exception e) {
-                            Log.e(TAG, "Error parsing notification: " + e.getMessage());
+                            Log.e(TAG, "Error parsing AI notification: " + e.getMessage());
                         }
                     }
-                    Log.d(TAG, "Loaded " + notifications.size() + " notifications");
+                    Log.d(TAG, "Loaded " + notifications.size() + " AI notifications");
                     if (listener != null) {
                         listener.onNotificationsLoaded(notifications);
                     }
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error loading notifications", e);
+                    Log.e(TAG, "Error loading AI notifications", e);
                     if (listener != null) {
                         listener.onNotificationsLoaded(new ArrayList<>());
                     }
                 });
     }
 
-    public interface OnNotificationSavedListener {
-        void onNotificationSaved(boolean success);
+    /**
+     * Cập nhật FCM token cho user
+     */
+    public void updateFcmToken(String uid, String fcmToken, OnNotificationUpdatedListener listener) {
+        Log.d(TAG, "Cập nhật FCM token cho user: " + uid);
+        
+        db.collection("users")
+                .document(uid)
+                .update("notification.fcmToken", fcmToken)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "✓ Đã cập nhật FCM token thành công");
+                    if (listener != null) {
+                        listener.onNotificationUpdated(true);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "✗ Lỗi cập nhật FCM token: " + e.getMessage(), e);
+                    if (listener != null) {
+                        listener.onNotificationUpdated(false);
+                    }
+                });
     }
 
-    public interface OnNotificationsLoadedListener {
-        void onNotificationsLoaded(ArrayList<Notification> notifications);
+    /**
+     * Cập nhật cài đặt thông báo AI cho user
+     */
+    public void updateAiNotificationSettings(String uid, Map<String, Object> settings, OnNotificationUpdatedListener listener) {
+        Log.d(TAG, "Cập nhật cài đặt AI notification cho user: " + uid);
+        
+        // Tạo map để update
+        Map<String, Object> updates = new HashMap<>();
+        for (Map.Entry<String, Object> entry : settings.entrySet()) {
+            updates.put("notification." + entry.getKey(), entry.getValue());
+        }
+        
+        db.collection("users")
+                .document(uid)
+                .update(updates)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "✓ Đã cập nhật cài đặt thành công");
+                    if (listener != null) {
+                        listener.onNotificationUpdated(true);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "✗ Lỗi cập nhật cài đặt: " + e.getMessage(), e);
+                    if (listener != null) {
+                        listener.onNotificationUpdated(false);
+                    }
+                });
+    }
+
+    // Interfaces cho AI notifications
+    public interface OnNotificationUpdatedListener {
+        void onNotificationUpdated(boolean success);
+    }
+
+    public interface OnNotificationDeletedListener {
+        void onNotificationDeleted(boolean success);
+    }
+
+    public interface OnUnreadCountLoadedListener {
+        void onUnreadCountLoaded(int count);
     }
 }

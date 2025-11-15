@@ -18,11 +18,13 @@ import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
 import fpt.fall2025.posetrainer.Domain.User;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
+import fpt.fall2025.posetrainer.Activity.MainActivity;
 import fpt.fall2025.posetrainer.databinding.FragmentHomeBinding;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.bumptech.glide.Glide;
+import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -64,8 +66,10 @@ public class HomeFragment extends Fragment {
 
         setupSearchListeners();
         setupFilterListeners();
+        setupNotificationButton();
         loadCurrentUserInfo();
         loadWorkoutTemplates();
+        loadUnreadNotificationCount();
         isDataLoaded = true;
         
         // Initialize chip states
@@ -77,6 +81,70 @@ public class HomeFragment extends Fragment {
         binding.searchBar.setOnClickListener(v -> {
             startActivity(new Intent(getActivity(), SearchActivity.class));
         });
+    }
+    
+    /**
+     * Setup button notification để mở NotificationFragment
+     * Và hiển thị badge số lượng thông báo chưa đọc
+     */
+    private void setupNotificationButton() {
+        // Click vào button notification → Mở NotificationFragment
+        binding.notificationButtonContainer.setOnClickListener(v -> {
+            // Lấy MainActivity và gọi method mở NotificationFragment
+            if (getActivity() instanceof MainActivity) {
+                MainActivity mainActivity = (MainActivity) getActivity();
+                mainActivity.openNotificationFragment();
+            } else {
+                Log.w(TAG, "Activity không phải MainActivity, không thể mở NotificationFragment");
+            }
+        });
+    }
+    
+    /**
+     * Load và hiển thị số lượng thông báo chưa đọc
+     * Được gọi khi fragment hiển thị và định kỳ để cập nhật
+     */
+    private void loadUnreadNotificationCount() {
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser == null) {
+            Log.w(TAG, "User chưa đăng nhập, không thể load notification count");
+            return;
+        }
+        
+        String uid = currentUser.getUid();
+        Log.d(TAG, "Đang load số lượng thông báo chưa đọc cho user: " + uid);
+        
+        // Gọi FirebaseService để đếm thông báo chưa đọc
+        FirebaseService.getInstance().countUnreadNotifications(uid, count -> {
+            Log.d(TAG, "Số thông báo chưa đọc: " + count);
+            updateNotificationBadge(count);
+        });
+    }
+    
+    /**
+     * Cập nhật badge hiển thị số thông báo chưa đọc
+     * @param count Số lượng thông báo chưa đọc
+     */
+    private void updateNotificationBadge(int count) {
+        TextView badgeTextView = binding.tvNotificationBadge;
+        
+        if (count > 0) {
+            // Có thông báo chưa đọc → Hiển thị badge
+            badgeTextView.setVisibility(android.view.View.VISIBLE);
+            
+            // Hiển thị số lượng, nếu > 99 thì hiển thị "99+"
+            if (count > 99) {
+                badgeTextView.setText("99+");
+            } else {
+                badgeTextView.setText(String.valueOf(count));
+            }
+            
+            Log.d(TAG, "✓ Hiển thị badge với số lượng: " + count);
+        } else {
+            // Không có thông báo chưa đọc → Ẩn badge
+            badgeTextView.setVisibility(android.view.View.GONE);
+            Log.d(TAG, "✓ Ẩn badge (không có thông báo chưa đọc)");
+        }
     }
 
     private void loadWorkoutTemplates() {
@@ -165,6 +233,10 @@ public class HomeFragment extends Fragment {
             loadCurrentUserInfo();
             isDataLoaded = true;
         }
+        
+        // Luôn refresh notification count khi fragment hiển thị lại
+        // Để badge cập nhật khi có thông báo mới
+        loadUnreadNotificationCount();
     }
     
     @Override
@@ -174,6 +246,8 @@ public class HomeFragment extends Fragment {
         // Chỉ refresh nếu fragment đã resumed và added
         if (!hidden && isAdded() && isResumed()) {
             loadCurrentUserInfo();
+            // Refresh notification count khi fragment hiển thị lại
+            loadUnreadNotificationCount();
         }
     }
 
