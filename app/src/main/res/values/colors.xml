@@ -26,4 +26,9 @@
     <!-- Additional colors for daily screen -->
     <color name="primary_blue">#FF2196F3</color>
     <color name="gray_text">#FF757575</color>
+    
+    <!-- Color for Material Design components -->
+    <color name="colorPrimary">#FF2196F3</color>
+    <color name="colorPrimaryDark">#FF1976D2</color>
+    <color name="colorAccent">#FFFF5722</color>
 </resources>
