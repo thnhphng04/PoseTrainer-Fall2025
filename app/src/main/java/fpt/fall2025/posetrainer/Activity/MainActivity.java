@@ -281,6 +281,22 @@ public class MainActivity extends AppCompatActivity {
     }
     
     /**
+     * Method public để các fragment khác có thể gọi navigate về HomeFragment
+     * Ví dụ: từ DailyFragment có thể click back arrow để về Home
+     */
+    public void navigateToHomeFragment() {
+        showFragment(homeFragment);
+    }
+    
+    /**
+     * Method public để các fragment khác có thể gọi navigate đến MyWorkoutFragment
+     * Ví dụ: từ DailyFragment có thể click tv_history để xem lịch sử
+     */
+    public void navigateToMyWorkoutFragment() {
+        showFragment(myWorkoutFragment);
+    }
+    
+    /**
      * Setup FCM token và notification settings cho user
      * Được gọi khi app khởi động để đảm bảo user có token và settings đúng
      */

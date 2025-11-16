@@ -72,6 +72,12 @@
         <activity
             android:name=".Activity.PlanPreviewActivity"
             android:theme="@style/HomeWorkoutTheme" />
+        <activity
+            android:name=".Activity.WorkoutHistoryActivity"
+            android:exported="false" />
+        <activity
+            android:name=".Activity.SessionResultActivity"
+            android:exported="false" />
 
         <!--        <activity-->
 <!--            android:name=".Activity.MainActivity"-->
