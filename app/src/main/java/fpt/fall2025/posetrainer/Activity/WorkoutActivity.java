@@ -103,6 +103,116 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
                 showMoreOptionsMenu(v);
             }
         });
+        
+        // Favorite button
+        setupFavoriteButton();
+    }
+    
+    /**
+     * Setup favorite button với click listener và kiểm tra trạng thái favorite
+     */
+    private void setupFavoriteButton() {
+        // Xử lý click vào nút favorite
+        binding.imageView8.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                toggleFavorite();
+            }
+        });
+    }
+    
+    /**
+     * Kiểm tra trạng thái favorite của workout template hiện tại
+     */
+    private void checkFavoriteStatus() {
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null || workoutTemplate == null) {
+            // Nếu chưa đăng nhập hoặc chưa có workout template, hiển thị icon mặc định
+            updateFavoriteIcon(false);
+            return;
+        }
+        
+        String userId = currentUser.getUid();
+        String workoutTemplateId = workoutTemplate.getId();
+        
+        // Kiểm tra xem workout template có trong danh sách yêu thích không
+        FirebaseService.getInstance().checkFavoriteWorkoutTemplate(userId, workoutTemplateId, new FirebaseService.OnFavoriteWorkoutCheckedListener() {
+            @Override
+            public void onFavoriteWorkoutChecked(boolean isFavorite) {
+                // Cập nhật icon dựa trên trạng thái favorite
+                updateFavoriteIcon(isFavorite);
+            }
+        });
+    }
+    
+    /**
+     * Toggle favorite (thêm hoặc xóa khỏi yêu thích)
+     */
+    private void toggleFavorite() {
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            Toast.makeText(this, "Vui lòng đăng nhập để sử dụng tính năng yêu thích", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        if (workoutTemplate == null) {
+            Toast.makeText(this, "Không thể thêm vào yêu thích", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        String userId = currentUser.getUid();
+        String workoutTemplateId = workoutTemplate.getId();
+        
+        // Kiểm tra trạng thái hiện tại
+        FirebaseService.getInstance().checkFavoriteWorkoutTemplate(userId, workoutTemplateId, new FirebaseService.OnFavoriteWorkoutCheckedListener() {
+            @Override
+            public void onFavoriteWorkoutChecked(boolean isFavorite) {
+                if (isFavorite) {
+                    // Đang là favorite → Xóa khỏi yêu thích
+                    FirebaseService.getInstance().removeFavoriteWorkoutTemplate(userId, workoutTemplateId, new FirebaseService.OnFavoriteWorkoutUpdatedListener() {
+                        @Override
+                        public void onFavoriteWorkoutUpdated(boolean success) {
+                            if (success) {
+                                // Cập nhật icon
+                                updateFavoriteIcon(false);
+                                Toast.makeText(WorkoutActivity.this, "Đã xóa khỏi yêu thích", Toast.LENGTH_SHORT).show();
+                            } else {
+                                Toast.makeText(WorkoutActivity.this, "Không thể xóa khỏi yêu thích", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    });
+                } else {
+                    // Chưa là favorite → Thêm vào yêu thích
+                    FirebaseService.getInstance().addFavoriteWorkoutTemplate(userId, workoutTemplateId, new FirebaseService.OnFavoriteWorkoutUpdatedListener() {
+                        @Override
+                        public void onFavoriteWorkoutUpdated(boolean success) {
+                            if (success) {
+                                // Cập nhật icon
+                                updateFavoriteIcon(true);
+                                Toast.makeText(WorkoutActivity.this, "Đã thêm vào yêu thích", Toast.LENGTH_SHORT).show();
+                            } else {
+                                Toast.makeText(WorkoutActivity.this, "Không thể thêm vào yêu thích", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    });
+                }
+            }
+        });
+    }
+    
+    /**
+     * Cập nhật icon favorite dựa trên trạng thái
+     */
+    private void updateFavoriteIcon(boolean isFavorite) {
+        if (isFavorite) {
+            // Đang là favorite → hiển thị icon filled (đỏ)
+            binding.imageView8.setImageResource(R.drawable.ic_favorite_filled);
+            binding.imageView8.setColorFilter(getResources().getColor(R.color.red, null));
+        } else {
+            // Chưa là favorite → hiển thị icon border (trắng)
+            binding.imageView8.setImageResource(R.drawable.ic_heart);
+            binding.imageView8.setColorFilter(getResources().getColor(R.color.white, null));
+        }
     }
     
     /**
@@ -513,6 +623,9 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
                     // Update UI
                     updateWorkoutTemplateUI();
                     
+                    // Kiểm tra trạng thái favorite
+                    checkFavoriteStatus();
+                    
                     // Load exercises for this template
                     loadExercises();
                     
@@ -620,6 +733,9 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
                 
                 // Update UI
                 updateWorkoutTemplateUI();
+                
+                // Kiểm tra trạng thái favorite
+                checkFavoriteStatus();
                 
                 // Load exercises for this template
                 loadExercises();

@@ -27,6 +27,7 @@ import fpt.fall2025.posetrainer.Domain.UserWorkout;
 import fpt.fall2025.posetrainer.Domain.Session;
 import fpt.fall2025.posetrainer.Domain.Schedule;
 import fpt.fall2025.posetrainer.Domain.Notification;
+import fpt.fall2025.posetrainer.Domain.Favorite;
 
 /**
  * FirebaseService - Service để quản lý tất cả Firebase operations
@@ -1022,6 +1023,198 @@ public class FirebaseService {
 
     public interface OnScheduleSavedListener {
         void onScheduleSaved(boolean success);
+    }
+
+    // ===================== FAVORITE WORKOUT TEMPLATES METHODS =====================
+
+    /**
+     * Thêm workout template vào danh sách yêu thích của user
+     * Lưu vào collection: users/{userId}/favorites/{workoutTemplateId}
+     */
+    public void addFavoriteWorkoutTemplate(String userId, String workoutTemplateId, OnFavoriteWorkoutUpdatedListener listener) {
+        Log.d(TAG, "Thêm workout template vào yêu thích: " + workoutTemplateId + " cho user: " + userId);
+        
+        // Tạo Favorite object để lưu
+        Favorite favorite = new Favorite(
+            workoutTemplateId, // ID của document = workoutTemplateId
+            userId, // ID của user
+            System.currentTimeMillis() / 1000 // Timestamp dạng seconds
+        );
+        
+        // Lưu vào Firestore
+        db.collection("users")
+                .document(userId)
+                .collection("favorites")
+                .document(workoutTemplateId)
+                .set(favorite)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "✓ Đã thêm workout template vào yêu thích thành công");
+                    if (listener != null) {
+                        listener.onFavoriteWorkoutUpdated(true);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "✗ Lỗi thêm workout template vào yêu thích: " + e.getMessage(), e);
+                    if (listener != null) {
+                        listener.onFavoriteWorkoutUpdated(false);
+                    }
+                });
+    }
+
+    /**
+     * Xóa workout template khỏi danh sách yêu thích của user
+     */
+    public void removeFavoriteWorkoutTemplate(String userId, String workoutTemplateId, OnFavoriteWorkoutUpdatedListener listener) {
+        Log.d(TAG, "Xóa workout template khỏi yêu thích: " + workoutTemplateId + " cho user: " + userId);
+        
+        db.collection("users")
+                .document(userId)
+                .collection("favorites")
+                .document(workoutTemplateId)
+                .delete()
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "✓ Đã xóa workout template khỏi yêu thích thành công");
+                    if (listener != null) {
+                        listener.onFavoriteWorkoutUpdated(true);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "✗ Lỗi xóa workout template khỏi yêu thích: " + e.getMessage(), e);
+                    if (listener != null) {
+                        listener.onFavoriteWorkoutUpdated(false);
+                    }
+                });
+    }
+
+    /**
+     * Kiểm tra xem workout template có trong danh sách yêu thích không
+     */
+    public void checkFavoriteWorkoutTemplate(String userId, String workoutTemplateId, OnFavoriteWorkoutCheckedListener listener) {
+        Log.d(TAG, "Kiểm tra workout template yêu thích: " + workoutTemplateId + " cho user: " + userId);
+        
+        db.collection("users")
+                .document(userId)
+                .collection("favorites")
+                .document(workoutTemplateId)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    boolean isFavorite = documentSnapshot.exists();
+                    Log.d(TAG, "✓ Workout template " + (isFavorite ? "có" : "không có") + " trong yêu thích");
+                    if (listener != null) {
+                        listener.onFavoriteWorkoutChecked(isFavorite);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "✗ Lỗi kiểm tra workout template yêu thích: " + e.getMessage(), e);
+                    if (listener != null) {
+                        listener.onFavoriteWorkoutChecked(false);
+                    }
+                });
+    }
+
+    /**
+     * Load tất cả favorite workout template IDs của user
+     */
+    public void loadFavoriteWorkoutTemplateIds(String userId, OnFavoriteWorkoutTemplateIdsLoadedListener listener) {
+        Log.d(TAG, "Load danh sách favorite workout template IDs cho user: " + userId);
+        
+        db.collection("users")
+                .document(userId)
+                .collection("favorites")
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    ArrayList<String> favoriteIds = new ArrayList<>();
+                    for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
+                        try {
+                            // Chuyển đổi document thành Favorite object
+                            Favorite favorite = document.toObject(Favorite.class);
+                            if (favorite != null) {
+                                // Lấy workoutTemplateId từ object
+                                String workoutTemplateId = favorite.getWorkoutTemplateId();
+                                if (workoutTemplateId != null && !workoutTemplateId.isEmpty()) {
+                                    favoriteIds.add(workoutTemplateId);
+                                } else {
+                                    // Fallback: sử dụng document ID nếu không có field workoutTemplateId
+                                    favoriteIds.add(document.getId());
+                                }
+                            } else {
+                                // Fallback: nếu không parse được object, sử dụng document ID
+                                favoriteIds.add(document.getId());
+                            }
+                        } catch (Exception e) {
+                            Log.e(TAG, "✗ Lỗi parse favorite document: " + document.getId(), e);
+                            // Fallback: sử dụng document ID
+                            favoriteIds.add(document.getId());
+                        }
+                    }
+                    Log.d(TAG, "✓ Đã load " + favoriteIds.size() + " favorite workout template IDs");
+                    if (listener != null) {
+                        listener.onFavoriteWorkoutTemplateIdsLoaded(favoriteIds);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "✗ Lỗi load favorite workout template IDs: " + e.getMessage(), e);
+                    if (listener != null) {
+                        listener.onFavoriteWorkoutTemplateIdsLoaded(new ArrayList<>());
+                    }
+                });
+    }
+
+    /**
+     * Load tất cả favorite workout templates của user (load full WorkoutTemplate objects)
+     */
+    public void loadFavoriteWorkoutTemplates(String userId, AppCompatActivity activity, OnWorkoutTemplatesLoadedListener listener) {
+        Log.d(TAG, "Load favorite workout templates cho user: " + userId);
+        
+        // Bước 1: Load danh sách favorite IDs
+        loadFavoriteWorkoutTemplateIds(userId, favoriteIds -> {
+            if (favoriteIds == null || favoriteIds.isEmpty()) {
+                Log.d(TAG, "Không có favorite workout templates");
+                activity.runOnUiThread(() -> {
+                    if (listener != null) {
+                        listener.onWorkoutTemplatesLoaded(new ArrayList<>());
+                    }
+                });
+                return;
+            }
+            
+            // Bước 2: Load từng workout template từ workouts_templates collection
+            ArrayList<WorkoutTemplate> favoriteTemplates = new ArrayList<>();
+            final int[] loadedCount = {0};
+            final int totalCount = favoriteIds.size();
+            
+            for (String workoutTemplateId : favoriteIds) {
+                loadWorkoutTemplateById(workoutTemplateId, activity, template -> {
+                    if (template != null) {
+                        favoriteTemplates.add(template);
+                    }
+                    loadedCount[0]++;
+                    
+                    // Khi đã load xong tất cả
+                    if (loadedCount[0] == totalCount) {
+                        Log.d(TAG, "✓ Đã load " + favoriteTemplates.size() + " favorite workout templates");
+                        activity.runOnUiThread(() -> {
+                            if (listener != null) {
+                                listener.onWorkoutTemplatesLoaded(favoriteTemplates);
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    // Interfaces cho favorite workout templates
+    public interface OnFavoriteWorkoutUpdatedListener {
+        void onFavoriteWorkoutUpdated(boolean success);
+    }
+
+    public interface OnFavoriteWorkoutCheckedListener {
+        void onFavoriteWorkoutChecked(boolean isFavorite);
+    }
+
+    public interface OnFavoriteWorkoutTemplateIdsLoadedListener {
+        void onFavoriteWorkoutTemplateIdsLoaded(ArrayList<String> favoriteIds);
     }
 
     // ===================== NOTIFICATION METHODS (Firestore) =====================
