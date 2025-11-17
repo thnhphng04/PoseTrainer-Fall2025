@@ -36,10 +36,17 @@ public class HomeFragment extends Fragment {
     private ArrayList<WorkoutTemplate> filteredWorkoutTemplates;
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
+    private WorkoutTemplateAdapter adapter; // Reuse adapter thay vì tạo mới mỗi lần
     
     // Filter states
     private String selectedCategory = "Latest Updates";
     private String selectedDuration = null;
+    
+    // Cache để tránh reload không cần thiết
+    private boolean isWorkoutTemplatesLoaded = false;
+    private String cachedUserId = null;
+    private long lastNotificationCountUpdate = 0;
+    private static final long NOTIFICATION_COUNT_UPDATE_INTERVAL = 5000; // 5 giây
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
@@ -61,8 +68,17 @@ public class HomeFragment extends Fragment {
         binding.view1.setLayoutManager(
                 new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false)
         );
-        // Set adapter immediately to avoid "No adapter attached" warning
-        binding.view1.setAdapter(new WorkoutTemplateAdapter(filteredWorkoutTemplates));
+        // Khởi tạo adapter một lần và reuse thay vì tạo mới mỗi lần
+        if (adapter == null) {
+            adapter = new WorkoutTemplateAdapter(filteredWorkoutTemplates);
+            binding.view1.setAdapter(adapter);
+        } else {
+            // Adapter đã tồn tại, chỉ cần update data
+            adapter.updateList(filteredWorkoutTemplates);
+            if (binding.view1.getAdapter() == null) {
+                binding.view1.setAdapter(adapter);
+            }
+        }
 
         setupSearchListeners();
         setupFilterListeners();
@@ -103,6 +119,7 @@ public class HomeFragment extends Fragment {
     /**
      * Load và hiển thị số lượng thông báo chưa đọc
      * Được gọi khi fragment hiển thị và định kỳ để cập nhật
+     * Đã tối ưu với debounce để tránh load quá nhiều lần
      */
     private void loadUnreadNotificationCount() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
@@ -112,6 +129,15 @@ public class HomeFragment extends Fragment {
         }
         
         String uid = currentUser.getUid();
+        
+        // Debounce: Chỉ load nếu đã qua 5 giây từ lần update cuối
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastNotificationCountUpdate < NOTIFICATION_COUNT_UPDATE_INTERVAL) {
+            Log.d(TAG, "Bỏ qua load notification count (debounce)");
+            return;
+        }
+        
+        lastNotificationCountUpdate = currentTime;
         Log.d(TAG, "Đang load số lượng thông báo chưa đọc cho user: " + uid);
         
         // Gọi FirebaseService để đếm thông báo chưa đọc
@@ -147,11 +173,37 @@ public class HomeFragment extends Fragment {
         }
     }
 
+    /**
+     * Load workout templates từ Firebase
+     * Chỉ load một lần và cache để tránh reload không cần thiết
+     */
     private void loadWorkoutTemplates() {
+        // Kiểm tra xem đã load chưa để tránh reload không cần thiết
+        if (isWorkoutTemplatesLoaded && workoutTemplates != null && !workoutTemplates.isEmpty()) {
+            Log.d(TAG, "Workout templates đã được load, bỏ qua reload");
+            applyFilters();
+            return;
+        }
+        
+        // Kiểm tra activity có tồn tại không
+        if (getActivity() == null || !(getActivity() instanceof androidx.appcompat.app.AppCompatActivity)) {
+            Log.w(TAG, "Activity không tồn tại, không thể load workout templates");
+            return;
+        }
+        
+        Log.d(TAG, "Đang load workout templates từ Firebase...");
         FirebaseService.getInstance().loadWorkoutTemplates(
                 (androidx.appcompat.app.AppCompatActivity) getActivity(),
                 templates -> {
-                    workoutTemplates = templates;
+                    if (templates != null) {
+                        workoutTemplates = templates;
+                        isWorkoutTemplatesLoaded = true;
+                        Log.d(TAG, "Đã load " + templates.size() + " workout templates");
+                    } else {
+                        workoutTemplates = new ArrayList<>();
+                        isWorkoutTemplatesLoaded = true;
+                        Log.w(TAG, "Không có workout templates nào được load");
+                    }
                     applyFilters();
                 }
         );
@@ -159,6 +211,7 @@ public class HomeFragment extends Fragment {
 
     /**
      * 🔄 Load current user info from Firestore or Auth (like ProfileFragment)
+     * Đã tối ưu với cache để tránh reload không cần thiết
      */
     private void loadCurrentUserInfo() {
         FirebaseUser current = mAuth.getCurrentUser();
@@ -168,8 +221,28 @@ public class HomeFragment extends Fragment {
         }
 
         String uid = current.getUid();
+        
+        // Kiểm tra cache: Chỉ reload nếu user thay đổi hoặc chưa load lần nào
+        if (cachedUserId != null && cachedUserId.equals(uid) && binding.ivUserAvatar.getDrawable() != null) {
+            Log.d(TAG, "User info đã được cache, bỏ qua reload");
+            return;
+        }
+        
+        cachedUserId = uid;
+        
+        // Kiểm tra fragment view có còn attached không
+        if (!isAdded() || getView() == null) {
+            Log.w(TAG, "Fragment không còn attached, bỏ qua load user info");
+            return;
+        }
+        
         db.collection("users").document(uid).get()
                 .addOnSuccessListener(doc -> {
+                    // Kiểm tra lại fragment view trước khi update UI
+                    if (!isAdded() || getView() == null || binding == null) {
+                        return;
+                    }
+                    
                     if (doc.exists()) {
                         User user = doc.toObject(User.class);
                         if (user != null) {
@@ -194,6 +267,10 @@ public class HomeFragment extends Fragment {
                     }
                 })
                 .addOnFailureListener(e -> {
+                    // Kiểm tra lại fragment view trước khi update UI
+                    if (!isAdded() || getView() == null || binding == null) {
+                        return;
+                    }
                     Log.e(TAG, "Lỗi: Không thể tải thông tin người dùng", e);
                     updateUserUIFromAuth(current);
                 });
@@ -231,10 +308,11 @@ public class HomeFragment extends Fragment {
         // Chỉ load data một lần ban đầu để tránh reload không cần thiết
         if (!isDataLoaded && isVisible() && isAdded()) {
             loadCurrentUserInfo();
+            loadWorkoutTemplates(); // Chỉ load một lần
             isDataLoaded = true;
         }
         
-        // Luôn refresh notification count khi fragment hiển thị lại
+        // Refresh notification count khi fragment hiển thị lại (với debounce)
         // Để badge cập nhật khi có thông báo mới
         loadUnreadNotificationCount();
     }
@@ -242,11 +320,10 @@ public class HomeFragment extends Fragment {
     @Override
     public void onHiddenChanged(boolean hidden) {
         super.onHiddenChanged(hidden);
-        // Khi fragment trở nên visible lại, refresh user info (phòng trường hợp user đã chỉnh sửa profile)
-        // Chỉ refresh nếu fragment đã resumed và added
+        // Khi fragment trở nên visible lại, chỉ refresh notification count
+        // User info và workout templates đã được cache, không cần reload
         if (!hidden && isAdded() && isResumed()) {
-            loadCurrentUserInfo();
-            // Refresh notification count khi fragment hiển thị lại
+            // Chỉ refresh notification count khi fragment hiển thị lại
             loadUnreadNotificationCount();
         }
     }
@@ -413,8 +490,14 @@ public class HomeFragment extends Fragment {
             }
         }
 
-        // Update RecyclerView
-        binding.view1.setAdapter(new WorkoutTemplateAdapter(filteredWorkoutTemplates));
+        // Update RecyclerView bằng cách update adapter thay vì tạo mới
+        if (adapter != null) {
+            adapter.updateList(filteredWorkoutTemplates);
+        } else {
+            // Nếu adapter chưa tồn tại, tạo mới
+            adapter = new WorkoutTemplateAdapter(filteredWorkoutTemplates);
+            binding.view1.setAdapter(adapter);
+        }
         
         Log.d(TAG, "Đã lọc bài tập: " + filteredWorkoutTemplates.size() + " / " + workoutTemplates.size());
     }
@@ -424,6 +507,8 @@ public class HomeFragment extends Fragment {
         super.onDestroyView();
         // Reset flag khi view bị destroy
         isDataLoaded = false;
+        // Không reset isWorkoutTemplatesLoaded và cachedUserId để cache vẫn hoạt động khi fragment bị recreate
         binding = null;
+        adapter = null; // Clear adapter reference
     }
 }

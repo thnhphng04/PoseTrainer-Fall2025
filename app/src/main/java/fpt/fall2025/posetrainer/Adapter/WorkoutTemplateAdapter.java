@@ -16,11 +16,24 @@ import fpt.fall2025.posetrainer.databinding.ViewholderWorktoutBinding;
 import java.util.ArrayList;
 
 public class WorkoutTemplateAdapter extends RecyclerView.Adapter<WorkoutTemplateAdapter.Viewholder> {
-    private final ArrayList<WorkoutTemplate> list;
+    private ArrayList<WorkoutTemplate> list; // Thay đổi từ final để có thể update
     private Context context;
 
     public WorkoutTemplateAdapter(ArrayList<WorkoutTemplate> list) {
-        this.list = list;
+        this.list = list != null ? list : new ArrayList<>();
+    }
+    
+    /**
+     * Cập nhật danh sách workout templates mới mà không tạo adapter mới
+     * Giúp tối ưu hiệu năng và tránh lag khi filter
+     */
+    public void updateList(ArrayList<WorkoutTemplate> newList) {
+        if (newList == null) {
+            newList = new ArrayList<>();
+        }
+        this.list = newList;
+        // Thông báo cho RecyclerView rằng toàn bộ data đã thay đổi
+        notifyDataSetChanged();
     }
 
     @NonNull
