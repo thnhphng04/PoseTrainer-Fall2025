@@ -2,25 +2,33 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/mainColor">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="16dp"
+        android:background="@color/mainColor">
 
         <!-- ===== THÔNG TIN CƠ BẢN ===== -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/til_birthday"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Ngày sinh (YYYY-MM-DD)">
+            android:hint="Ngày sinh (YYYY-MM-DD)"
+            app:boxBackgroundMode="outline"
+            app:boxStrokeColor="@color/white"
+            app:boxStrokeWidth="1dp"
+            app:hintTextColor="@color/white"
+            app:hintEnabled="true">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_birthday"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:textColor="@color/white"
+                android:textColorHint="@android:color/darker_gray"
                 android:focusable="false"
                 android:clickable="true"
                 android:inputType="none" />
@@ -28,15 +36,20 @@
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/til_gender"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:hint="Giới tính">
+            android:hint="Giới tính"
+            app:boxBackgroundMode="outline"
+            app:boxStrokeColor="@color/white"
+            app:boxStrokeWidth="1dp"
+            app:hintTextColor="@color/white"
+            app:hintEnabled="true">
             <com.google.android.material.textfield.MaterialAutoCompleteTextView
                 android:id="@+id/dd_gender"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content"
+                android:textColor="@color/white" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <LinearLayout
@@ -48,15 +61,21 @@
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/til_height"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:hint="Chiều cao (cm)">
+                android:hint="Chiều cao (cm)"
+                app:boxBackgroundMode="outline"
+                app:boxStrokeColor="@color/white"
+                app:boxStrokeWidth="1dp"
+                app:hintTextColor="@color/white"
+                app:hintEnabled="true">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/et_height"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:textColor="@color/white"
+                    android:textColorHint="@android:color/darker_gray"
                     android:inputType="number" />
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -66,58 +85,81 @@
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/til_weight"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:hint="Cân nặng (kg)">
+                android:hint="Cân nặng (kg)"
+                app:boxBackgroundMode="outline"
+                app:boxStrokeColor="@color/white"
+                app:boxStrokeWidth="1dp"
+                app:hintTextColor="@color/white"
+                app:hintEnabled="true">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/et_weight"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:textColor="@color/white"
+                    android:textColorHint="@android:color/darker_gray"
                     android:inputType="number" />
             </com.google.android.material.textfield.TextInputLayout>
         </LinearLayout>
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/til_daily_minutes"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:hint="Thời gian tập mỗi ngày (phút)">
+            android:hint="Thời gian tập mỗi ngày (phút)"
+            app:boxBackgroundMode="outline"
+            app:boxStrokeColor="@color/white"
+            app:boxStrokeWidth="1dp"
+            app:hintTextColor="@color/white"
+            app:hintEnabled="true">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_daily_minutes"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:textColor="@color/white"
+                android:textColorHint="@android:color/darker_gray"
                 android:inputType="number" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/til_weekly_goal"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:hint="Số ngày có thể tập luyện trong 1 tuần">
+            android:hint="Số ngày có thể tập luyện trong 1 tuần"
+            app:boxBackgroundMode="outline"
+            app:boxStrokeColor="@color/white"
+            app:boxStrokeWidth="1dp"
+            app:hintTextColor="@color/white"
+            app:hintEnabled="true">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_weekly_goal"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:textColor="@color/white"
+                android:textColorHint="@android:color/darker_gray"
                 android:inputType="number" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/til_experience"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:hint="Kinh nghiệm tập luyện">
+            android:hint="Kinh nghiệm tập luyện"
+            app:boxBackgroundMode="outline"
+            app:boxStrokeColor="@color/white"
+            app:boxStrokeWidth="1dp"
+            app:hintTextColor="@color/white"
+            app:hintEnabled="true">
             <com.google.android.material.textfield.MaterialAutoCompleteTextView
                 android:id="@+id/dd_experience"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content"
+                android:textColor="@color/white" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Divider -->
@@ -126,16 +168,17 @@
             android:layout_height="1dp"
             android:layout_marginTop="16dp"
             android:layout_marginBottom="12dp"
-            android:background="?attr/colorOutline" />
+            android:background="@color/gray" />
 
         <!-- ===== BODY HIỆN TẠI (chọn 1) ===== -->
         <TextView
             android:id="@+id/tv_section_body_current"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Body hiện tại (chọn 1)"
+            android:text="Cơ thể hiện tại (chọn 1)"
             android:textStyle="bold"
             android:textSize="18sp"
+            android:textColor="@color/white"
             android:paddingBottom="8dp" />
 
         <GridLayout
@@ -157,6 +200,8 @@
                 android:foreground="?attr/selectableItemBackground"
                 android:tag="very_lean"
                 app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/darkBlue"
                 app:strokeWidth="1dp"
                 app:strokeColor="?attr/colorOutline">
 
@@ -170,17 +215,19 @@
                     <ImageView
                         android:id="@+id/ivBody1"
                         android:layout_width="match_parent"
-                        android:layout_height="110dp"
-                        android:scaleType="centerCrop"
+                        android:layout_height="120dp"
+                        android:scaleType="fitCenter"
+                        android:adjustViewBounds="true"
                         android:src="@drawable/female_body_very_lean"
-                        android:contentDescription="Very Lean" />
+                        android:contentDescription="Rất gầy" />
 
                     <TextView
                         android:id="@+id/tvBody1"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:paddingTop="6dp"
-                        android:text="Very Lean"
+                        android:text="Rất gầy"
+                        android:textColor="@color/white"
                         android:textStyle="bold" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -196,6 +243,8 @@
                 android:foreground="?attr/selectableItemBackground"
                 android:tag="lean"
                 app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/darkBlue"
                 app:strokeWidth="1dp"
                 app:strokeColor="?attr/colorOutline">
 
@@ -209,17 +258,19 @@
                     <ImageView
                         android:id="@+id/ivBody2"
                         android:layout_width="match_parent"
-                        android:layout_height="110dp"
-                        android:scaleType="centerCrop"
+                        android:layout_height="120dp"
+                        android:scaleType="fitCenter"
+                        android:adjustViewBounds="true"
                         android:src="@drawable/female_body_lean"
-                        android:contentDescription="Lean" />
+                        android:contentDescription="Gầy" />
 
                     <TextView
                         android:id="@+id/tvBody2"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:paddingTop="6dp"
-                        android:text="Lean"
+                        android:text="Gầy"
+                        android:textColor="@color/white"
                         android:textStyle="bold" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -235,6 +286,8 @@
                 android:foreground="?attr/selectableItemBackground"
                 android:tag="normal"
                 app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/darkBlue"
                 app:strokeWidth="1dp"
                 app:strokeColor="?attr/colorOutline">
 
@@ -248,17 +301,19 @@
                     <ImageView
                         android:id="@+id/ivBody3"
                         android:layout_width="match_parent"
-                        android:layout_height="110dp"
-                        android:scaleType="centerCrop"
+                        android:layout_height="120dp"
+                        android:scaleType="fitCenter"
+                        android:adjustViewBounds="true"
                         android:src="@drawable/female_body_normal"
-                        android:contentDescription="Normal" />
+                        android:contentDescription="Bình thường" />
 
                     <TextView
                         android:id="@+id/tvBody3"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:paddingTop="6dp"
-                        android:text="Normal"
+                        android:text="Bình thường"
+                        android:textColor="@color/white"
                         android:textStyle="bold" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -274,6 +329,8 @@
                 android:foreground="?attr/selectableItemBackground"
                 android:tag="overweight"
                 app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/darkBlue"
                 app:strokeWidth="1dp"
                 app:strokeColor="?attr/colorOutline">
 
@@ -287,17 +344,19 @@
                     <ImageView
                         android:id="@+id/ivBody4"
                         android:layout_width="match_parent"
-                        android:layout_height="110dp"
-                        android:scaleType="centerCrop"
+                        android:layout_height="120dp"
+                        android:scaleType="fitCenter"
+                        android:adjustViewBounds="true"
                         android:src="@drawable/female_body_overweight"
-                        android:contentDescription="Overweight" />
+                        android:contentDescription="Thừa cân" />
 
                     <TextView
                         android:id="@+id/tvBody4"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:paddingTop="6dp"
-                        android:text="Overweight"
+                        android:text="Thừa cân"
+                        android:textColor="@color/white"
                         android:textStyle="bold" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -313,6 +372,8 @@
                 android:foreground="?attr/selectableItemBackground"
                 android:tag="obese"
                 app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/darkBlue"
                 app:strokeWidth="1dp"
                 app:strokeColor="?attr/colorOutline">
 
@@ -326,17 +387,19 @@
                     <ImageView
                         android:id="@+id/ivBody5"
                         android:layout_width="match_parent"
-                        android:layout_height="110dp"
-                        android:scaleType="centerCrop"
+                        android:layout_height="120dp"
+                        android:scaleType="fitCenter"
+                        android:adjustViewBounds="true"
                         android:src="@drawable/female_body_obese"
-                        android:contentDescription="Obese" />
+                        android:contentDescription="Béo phì" />
 
                     <TextView
                         android:id="@+id/tvBody5"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:paddingTop="6dp"
-                        android:text="Obese"
+                        android:text="Béo phì"
+                        android:textColor="@color/white"
                         android:textStyle="bold" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -347,9 +410,10 @@
             android:id="@+id/tv_section_body_target"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Body mục tiêu (chọn 1)"
+            android:text="Cơ thể mục tiêu (chọn 1)"
             android:textStyle="bold"
             android:textSize="18sp"
+            android:textColor="@color/white"
             android:paddingTop="16dp"
             android:paddingBottom="8dp" />
 
@@ -372,6 +436,8 @@
                 android:foreground="?attr/selectableItemBackground"
                 android:tag="very_lean"
                 app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/darkBlue"
                 app:strokeWidth="1dp"
                 app:strokeColor="?attr/colorOutline">
 
@@ -385,17 +451,19 @@
                     <ImageView
                         android:id="@+id/ivTarget1"
                         android:layout_width="match_parent"
-                        android:layout_height="110dp"
-                        android:scaleType="centerCrop"
+                        android:layout_height="120dp"
+                        android:scaleType="fitCenter"
+                        android:adjustViewBounds="true"
                         android:src="@drawable/female_body_very_lean"
-                        android:contentDescription="Very Lean" />
+                        android:contentDescription="Rất gầy" />
 
                     <TextView
                         android:id="@+id/tvTarget1"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:paddingTop="6dp"
-                        android:text="Very Lean"
+                        android:text="Rất gầy"
+                        android:textColor="@color/white"
                         android:textStyle="bold" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -411,6 +479,8 @@
                 android:foreground="?attr/selectableItemBackground"
                 android:tag="lean"
                 app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/darkBlue"
                 app:strokeWidth="1dp"
                 app:strokeColor="?attr/colorOutline">
 
@@ -424,17 +494,19 @@
                     <ImageView
                         android:id="@+id/ivTarget2"
                         android:layout_width="match_parent"
-                        android:layout_height="110dp"
-                        android:scaleType="centerCrop"
+                        android:layout_height="120dp"
+                        android:scaleType="fitCenter"
+                        android:adjustViewBounds="true"
                         android:src="@drawable/female_body_lean"
-                        android:contentDescription="Lean" />
+                        android:contentDescription="Gầy" />
 
                     <TextView
                         android:id="@+id/tvTarget2"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:paddingTop="6dp"
-                        android:text="Lean"
+                        android:text="Gầy"
+                        android:textColor="@color/white"
                         android:textStyle="bold" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -450,6 +522,8 @@
                 android:foreground="?attr/selectableItemBackground"
                 android:tag="normal"
                 app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/darkBlue"
                 app:strokeWidth="1dp"
                 app:strokeColor="?attr/colorOutline">
 
@@ -463,17 +537,19 @@
                     <ImageView
                         android:id="@+id/ivTarget3"
                         android:layout_width="match_parent"
-                        android:layout_height="110dp"
-                        android:scaleType="centerCrop"
+                        android:layout_height="120dp"
+                        android:scaleType="fitCenter"
+                        android:adjustViewBounds="true"
                         android:src="@drawable/female_body_normal"
-                        android:contentDescription="Normal" />
+                        android:contentDescription="Bình thường" />
 
                     <TextView
                         android:id="@+id/tvTarget3"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:paddingTop="6dp"
-                        android:text="Normal"
+                        android:text="Bình thường"
+                        android:textColor="@color/white"
                         android:textStyle="bold" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -489,6 +565,8 @@
                 android:foreground="?attr/selectableItemBackground"
                 android:tag="overweight"
                 app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/darkBlue"
                 app:strokeWidth="1dp"
                 app:strokeColor="?attr/colorOutline">
 
@@ -502,17 +580,19 @@
                     <ImageView
                         android:id="@+id/ivTarget4"
                         android:layout_width="match_parent"
-                        android:layout_height="110dp"
-                        android:scaleType="centerCrop"
+                        android:layout_height="120dp"
+                        android:scaleType="fitCenter"
+                        android:adjustViewBounds="true"
                         android:src="@drawable/female_body_overweight"
-                        android:contentDescription="Overweight" />
+                        android:contentDescription="Thừa cân" />
 
                     <TextView
                         android:id="@+id/tvTarget4"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:paddingTop="6dp"
-                        android:text="Overweight"
+                        android:text="Thừa cân"
+                        android:textColor="@color/white"
                         android:textStyle="bold" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -528,6 +608,8 @@
                 android:foreground="?attr/selectableItemBackground"
                 android:tag="obese"
                 app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/darkBlue"
                 app:strokeWidth="1dp"
                 app:strokeColor="?attr/colorOutline">
 
@@ -541,17 +623,19 @@
                     <ImageView
                         android:id="@+id/ivTarget5"
                         android:layout_width="match_parent"
-                        android:layout_height="110dp"
-                        android:scaleType="centerCrop"
+                        android:layout_height="120dp"
+                        android:scaleType="fitCenter"
+                        android:adjustViewBounds="true"
                         android:src="@drawable/female_body_obese"
-                        android:contentDescription="Obese" />
+                        android:contentDescription="Béo phì" />
 
                     <TextView
                         android:id="@+id/tvTarget5"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:paddingTop="6dp"
-                        android:text="Obese"
+                        android:text="Béo phì"
+                        android:textColor="@color/white"
                         android:textStyle="bold" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -560,16 +644,22 @@
         <!-- ===== CÂN NẶNG MỤC TIÊU ===== -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/til_target_weight"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:hint="Cân nặng mục tiêu (kg)">
+            android:hint="Cân nặng mục tiêu (kg)"
+            app:boxBackgroundMode="outline"
+            app:boxStrokeColor="@color/white"
+            app:boxStrokeWidth="1dp"
+            app:hintTextColor="@color/white"
+            app:hintEnabled="true">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_target_weight"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:textColor="@color/white"
+                android:textColorHint="@android:color/darker_gray"
                 android:inputType="number" />
         </com.google.android.material.textfield.TextInputLayout>
 
@@ -590,15 +680,20 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Lưu và bắt đầu"
-            android:layout_marginTop="18dp" />
+            android:textColor="@color/white"
+            android:backgroundTint="@color/primary"
+            android:layout_marginTop="18dp"
+            app:cornerRadius="12dp" />
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_cancel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Hủy"
+            android:textColor="@color/white"
             android:layout_marginTop="8dp"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            app:cornerRadius="16dp" />
+            app:strokeColor="@color/white"
+            app:cornerRadius="12dp" />
 
     </LinearLayout>
 </ScrollView>
