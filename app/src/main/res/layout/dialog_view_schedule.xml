@@ -4,14 +4,14 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     app:cardCornerRadius="24dp"
-    app:cardElevation="8dp"
-    app:cardBackgroundColor="@color/hw_surface">
+    app:cardElevation="0dp"
+    app:cardBackgroundColor="#ff2a3142">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="@color/hw_surface">
+        android:background="#ff2a3142">
 
         <!-- Header with gradient background -->
         <LinearLayout
@@ -30,7 +30,7 @@
                 android:layout_weight="1"
                 android:gravity="center_vertical|start"
                 android:text="📅 Lịch tập của tôi"
-                android:textColor="@color/hw_text_white"
+                android:textColor="#ffffff"
                 android:textSize="20sp"
                 android:textStyle="bold" />
 
@@ -41,7 +41,7 @@
                 android:layout_height="40dp"
                 android:src="@drawable/ic_close"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:tint="@color/hw_text_white"
+                android:tint="#ffffff"
                 android:contentDescription="Đóng"
                 android:padding="8dp" />
 
@@ -62,7 +62,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="🔍 Lọc:"
-                android:textColor="@color/hw_text_primary"
+                android:textColor="#ffffff"
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:layout_marginEnd="12dp" />
@@ -72,7 +72,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Tất cả"
-                android:textColor="@color/hw_text_primary"
+                android:textColor="#4d9df2"
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:background="@drawable/button_secondary"
@@ -83,7 +83,7 @@
                 android:minWidth="120dp"
                 android:gravity="center"
                 android:drawableEnd="@drawable/ic_arrow_drop_down"
-                android:drawableTint="@color/hw_primary" />
+                android:drawableTint="#4d9df2" />
 
         </LinearLayout>
 
@@ -136,7 +136,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Bạn chưa có lịch tập nào"
-                    android:textColor="@color/gray_text"
+                    android:textColor="#99ffffff"
                     android:textSize="16sp"
                     android:gravity="center" />
 
@@ -144,7 +144,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Hãy thêm lịch tập để bắt đầu!"
-                    android:textColor="@color/gray_text"
+                    android:textColor="#66ffffff"
                     android:textSize="14sp"
                     android:layout_marginTop="8dp"
                     android:gravity="center" />
@@ -156,4 +156,3 @@
     </LinearLayout>
 
 </androidx.cardview.widget.CardView>
-

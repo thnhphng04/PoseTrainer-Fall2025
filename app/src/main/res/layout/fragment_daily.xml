@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/gradient_bg">
+    android:background="#ff1a1f2e">
 
     <!-- Header -->
     <LinearLayout
@@ -28,7 +28,7 @@
             android:layout_height="40dp"
             android:padding="8dp"
             android:src="@drawable/ic_arrow_back"
-            android:tint="@color/white"
+            android:tint="#ffffff"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:clickable="true"
             android:focusable="true" />
@@ -42,7 +42,7 @@
             android:layout_weight="1"
             android:gravity="center"
             android:text="📅 Ngày"
-            android:textColor="@color/white"
+            android:textColor="#ffffff"
             android:textSize="20sp"
             android:textStyle="bold"
             android:letterSpacing="0.02" />
@@ -57,13 +57,13 @@
             android:focusable="true"
             android:padding="12dp"
             android:text="✏️ Chỉnh sửa"
-            android:textColor="@color/white"
+            android:textColor="#ffffff"
             android:textSize="14sp"
             android:textStyle="bold" />
 
     </LinearLayout>
 
-    <!-- Weekly Goal Card -->
+    <!-- Weekly Goal Card - IMPROVED VERSION -->
     <androidx.cardview.widget.CardView
         android:id="@+id/weekly_goal_card"
         android:layout_width="match_parent"
@@ -72,8 +72,8 @@
         android:layout_marginTop="12dp"
         android:layout_marginEnd="16dp"
         app:cardCornerRadius="16dp"
-        app:cardElevation="4dp"
-        app:cardBackgroundColor="@color/hw_surface"
+        app:cardElevation="0dp"
+        app:cardBackgroundColor="#ff2a3142"
         app:layout_constraintTop_toBottomOf="@+id/header"
         tools:layout_editor_absoluteX="16dp">
 
@@ -81,7 +81,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="12dp">
+            android:padding="16dp">
 
             <!-- Title with icon -->
             <LinearLayout
@@ -89,14 +89,14 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:layout_marginBottom="10dp">
+                android:layout_marginBottom="16dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="🎯"
-                    android:textSize="16sp"
-                    android:layout_marginEnd="6dp" />
+                    android:textSize="18sp"
+                    android:layout_marginEnd="8dp" />
 
                 <TextView
                     android:id="@+id/tv_weekly_goal_title"
@@ -104,8 +104,8 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Mục tiêu hàng tuần"
-                    android:textColor="@color/hw_text_primary"
-                    android:textSize="14sp"
+                    android:textColor="#ffffff"
+                    android:textSize="16sp"
                     android:textStyle="bold" />
 
             </LinearLayout>
@@ -117,32 +117,33 @@
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:orientation="horizontal"
-                android:layout_marginBottom="10dp">
+                android:layout_marginBottom="12dp"
+                android:paddingVertical="4dp">
 
                 <!-- Monday -->
                 <LinearLayout
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
                     android:gravity="center"
                     android:orientation="vertical">
 
                     <FrameLayout
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
-                        android:layout_marginBottom="3dp"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:layout_marginBottom="6dp"
                         android:gravity="center">
 
                         <View
                             android:id="@+id/circle_1"
-                            android:layout_width="28dp"
-                            android:layout_height="28dp"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
                             android:background="@drawable/circle_empty" />
 
                         <ImageView
                             android:id="@+id/iv_status_1"
-                            android:layout_width="14dp"
-                            android:layout_height="14dp"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
                             android:layout_gravity="center"
                             android:src="@drawable/ic_check"
                             android:visibility="gone" />
@@ -154,37 +155,37 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="T2"
-                        android:textColor="@color/hw_text_secondary"
-                        android:textSize="9sp"
-                        android:textStyle="normal"
+                        android:textColor="#ffffff"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
                         android:gravity="center" />
 
                 </LinearLayout>
 
                 <!-- Tuesday -->
                 <LinearLayout
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
                     android:gravity="center"
                     android:orientation="vertical">
 
                     <FrameLayout
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
-                        android:layout_marginBottom="3dp"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:layout_marginBottom="6dp"
                         android:gravity="center">
 
                         <View
                             android:id="@+id/circle_2"
-                            android:layout_width="28dp"
-                            android:layout_height="28dp"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
                             android:background="@drawable/circle_empty" />
 
                         <ImageView
                             android:id="@+id/iv_status_2"
-                            android:layout_width="14dp"
-                            android:layout_height="14dp"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
                             android:layout_gravity="center"
                             android:src="@drawable/ic_check"
                             android:visibility="gone" />
@@ -196,36 +197,36 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="T3"
-                        android:textColor="@color/hw_text_secondary"
-                        android:textSize="9sp"
-                        android:textStyle="normal"
+                        android:textColor="#ffffff"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
                         android:gravity="center" />
 
                 </LinearLayout>
 
                 <!-- Wednesday -->
                 <LinearLayout
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
                     android:gravity="center"
                     android:orientation="vertical">
 
                     <FrameLayout
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
-                        android:layout_marginBottom="4dp">
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:layout_marginBottom="6dp">
 
                         <View
                             android:id="@+id/circle_3"
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
-                        android:background="@drawable/circle_empty" />
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="@drawable/circle_empty" />
 
                         <ImageView
                             android:id="@+id/iv_status_3"
-                            android:layout_width="16dp"
-                            android:layout_height="16dp"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
                             android:layout_gravity="center"
                             android:src="@drawable/ic_check"
                             android:visibility="gone" />
@@ -237,35 +238,35 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="T4"
-                        android:textColor="@color/hw_text_secondary"
-                        android:textSize="9sp"
+                        android:textColor="#ffffff"
+                        android:textSize="11sp"
                         android:textStyle="bold" />
 
                 </LinearLayout>
 
                 <!-- Thursday -->
                 <LinearLayout
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
                     android:gravity="center"
                     android:orientation="vertical">
 
                     <FrameLayout
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
-                        android:layout_marginBottom="4dp">
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:layout_marginBottom="6dp">
 
                         <View
                             android:id="@+id/circle_4"
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
-                        android:background="@drawable/circle_empty" />
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="@drawable/circle_empty" />
 
                         <ImageView
                             android:id="@+id/iv_status_4"
-                            android:layout_width="16dp"
-                            android:layout_height="16dp"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
                             android:layout_gravity="center"
                             android:src="@drawable/ic_check"
                             android:visibility="gone" />
@@ -277,35 +278,35 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="T5"
-                        android:textColor="@color/hw_text_secondary"
-                        android:textSize="9sp"
+                        android:textColor="#ffffff"
+                        android:textSize="11sp"
                         android:textStyle="bold" />
 
                 </LinearLayout>
 
                 <!-- Friday -->
                 <LinearLayout
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
                     android:gravity="center"
                     android:orientation="vertical">
 
                     <FrameLayout
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
-                        android:layout_marginBottom="4dp">
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:layout_marginBottom="6dp">
 
                         <View
                             android:id="@+id/circle_5"
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
-                        android:background="@drawable/circle_empty" />
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="@drawable/circle_empty" />
 
                         <ImageView
                             android:id="@+id/iv_status_5"
-                            android:layout_width="16dp"
-                            android:layout_height="16dp"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
                             android:layout_gravity="center"
                             android:src="@drawable/ic_check"
                             android:visibility="gone" />
@@ -317,35 +318,35 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="T6"
-                        android:textColor="@color/hw_text_secondary"
-                        android:textSize="9sp"
+                        android:textColor="#ffffff"
+                        android:textSize="11sp"
                         android:textStyle="bold" />
 
                 </LinearLayout>
 
                 <!-- Saturday -->
                 <LinearLayout
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
                     android:gravity="center"
                     android:orientation="vertical">
 
                     <FrameLayout
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
-                        android:layout_marginBottom="4dp">
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:layout_marginBottom="6dp">
 
                         <View
                             android:id="@+id/circle_6"
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
-                        android:background="@drawable/circle_empty" />
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="@drawable/circle_empty" />
 
                         <ImageView
                             android:id="@+id/iv_status_6"
-                            android:layout_width="16dp"
-                            android:layout_height="16dp"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
                             android:layout_gravity="center"
                             android:src="@drawable/ic_check"
                             android:visibility="gone" />
@@ -357,34 +358,35 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="T7"
-                        android:textColor="@color/hw_text_secondary"
-                        android:textSize="9sp"
+                        android:textColor="#ffffff"
+                        android:textSize="11sp"
                         android:textStyle="bold" />
 
                 </LinearLayout>
 
                 <!-- Sunday -->
                 <LinearLayout
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_weight="1"
                     android:gravity="center"
                     android:orientation="vertical">
 
                     <FrameLayout
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
-                        android:layout_marginBottom="4dp">
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:layout_marginBottom="6dp">
 
                         <View
                             android:id="@+id/circle_7"
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
-                        android:background="@drawable/circle_empty" />
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="@drawable/circle_empty" />
 
                         <ImageView
                             android:id="@+id/iv_status_7"
-                            android:layout_width="16dp"
-                            android:layout_height="16dp"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
                             android:layout_gravity="center"
                             android:src="@drawable/ic_check"
                             android:visibility="gone" />
@@ -396,8 +398,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="CN"
-                        android:textColor="@color/hw_text_secondary"
-                        android:textSize="9sp"
+                        android:textColor="#ffffff"
+                        android:textSize="11sp"
                         android:textStyle="bold" />
 
                 </LinearLayout>
@@ -408,8 +410,9 @@
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:background="@color/hw_card_bg"
-                android:layout_marginBottom="12dp" />
+                android:background="#ffffff"
+                android:alpha="0.15"
+                android:layout_marginBottom="14dp" />
 
             <!-- Weekly Progress -->
             <LinearLayout
@@ -422,14 +425,14 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
-                    android:layout_marginBottom="6dp">
+                    android:layout_marginBottom="8dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="📊"
-                        android:textSize="14sp"
-                        android:layout_marginEnd="6dp" />
+                        android:textSize="16sp"
+                        android:layout_marginEnd="8dp" />
 
                     <TextView
                         android:id="@+id/tv_weekly_progress"
@@ -437,8 +440,8 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="Tiến độ: 0/0 ngày"
-                        android:textColor="@color/hw_text_primary"
-                        android:textSize="13sp"
+                        android:textColor="#ffffff"
+                        android:textSize="14sp"
                         android:textStyle="bold" />
 
                 </LinearLayout>
@@ -447,11 +450,13 @@
                     android:id="@+id/progress_bar_weekly"
                     style="?android:attr/progressBarStyleHorizontal"
                     android:layout_width="match_parent"
-                    android:layout_height="8dp"
+                    android:layout_height="10dp"
                     android:max="100"
                     android:progress="0"
-                    android:progressTint="@color/hw_primary"
-                    android:progressBackgroundTint="@color/hw_card_bg" />
+                    android:progressTint="#4d9df2"
+                    android:progressBackgroundTint="#ffffff"
+                    android:backgroundTintMode="src_over"
+                    android:alpha="1.0" />
 
             </LinearLayout>
 
@@ -469,7 +474,8 @@
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="16dp"
         app:cardCornerRadius="20dp"
-        app:cardElevation="8dp"
+        app:cardElevation="0dp"
+        app:cardBackgroundColor="#ff2a3142"
         app:layout_constraintTop_toBottomOf="@+id/weekly_goal_card"
         app:layout_constraintBottom_toBottomOf="parent">
 
@@ -505,7 +511,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="Các hoạt động"
-                        android:textColor="@color/hw_text_primary"
+                        android:textColor="#ffffff"
                         android:textSize="20sp"
                         android:textStyle="bold" />
 
@@ -514,7 +520,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Lịch sử ➜"
-                        android:textColor="@color/hw_primary"
+                        android:textColor="#4d9df2"
                         android:textSize="14sp"
                         android:textStyle="bold"
                         android:background="?attr/selectableItemBackgroundBorderless"
@@ -530,8 +536,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="20dp"
                     app:cardCornerRadius="16dp"
-                    app:cardElevation="2dp"
-                    app:cardBackgroundColor="@color/hw_card_bg">
+                    app:cardElevation="0dp"
+                    app:cardBackgroundColor="#ff1a1f2e">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -560,7 +566,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="0 phút"
-                                android:textColor="@color/hw_text_primary"
+                                android:textColor="#ffffff"
                                 android:textSize="12sp"
                                 android:textStyle="bold"
                                 android:layout_marginBottom="4dp" />
@@ -569,7 +575,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Thời gian"
-                                android:textColor="@color/hw_text_secondary"
+                                android:textColor="#99ffffff"
                                 android:textSize="12sp" />
 
                         </LinearLayout>
@@ -578,7 +584,7 @@
                         <View
                             android:layout_width="1dp"
                             android:layout_height="50dp"
-                            android:background="@color/hw_card_bg"
+                            android:background="#33ffffff"
                             android:alpha="0.5" />
 
                         <!-- Calories Info -->
@@ -602,7 +608,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="0 kcal"
-                                android:textColor="@color/hw_text_primary"
+                                android:textColor="#ffffff"
                                 android:textSize="12sp"
                                 android:textStyle="bold"
                                 android:layout_marginBottom="4dp" />
@@ -611,7 +617,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Calo"
-                                android:textColor="@color/hw_text_secondary"
+                                android:textColor="#99ffffff"
                                 android:textSize="12sp" />
 
                         </LinearLayout>
@@ -641,7 +647,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="Buổi tập trong ngày"
-                        android:textColor="@color/hw_text_primary"
+                        android:textColor="#ffffff"
                         android:textSize="17sp"
                         android:textStyle="bold" />
 
@@ -669,7 +675,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Không có buổi tập nào trong ngày này"
-                        android:textColor="@color/hw_text_secondary"
+                        android:textColor="#99ffffff"
                         android:textSize="15sp"
                         android:gravity="center"
                         android:textStyle="bold" />
@@ -697,11 +703,11 @@
                         android:layout_width="match_parent"
                         android:layout_height="50dp"
                         android:text="📅 Xem lịch đã lên"
-                        android:textColor="@color/hw_text_white"
+                        android:textColor="#ffffff"
                         android:textSize="12sp"
                         android:textStyle="bold"
                         android:background="@drawable/button_primary"
-                        android:elevation="4dp"
+                        android:elevation="0dp"
                         android:layout_marginBottom="12dp" />
 
                     <!-- Add Activity Button -->
@@ -710,11 +716,11 @@
                         android:layout_width="match_parent"
                         android:layout_height="50dp"
                         android:text="➕ Thêm hoạt động"
-                        android:textColor="@color/hw_primary"
+                        android:textColor="#4d9df2"
                         android:textSize="12sp"
                         android:textStyle="bold"
                         android:background="@drawable/button_secondary"
-                        android:elevation="2dp" />
+                        android:elevation="0dp" />
 
                 </LinearLayout>
 

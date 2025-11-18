@@ -1,15 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Layout cho mỗi notification item trong RecyclerView -->
-<androidx.cardview.widget.CardView 
+<androidx.cardview.widget.CardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/notification_card"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="8dp"
+    android:layout_marginHorizontal="12dp"
+    android:layout_marginVertical="6dp"
     app:cardCornerRadius="12dp"
-    app:cardElevation="2dp"
+    app:cardElevation="0dp"
+    app:cardBackgroundColor="#ff2a3142"
     android:foreground="?attr/selectableItemBackground">
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -35,7 +37,7 @@
             android:layout_height="40dp"
             android:layout_marginStart="8dp"
             android:src="@drawable/ic_notifications"
-            android:tint="@color/colorPrimary"
+            android:tint="#4d9df2"
             app:layout_constraintStart_toEndOf="@id/unread_indicator"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -73,7 +75,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textSize="16sp"
-                android:textColor="@android:color/black"
+                android:textColor="#ffffff"
                 android:textStyle="bold"
                 android:maxLines="2"
                 android:ellipsize="end"
@@ -86,7 +88,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:textSize="14sp"
-                android:textColor="@android:color/darker_gray"
+                android:textColor="#99ffffff"
                 android:maxLines="3"
                 android:ellipsize="end"
                 tools:text="Còn 15 phút nữa là đến giờ tập luyện vào Thứ hai. Hãy chuẩn bị sẵn sàng!" />
@@ -98,7 +100,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:textSize="12sp"
-                android:textColor="@android:color/darker_gray"
+                android:textColor="#66ffffff"
                 tools:text="5 phút trước" />
 
         </LinearLayout>
@@ -106,5 +108,3 @@
     </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.cardview.widget.CardView>
-
-
