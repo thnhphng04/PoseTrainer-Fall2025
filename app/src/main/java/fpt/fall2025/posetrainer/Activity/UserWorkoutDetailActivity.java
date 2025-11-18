@@ -109,68 +109,118 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
             }
         });
         
-        // Add test button for sample data (for debugging)
+        // Favorite button - setup click listener
+        setupFavoriteButton();
+    }
+    
+    /**
+     * Setup favorite button với click listener và kiểm tra trạng thái favorite
+     */
+    private void setupFavoriteButton() {
+        // Xử lý click vào nút favorite
         binding.imageView8.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.d(TAG, "Test button clicked - creating sample data");
-                createSampleData();
+                toggleFavorite();
             }
         });
+    }
+    
+    /**
+     * Kiểm tra trạng thái favorite của user workout hiện tại
+     * Lưu ý: UserWorkout được yêu thích bằng cách lưu userWorkoutId vào favorites
+     */
+    private void checkFavoriteStatus() {
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null || userWorkout == null) {
+            // Nếu chưa đăng nhập hoặc chưa có user workout, hiển thị icon mặc định
+            updateFavoriteIcon(false);
+            return;
+        }
         
-        // Add double tap to test RecyclerView directly
-        binding.imageView8.setOnTouchListener(new View.OnTouchListener() {
-            private long lastTouchTime = 0;
-            private int tapCount = 0;
-            private static final int DOUBLE_TAP_TIME_DELTA = 300;
-            private static final int TRIPLE_TAP_TIME_DELTA = 500;
-            
+        String userId = currentUser.getUid();
+        String userWorkoutId = userWorkout.getId();
+        
+        // Kiểm tra xem user workout có trong danh sách yêu thích không
+        // Sử dụng userWorkoutId làm workoutTemplateId trong Favorite (vì Favorite chỉ có workoutTemplateId)
+        FirebaseService.getInstance().checkFavoriteWorkoutTemplate(userId, userWorkoutId, new FirebaseService.OnFavoriteWorkoutCheckedListener() {
             @Override
-            public boolean onTouch(View v, android.view.MotionEvent event) {
-                if (event.getAction() == android.view.MotionEvent.ACTION_DOWN) {
-                    long currentTime = System.currentTimeMillis();
-                    if (currentTime - lastTouchTime < TRIPLE_TAP_TIME_DELTA) {
-                        tapCount++;
-                        if (tapCount == 2) {
-                            // Double tap detected
-                            Log.d(TAG, "Double tap - testing RecyclerView directly");
-                            testRecyclerViewDirectly();
-                            return true;
-                        } else if (tapCount == 3) {
-                            // Triple tap detected
-                            Log.d(TAG, "Triple tap - checking RecyclerView layout");
-                            checkRecyclerViewLayout();
-                            tapCount = 0;
-                            return true;
-                        } else if (tapCount == 4) {
-                            // Quad tap detected
-                            Log.d(TAG, "Quad tap - testing ScrollView functionality");
-                            testScrollViewFunctionality();
-                            tapCount = 0;
-                            return true;
+            public void onFavoriteWorkoutChecked(boolean isFavorite) {
+                // Cập nhật icon dựa trên trạng thái favorite
+                updateFavoriteIcon(isFavorite);
+            }
+        });
+    }
+    
+    /**
+     * Toggle favorite (thêm hoặc xóa khỏi yêu thích)
+     */
+    private void toggleFavorite() {
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            Toast.makeText(this, "Vui lòng đăng nhập để sử dụng tính năng yêu thích", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        if (userWorkout == null) {
+            Toast.makeText(this, "Không thể thêm vào yêu thích", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        String userId = currentUser.getUid();
+        String userWorkoutId = userWorkout.getId();
+        
+        // Kiểm tra trạng thái hiện tại
+        // Sử dụng userWorkoutId làm workoutTemplateId trong Favorite
+        FirebaseService.getInstance().checkFavoriteWorkoutTemplate(userId, userWorkoutId, new FirebaseService.OnFavoriteWorkoutCheckedListener() {
+            @Override
+            public void onFavoriteWorkoutChecked(boolean isFavorite) {
+                if (isFavorite) {
+                    // Đang là favorite → Xóa khỏi yêu thích
+                    FirebaseService.getInstance().removeFavoriteWorkoutTemplate(userId, userWorkoutId, new FirebaseService.OnFavoriteWorkoutUpdatedListener() {
+                        @Override
+                        public void onFavoriteWorkoutUpdated(boolean success) {
+                            if (success) {
+                                // Cập nhật icon
+                                updateFavoriteIcon(false);
+                                Toast.makeText(UserWorkoutDetailActivity.this, "Đã xóa khỏi yêu thích", Toast.LENGTH_SHORT).show();
+                            } else {
+                                Toast.makeText(UserWorkoutDetailActivity.this, "Không thể xóa khỏi yêu thích", Toast.LENGTH_SHORT).show();
+                            }
                         }
-                    } else {
-                        tapCount = 1;
-                    }
-                    lastTouchTime = currentTime;
-                }
-                return false;
-            }
-        });
-        
-        // Add long click listener to reload exercises
-        binding.imageView8.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View v) {
-                Log.d(TAG, "Long click - reloading exercises from Firebase");
-                if (userWorkout != null) {
-                    loadExercises();
+                    });
                 } else {
-                    Log.e(TAG, "UserWorkout is null, cannot reload exercises");
+                    // Chưa là favorite → Thêm vào yêu thích
+                    FirebaseService.getInstance().addFavoriteWorkoutTemplate(userId, userWorkoutId, new FirebaseService.OnFavoriteWorkoutUpdatedListener() {
+                        @Override
+                        public void onFavoriteWorkoutUpdated(boolean success) {
+                            if (success) {
+                                // Cập nhật icon
+                                updateFavoriteIcon(true);
+                                Toast.makeText(UserWorkoutDetailActivity.this, "Đã thêm vào yêu thích", Toast.LENGTH_SHORT).show();
+                            } else {
+                                Toast.makeText(UserWorkoutDetailActivity.this, "Không thể thêm vào yêu thích", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    });
                 }
-                return true;
             }
         });
+    }
+    
+    /**
+     * Cập nhật icon favorite dựa trên trạng thái
+     */
+    private void updateFavoriteIcon(boolean isFavorite) {
+        if (isFavorite) {
+            // Đang là favorite → hiển thị icon filled (đỏ)
+            binding.imageView8.setImageResource(R.drawable.ic_favorite_filled);
+            binding.imageView8.setColorFilter(getResources().getColor(R.color.red, null));
+        } else {
+            // Chưa là favorite → hiển thị icon border (trắng)
+            binding.imageView8.setImageResource(R.drawable.ic_heart);
+            binding.imageView8.setColorFilter(getResources().getColor(R.color.white, null));
+        }
     }
     
     /**
@@ -712,6 +762,9 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
                     
                     // Update UI
                     updateUserWorkoutUI();
+                    
+                    // Kiểm tra trạng thái favorite
+                    checkFavoriteStatus();
                     
                     // Load exercises for this workout
                     loadExercises();

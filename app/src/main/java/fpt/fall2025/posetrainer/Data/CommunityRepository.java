@@ -1,5 +1,7 @@
 package fpt.fall2025.posetrainer.Data;
 
+import android.util.Log;
+
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.auth.FirebaseAuth;
@@ -12,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 public class CommunityRepository {
+    private static final String TAG = "CommunityRepository";
     private final FirebaseAuth auth = FirebaseAuth.getInstance();
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
 
@@ -29,6 +32,7 @@ public class CommunityRepository {
         DocumentReference likeRef = postRef(postId).collection("likes").document(uid);
         DocumentReference pRef = postRef(postId);
 
+        // Thực hiện transaction để toggle like
         return db.runTransaction(trx -> {
             DocumentSnapshot likeSnap = trx.get(likeRef);
             DocumentSnapshot postSnap = trx.get(pRef);
@@ -42,6 +46,7 @@ public class CommunityRepository {
             }
 
             Map<String, Object> updates = new HashMap<>();
+            boolean isNewLike = !likeSnap.exists(); // true nếu đang like (chưa tồn tại)
 
             if (likeSnap.exists()) {
                 // Unlike: xóa khỏi subcollection và likedBy array
@@ -66,6 +71,27 @@ public class CommunityRepository {
             updates.put("updatedAt", FieldValue.serverTimestamp());
             trx.update(pRef, updates);
 
+            // Trả về Map chứa thông tin để tạo notification sau
+            Map<String, Object> result = new HashMap<>();
+            result.put("postUid", postSnap.getString("uid"));
+            result.put("isNewLike", isNewLike);
+            return result;
+        }).continueWith(transactionTask -> {
+            // Sau khi transaction thành công, tạo notification nếu cần
+            if (transactionTask.isSuccessful() && transactionTask.getResult() != null) {
+                Map<String, Object> result = transactionTask.getResult();
+                String postUid = (String) result.get("postUid");
+                Boolean isNewLike = (Boolean) result.get("isNewLike");
+                
+                // Chỉ tạo notification khi like mới (không phải unlike) và không phải chính mình
+                if (Boolean.TRUE.equals(isNewLike) && postUid != null && !postUid.equals(uid)) {
+                    // Không tạo notification cho chính mình
+                    createLikeNotification(postId, postUid, uid)
+                            .addOnFailureListener(e -> 
+                                Log.e(TAG, "Lỗi tạo notification cho like: " + e.getMessage())
+                            );
+                }
+            }
             return null;
         });
     }
@@ -116,7 +142,150 @@ public class CommunityRepository {
             if (count == null) count = 0L;
             trx.set(cRef, cmt);
             trx.update(pRef, "commentsCount", count + 1);
+            
+            // Trả về postUid để tạo notification sau transaction
+            return postSnap.getString("uid");
+        }).continueWith(task -> {
+            // Sau khi transaction thành công, tạo notification nếu cần
+            if (task.isSuccessful() && task.getResult() != null) {
+                String postUid = task.getResult();
+                if (!postUid.equals(uid)) {
+                    // Không tạo notification cho chính mình
+                    createCommentNotification(postId, postUid, uid, displayName, text.trim())
+                            .addOnFailureListener(e -> 
+                                Log.e(TAG, "Lỗi tạo notification cho comment: " + e.getMessage())
+                            );
+                }
+            }
             return null;
         });
+    }
+
+    // =============================
+    // 4️⃣ Tạo Notification khi có Like
+    // =============================
+    /**
+     * Tạo notification cho chủ bài viết khi có người like bài viết của họ
+     * @param postId ID của bài viết
+     * @param postOwnerUid UID của người đăng bài viết
+     * @param likerUid UID của người like bài viết
+     * @return Task để track việc tạo notification
+     */
+    private Task<Void> createLikeNotification(String postId, String postOwnerUid, String likerUid) {
+        // Lấy thông tin người like để hiển thị trong notification
+        return db.collection("users").document(likerUid).get()
+                .continueWith(task -> {
+                    if (!task.isSuccessful() || task.getResult() == null) {
+                        Log.w(TAG, "Không thể lấy thông tin user like, dùng thông tin mặc định");
+                        return "Ai đó";
+                    }
+                    
+                    Map<String, Object> userData = task.getResult().getData();
+                    if (userData != null && userData.containsKey("displayName")) {
+                        return userData.get("displayName").toString();
+                    }
+                    return "Ai đó";
+                })
+                .continueWith(task -> {
+                    String likerName = task.getResult();
+                    
+                    // Tạo notification document
+                    Map<String, Object> notification = new HashMap<>();
+                    notification.put("uid", postOwnerUid); // Gửi cho chủ bài viết
+                    notification.put("type", "social_like"); // Loại thông báo: like xã hội
+                    notification.put("title", "Có người thích bài viết của bạn");
+                    notification.put("body", likerName + " đã thích bài viết của bạn");
+                    notification.put("sentAt", System.currentTimeMillis()); // Timestamp hiện tại
+                    notification.put("read", false); // Chưa đọc
+                    notification.put("isAiGenerated", false); // Không phải AI
+                    notification.put("actionType", "open_post"); // Khi click vào sẽ mở post
+                    notification.put("actionData", postId); // ID của post cần mở
+                    
+                    // Metadata để lưu thông tin bổ sung
+                    Map<String, Object> metadata = new HashMap<>();
+                    metadata.put("postId", postId);
+                    metadata.put("likerUid", likerUid);
+                    metadata.put("likerName", likerName);
+                    notification.put("metadata", metadata);
+                    
+                    // Lưu vào Firestore collection "notifications"
+                    Task<DocumentReference> addTask = db.collection("notifications").add(notification);
+                    
+                    // Log kết quả
+                    addTask.addOnSuccessListener(docRef -> {
+                        String notificationId = docRef.getId();
+                        Log.d(TAG, "✓ Đã tạo notification cho like bài viết: " + postId);
+                        Log.d(TAG, "  - Notification ID: " + notificationId);
+                        Log.d(TAG, "  - Post Owner UID: " + postOwnerUid);
+                        Log.d(TAG, "  - Liker UID: " + likerUid);
+                        Log.d(TAG, "  - Liker Name: " + likerName);
+                    }).addOnFailureListener(e -> {
+                        Log.e(TAG, "✗ Lỗi tạo notification cho like: " + e.getMessage());
+                        e.printStackTrace();
+                    });
+                    
+                    return addTask;
+                })
+                .continueWith(task -> null); // Return null để hoàn thành task chain
+    }
+
+    // =============================
+    // 5️⃣ Tạo Notification khi có Comment
+    // =============================
+    /**
+     * Tạo notification cho chủ bài viết khi có người comment bài viết của họ
+     * @param postId ID của bài viết
+     * @param postOwnerUid UID của người đăng bài viết
+     * @param commenterUid UID của người comment
+     * @param commenterName Tên của người comment
+     * @param commentText Nội dung comment
+     * @return Task để track việc tạo notification
+     */
+    private Task<Void> createCommentNotification(String postId, String postOwnerUid, 
+                                                  String commenterUid, String commenterName, 
+                                                  String commentText) {
+        // Tạo notification document
+        Map<String, Object> notification = new HashMap<>();
+        notification.put("uid", postOwnerUid); // Gửi cho chủ bài viết
+        notification.put("type", "social_comment"); // Loại thông báo: comment xã hội
+        notification.put("title", "Có người bình luận bài viết của bạn");
+        
+        // Rút ngắn nội dung comment nếu quá dài
+        String previewText = commentText;
+        if (commentText.length() > 50) {
+            previewText = commentText.substring(0, 50) + "...";
+        }
+        notification.put("body", commenterName + " đã bình luận: \"" + previewText + "\"");
+        notification.put("sentAt", System.currentTimeMillis()); // Timestamp hiện tại
+        notification.put("read", false); // Chưa đọc
+        notification.put("isAiGenerated", false); // Không phải AI
+        notification.put("actionType", "open_post"); // Khi click vào sẽ mở post
+        notification.put("actionData", postId); // ID của post cần mở
+        
+        // Metadata để lưu thông tin bổ sung
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("postId", postId);
+        metadata.put("commenterUid", commenterUid);
+        metadata.put("commenterName", commenterName);
+        metadata.put("commentText", commentText);
+        notification.put("metadata", metadata);
+        
+        // Lưu vào Firestore collection "notifications"
+        Task<DocumentReference> addTask = db.collection("notifications").add(notification);
+        
+        // Log kết quả
+        addTask.addOnSuccessListener(docRef -> {
+            String notificationId = docRef.getId();
+            Log.d(TAG, "✓ Đã tạo notification cho comment bài viết: " + postId);
+            Log.d(TAG, "  - Notification ID: " + notificationId);
+            Log.d(TAG, "  - Post Owner UID: " + postOwnerUid);
+            Log.d(TAG, "  - Commenter UID: " + commenterUid);
+            Log.d(TAG, "  - Commenter Name: " + commenterName);
+        }).addOnFailureListener(e -> {
+            Log.e(TAG, "✗ Lỗi tạo notification cho comment: " + e.getMessage());
+            e.printStackTrace();
+        });
+        
+        return addTask.continueWith(task -> null); // Return Task<Void>
     }
 }

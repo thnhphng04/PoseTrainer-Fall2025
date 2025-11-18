@@ -15,6 +15,7 @@ import androidx.core.content.ContextCompat;
 
 import fpt.fall2025.posetrainer.Activity.MainActivity;
 import fpt.fall2025.posetrainer.Activity.WorkoutActivity;
+import fpt.fall2025.posetrainer.Activity.PostDetailActivity;
 import fpt.fall2025.posetrainer.R;
 
 /**
@@ -24,27 +25,43 @@ public class NotificationHelper {
     private static final String TAG = "NotificationHelper";
     private static final String CHANNEL_ID = "workout_reminder_channel";
     private static final String CHANNEL_NAME = "Workout Reminders";
+    private static final String CHANNEL_ID_SOCIAL = "social_notifications_channel";
+    private static final String CHANNEL_NAME_SOCIAL = "Thông báo xã hội";
     private static final int NOTIFICATION_ID_BASE = 1000;
+    private static final int NOTIFICATION_ID_SOCIAL_BASE = 2000;
 
     /**
      * Create notification channel (required for Android 8.0+)
      */
     public static void createNotificationChannel(Context context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                CHANNEL_ID,
-                CHANNEL_NAME,
-                NotificationManager.IMPORTANCE_HIGH
-            );
-            channel.setDescription("Nhắc nhở tập luyện");
-            channel.enableVibration(true);
-            channel.enableLights(true);
-
             NotificationManager notificationManager = 
                 context.getSystemService(NotificationManager.class);
+            
             if (notificationManager != null) {
-                notificationManager.createNotificationChannel(channel);
-                Log.d(TAG, "Notification channel created");
+                // Tạo channel cho workout reminders
+                NotificationChannel workoutChannel = new NotificationChannel(
+                    CHANNEL_ID,
+                    CHANNEL_NAME,
+                    NotificationManager.IMPORTANCE_HIGH
+                );
+                workoutChannel.setDescription("Nhắc nhở tập luyện");
+                workoutChannel.enableVibration(true);
+                workoutChannel.enableLights(true);
+                notificationManager.createNotificationChannel(workoutChannel);
+                
+                // Tạo channel cho social notifications
+                NotificationChannel socialChannel = new NotificationChannel(
+                    CHANNEL_ID_SOCIAL,
+                    CHANNEL_NAME_SOCIAL,
+                    NotificationManager.IMPORTANCE_HIGH
+                );
+                socialChannel.setDescription("Thông báo về tương tác xã hội (like, comment)");
+                socialChannel.enableVibration(true);
+                socialChannel.enableLights(true);
+                notificationManager.createNotificationChannel(socialChannel);
+                
+                Log.d(TAG, "Notification channels created");
             }
         }
     }
@@ -223,6 +240,112 @@ public class NotificationHelper {
         int hash = workoutId != null ? workoutId.hashCode() : 0;
         // Use modulo to keep ID within reasonable range, add base offset
         return NOTIFICATION_ID_BASE + (Math.abs(hash) % 10000) + (dayOfWeek * 100) + minutesBefore;
+    }
+
+    // =============================
+    // SOCIAL NOTIFICATIONS
+    // =============================
+
+    /**
+     * Hiển thị notification cho thông báo xã hội (like, comment)
+     * @param context Context để hiển thị notification
+     * @param title Tiêu đề notification
+     * @param body Nội dung notification
+     * @param postId ID của bài viết (để mở khi click)
+     * @param notificationType Loại notification ("social_like" hoặc "social_comment")
+     */
+    public static void showSocialNotification(Context context, String title, String body, 
+                                               String postId, String notificationType) {
+        Log.d(TAG, "=== BẮT ĐẦU HIỂN THỊ SOCIAL NOTIFICATION ===");
+        Log.d(TAG, "  - Title: " + title);
+        Log.d(TAG, "  - Body: " + body);
+        Log.d(TAG, "  - PostId: " + postId);
+        Log.d(TAG, "  - Type: " + notificationType);
+        
+        // Kiểm tra quyền notification
+        if (!hasNotificationPermission(context)) {
+            Log.e(TAG, "✗✗✗ KHÔNG CÓ QUYỀN NOTIFICATION - Không thể hiển thị thông báo");
+            Log.e(TAG, "  Vui lòng cấp quyền notification trong Settings");
+            return;
+        }
+        Log.d(TAG, "✓ Đã có quyền notification");
+        
+        // Đảm bảo channel đã được tạo
+        createNotificationChannel(context);
+
+        // Tạo intent để mở PostDetailActivity khi click vào notification
+        Intent postIntent = new Intent(context, PostDetailActivity.class);
+        postIntent.putExtra(PostDetailActivity.EXTRA_POST_ID, postId);
+        
+        // Tạo task stack builder để đảm bảo navigation đúng
+        // MainActivity sẽ ở trong back stack, user có thể quay lại
+        TaskStackBuilder stackBuilder = TaskStackBuilder.create(context);
+        // Thêm MainActivity làm parent activity
+        stackBuilder.addNextIntent(new Intent(context, MainActivity.class));
+        // Thêm PostDetailActivity là activity cần mở
+        stackBuilder.addNextIntent(postIntent);
+
+        // Tạo unique request code dựa trên postId và notificationType
+        int requestCode = generateSocialRequestCode(postId, notificationType);
+
+        PendingIntent pendingIntent = stackBuilder.getPendingIntent(
+            requestCode,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        // Chọn icon phù hợp
+        int iconRes = R.drawable.ic_favorite_filled; // Icon heart cho social notifications
+        // Nếu có icon comment thì dùng, không thì dùng icon heart cho cả comment
+        // Icon comment có thể thêm sau: R.drawable.ic_comment
+
+        // Build notification
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID_SOCIAL)
+            .setSmallIcon(iconRes)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(new NotificationCompat.BigTextStyle()
+                .bigText(body))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_ALL) // Âm thanh, rung, đèn
+            .setAutoCancel(true) // Tự động xóa khi tap vào
+            .setContentIntent(pendingIntent);
+
+        // Hiển thị notification
+        NotificationManager notificationManager = 
+            (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        
+        if (notificationManager != null) {
+            // Sử dụng unique notification ID dựa trên postId và notificationType
+            int notificationId = generateSocialNotificationId(postId, notificationType);
+            notificationManager.notify(notificationId, builder.build());
+            Log.d(TAG, "✓✓✓ ĐÃ HIỂN THỊ THÔNG BÁO XÃ HỘI");
+            Log.d(TAG, "  - Notification ID: " + notificationId);
+            Log.d(TAG, "  - PostId: " + postId);
+            Log.d(TAG, "  - Type: " + notificationType);
+            Log.d(TAG, "=== KẾT THÚC HIỂN THỊ SOCIAL NOTIFICATION ===");
+        } else {
+            Log.e(TAG, "✗✗✗ NotificationManager is null - Không thể hiển thị notification");
+        }
+    }
+
+    /**
+     * Tạo unique request code cho PendingIntent dựa trên postId và notificationType
+     */
+    private static int generateSocialRequestCode(String postId, String notificationType) {
+        int hash = postId != null ? postId.hashCode() : 0;
+        int typeHash = notificationType != null ? notificationType.hashCode() : 0;
+        // Kết hợp hash của postId và type để tạo unique request code
+        return Math.abs(hash + typeHash) % 1000000;
+    }
+
+    /**
+     * Tạo unique notification ID dựa trên postId và notificationType
+     */
+    private static int generateSocialNotificationId(String postId, String notificationType) {
+        int hash = postId != null ? postId.hashCode() : 0;
+        int typeHash = notificationType != null ? notificationType.hashCode() : 0;
+        // Sử dụng modulo để giữ ID trong phạm vi hợp lý, thêm base offset
+        return NOTIFICATION_ID_SOCIAL_BASE + (Math.abs(hash + typeHash) % 10000);
     }
 }
 

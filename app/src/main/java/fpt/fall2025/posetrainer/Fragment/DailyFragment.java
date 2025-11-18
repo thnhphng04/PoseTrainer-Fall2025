@@ -34,7 +34,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import fpt.fall2025.posetrainer.Activity.EditGoalsActivity;
+import fpt.fall2025.posetrainer.Activity.MainActivity;
 import fpt.fall2025.posetrainer.Activity.WorkoutActivity;
+import fpt.fall2025.posetrainer.Activity.WorkoutHistoryActivity;
 import fpt.fall2025.posetrainer.Adapter.SessionAdapter;
 import fpt.fall2025.posetrainer.Dialog.CreateScheduleDialog;
 import fpt.fall2025.posetrainer.Dialog.ViewScheduleDialog;
@@ -149,16 +152,31 @@ public class DailyFragment extends Fragment {
         // Set current date
         updateCurrentDate();
         
+        // Xử lý click vào nút back arrow để navigate về HomeFragment
         binding.ivBackArrow.setOnClickListener(v -> {
-            // Navigate back
-            if (getActivity() != null) {
-                getActivity().onBackPressed();
+            // Kiểm tra activity có tồn tại và là MainActivity không
+            if (getActivity() != null && getActivity() instanceof MainActivity) {
+                // Ép kiểu về MainActivity và gọi method navigate về Home
+                MainActivity mainActivity = (MainActivity) getActivity();
+                mainActivity.navigateToHomeFragment();
+            } else {
+                // Fallback: nếu không phải MainActivity, dùng onBackPressed
+                if (getActivity() != null) {
+                    getActivity().onBackPressed();
+                }
             }
         });
 
+        // Xử lý click vào nút chỉnh sửa để navigate đến EditGoalsActivity
         binding.tvEdit.setOnClickListener(v -> {
-            // Handle edit functionality
-            Toast.makeText(getContext(), "Chỉnh sửa", Toast.LENGTH_SHORT).show();
+            // Kiểm tra activity có tồn tại không
+            if (getActivity() != null) {
+                // Navigate đến EditGoalsActivity để chỉnh sửa mục tiêu
+                Intent editIntent = new Intent(getContext(), EditGoalsActivity.class);
+                startActivity(editIntent);
+            } else {
+                Toast.makeText(getContext(), "Không thể mở màn hình chỉnh sửa", Toast.LENGTH_SHORT).show();
+            }
         });
     }
 
@@ -428,10 +446,16 @@ public class DailyFragment extends Fragment {
      * Setup activities section
      */
     private void setupActivities() {
+        // Xử lý click vào nút lịch sử để navigate đến WorkoutHistoryActivity
         binding.tvHistory.setOnClickListener(v -> {
-            // Navigate to history - could navigate to a history fragment or activity
-            Toast.makeText(getContext(), "Lịch sử", Toast.LENGTH_SHORT).show();
-            // TODO: Implement navigation to history screen
+            // Kiểm tra activity có tồn tại không
+            if (getActivity() != null) {
+                // Navigate đến WorkoutHistoryActivity để xem lịch sử tập luyện
+                Intent historyIntent = new Intent(getContext(), WorkoutHistoryActivity.class);
+                startActivity(historyIntent);
+            } else {
+                Toast.makeText(getContext(), "Không thể mở màn hình lịch sử", Toast.LENGTH_SHORT).show();
+            }
         });
 
         // View Schedule Button
