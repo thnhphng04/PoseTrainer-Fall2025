@@ -31,6 +31,10 @@ public class ProfileFragment extends Fragment {
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
     private GoogleSignInClient googleClient;
+    
+    // Cache để tránh reload không cần thiết
+    private String cachedUserId = null;
+    private boolean isUserDataLoaded = false;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
@@ -93,6 +97,7 @@ public class ProfileFragment extends Fragment {
     /**
      * ✅ Load thông tin user từ Firestore
      * Ưu tiên photoUrl trong Firestore, fallback sang FirebaseAuth
+     * Đã tối ưu với cache để tránh reload không cần thiết
      */
     private void loadUserFromFirestore() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
@@ -101,9 +106,24 @@ public class ProfileFragment extends Fragment {
             return;
         }
 
+        String uid = currentUser.getUid();
+        
+        // Kiểm tra cache: Chỉ reload nếu user thay đổi hoặc chưa load lần nào
+        if (cachedUserId != null && cachedUserId.equals(uid) && isUserDataLoaded) {
+            Log.d(TAG, "User data đã được cache, bỏ qua reload");
+            return;
+        }
+        
+        // Kiểm tra fragment view có còn attached không
+        if (!isAdded() || binding == null) {
+            Log.w(TAG, "Fragment không còn attached, bỏ qua load user data");
+            return;
+        }
+
+        cachedUserId = uid;
         setLoading(true);
 
-        db.collection("users").document(currentUser.getUid())
+        db.collection("users").document(uid)
                 .get()
                 .addOnSuccessListener(doc -> {
                     // Check if fragment view is still attached
@@ -112,6 +132,8 @@ public class ProfileFragment extends Fragment {
                     }
                     
                     setLoading(false);
+                    isUserDataLoaded = true;
+                    
                     if (doc.exists()) {
                         User user = doc.toObject(User.class);
                         if (user != null) {
@@ -139,6 +161,7 @@ public class ProfileFragment extends Fragment {
                     }
                     
                     setLoading(false);
+                    isUserDataLoaded = true;
                     Log.e(TAG, "loadUserFromFirestore: " + e.getMessage());
                     bindFromAuth(currentUser);
                 });
@@ -194,12 +217,27 @@ public class ProfileFragment extends Fragment {
 
     /**
      * ✅ Load workout statistics từ Firestore
+     * Đã tối ưu với cache để tránh reload không cần thiết
      */
     private void loadUserStats() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser == null) return;
 
-        db.collection("users").document(currentUser.getUid())
+        String uid = currentUser.getUid();
+        
+        // Kiểm tra cache: Chỉ reload nếu user thay đổi hoặc chưa load lần nào
+        if (cachedUserId != null && cachedUserId.equals(uid) && isUserDataLoaded) {
+            Log.d(TAG, "User stats đã được cache, bỏ qua reload");
+            return;
+        }
+        
+        // Kiểm tra fragment view có còn attached không
+        if (!isAdded() || binding == null) {
+            Log.w(TAG, "Fragment không còn attached, bỏ qua load user stats");
+            return;
+        }
+
+        db.collection("users").document(uid)
                 .get()
                 .addOnSuccessListener(doc -> {
                     // Check if fragment view is still attached
@@ -335,11 +373,12 @@ public class ProfileFragment extends Fragment {
     @Override
     public void onHiddenChanged(boolean hidden) {
         super.onHiddenChanged(hidden);
-        // Reload khi fragment trở nên visible (phòng trường hợp user đã chỉnh sửa profile)
-        // Chỉ refresh nếu fragment đã resumed và added
+        // Không reload khi fragment trở nên visible để tối ưu hiệu năng
+        // Data đã được cache, chỉ reload nếu user thay đổi hoặc cần refresh
+        // User có thể pull-to-refresh hoặc quay lại fragment này để reload
         if (!hidden && isAdded() && isResumed()) {
-            loadUserFromFirestore();
-            loadUserStats();
+            // Chỉ check cache, không reload
+            Log.d(TAG, "Fragment visible, kiểm tra cache");
         }
     }
 
@@ -348,6 +387,7 @@ public class ProfileFragment extends Fragment {
         super.onDestroyView();
         // Reset flag khi view bị destroy
         isDataLoaded = false;
+        // Không reset cachedUserId và isUserDataLoaded để cache vẫn hoạt động khi fragment bị recreate
         binding = null;
     }
 }
