@@ -66,6 +66,13 @@ public class DailyFragment extends Fragment {
     
     // ActivityResultLauncher for notification permission (Android 13+)
     private ActivityResultLauncher<String> notificationPermissionLauncher;
+    
+    // Cache để tránh reload không cần thiết
+    private boolean isSessionsLoaded = false;
+    private boolean isScheduleLoaded = false;
+    private String cachedUserId = null;
+    private long lastWeeklyStatusUpdate = 0;
+    private static final long WEEKLY_STATUS_UPDATE_INTERVAL = 60000; // 60 giây
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -113,10 +120,10 @@ public class DailyFragment extends Fragment {
         setupActivities();
         setupRecyclerView();
         
-        // Load sessions from Firestore
+        // Load sessions from Firestore (chỉ load một lần)
         loadSessions();
         
-        // Load user schedule from Firestore
+        // Load user schedule from Firestore (chỉ load một lần)
         loadUserSchedule();
     }
     
@@ -809,6 +816,7 @@ public class DailyFragment extends Fragment {
 
     /**
      * Load user schedule from Firestore
+     * Đã tối ưu với cache để tránh reload không cần thiết
      */
     private void loadUserSchedule() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
@@ -818,6 +826,15 @@ public class DailyFragment extends Fragment {
         }
 
         String userId = currentUser.getUid();
+        
+        // Kiểm tra cache: Chỉ reload nếu user thay đổi hoặc chưa load lần nào
+        if (cachedUserId != null && cachedUserId.equals(userId) && isScheduleLoaded && userSchedule != null) {
+            Log.d(TAG, "Schedule đã được cache, bỏ qua reload");
+            // Vẫn cần update UI để đảm bảo data chính xác
+            updateScheduleUI();
+            return;
+        }
+        
         Log.d(TAG, "=== ĐANG TẢI USER SCHEDULE ===");
         Log.d(TAG, "Đang tải schedule cho userId: " + userId);
 
@@ -833,6 +850,7 @@ public class DailyFragment extends Fragment {
                     // Validate and cleanup schedule items (remove deleted workouts)
                     validateAndCleanupSchedule(schedule, cleanedSchedule -> {
                         userSchedule = cleanedSchedule;
+                        isScheduleLoaded = true;
                         
                         // Update UI with cleaned schedule
                         updateScheduleUI();
@@ -843,6 +861,7 @@ public class DailyFragment extends Fragment {
                 } else {
                     Log.d(TAG, "Không tìm thấy schedule cho người dùng");
                     userSchedule = null;
+                    isScheduleLoaded = true;
                 }
                 
                 Log.d(TAG, "=== KẾT THÚC TẢI SCHEDULE ===");
@@ -1163,6 +1182,7 @@ public class DailyFragment extends Fragment {
 
     /**
      * Load sessions from Firebase Firestore for current user
+     * Đã tối ưu với cache để tránh reload không cần thiết
      */
     private void loadSessions() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
@@ -1173,6 +1193,24 @@ public class DailyFragment extends Fragment {
         }
 
         String uid = currentUser.getUid();
+        
+        // Kiểm tra cache: Chỉ reload nếu user thay đổi hoặc chưa load lần nào
+        if (cachedUserId != null && cachedUserId.equals(uid) && isSessionsLoaded && sessions != null && !sessions.isEmpty()) {
+            Log.d(TAG, "Sessions đã được cache, bỏ qua reload");
+            // Vẫn cần analyze và filter lại để đảm bảo data chính xác
+            analyzeWeeklySessions();
+            filterSessionsForSelectedDay();
+            updateActivityInfo();
+            return;
+        }
+        
+        // Kiểm tra activity có tồn tại không
+        if (getActivity() == null || !(getActivity() instanceof androidx.appcompat.app.AppCompatActivity)) {
+            Log.w(TAG, "Activity không tồn tại, không thể load sessions");
+            return;
+        }
+        
+        cachedUserId = uid;
         Log.d(TAG, "=== LOADING SESSIONS ===");
         Log.d(TAG, "Loading sessions for uid: " + uid + " from Firestore...");
 
@@ -1192,6 +1230,7 @@ public class DailyFragment extends Fragment {
                 }
 
                 sessions = loadedSessions != null ? loadedSessions : new ArrayList<>();
+                isSessionsLoaded = true;
                 
                 // Analyze sessions and update weekly status
                 analyzeWeeklySessions();
@@ -1210,8 +1249,21 @@ public class DailyFragment extends Fragment {
 
     /**
      * Analyze sessions for the current week and update workout status
+     * Đã tối ưu với debounce để tránh tính toán quá nhiều lần
      */
     private void analyzeWeeklySessions() {
+        // Debounce: Chỉ analyze nếu đã qua 60 giây từ lần update cuối
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastWeeklyStatusUpdate < WEEKLY_STATUS_UPDATE_INTERVAL && 
+            weeklyWorkoutStatus != null && !weeklyWorkoutStatus.isEmpty()) {
+            Log.d(TAG, "Bỏ qua analyze weekly sessions (debounce)");
+            // Vẫn update UI để đảm bảo hiển thị đúng
+            updateWeeklyStatus();
+            return;
+        }
+        
+        lastWeeklyStatusUpdate = currentTime;
+        
         // Safety check: ensure weeklyWorkoutStatus is initialized
         if (weeklyWorkoutStatus == null) {
             Log.w(TAG, "weeklyWorkoutStatus is null in analyzeWeeklySessions, initializing...");

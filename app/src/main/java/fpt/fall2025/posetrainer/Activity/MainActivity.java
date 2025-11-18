@@ -281,6 +281,14 @@ public class MainActivity extends AppCompatActivity {
     }
     
     /**
+     * Method public để các fragment khác có thể gọi mở ProfileFragment
+     * Ví dụ: từ NotificationFragment khi click vào thông báo "view_progress"
+     */
+    public void openProfileFragment() {
+        showFragment(profileFragment);
+    }
+    
+    /**
      * Method public để các fragment khác có thể gọi navigate về HomeFragment
      * Ví dụ: từ DailyFragment có thể click back arrow để về Home
      */

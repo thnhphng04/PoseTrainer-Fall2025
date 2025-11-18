@@ -43,6 +43,10 @@ public class CommunityFragment extends Fragment {
     private FirestoreRecyclerAdapter<Community, PostVH> adapter;
     private LinearLayoutManager layoutManager;
     private CommunityViewModel viewModel;
+    
+    // Cache để tránh reload không cần thiết
+    private String cachedUserId = null;
+    private String cachedPhotoUrl = null;
 
     @Nullable
     @Override
@@ -138,6 +142,10 @@ public class CommunityFragment extends Fragment {
     }
 
     // ===================== LOAD USER AVATAR =====================
+    /**
+     * Load user avatar từ Firestore hoặc Auth
+     * Đã tối ưu với cache để tránh reload không cần thiết
+     */
     private void loadUserFromFirestore() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser == null) {
@@ -145,9 +153,31 @@ public class CommunityFragment extends Fragment {
             return;
         }
 
-        db.collection("users").document(currentUser.getUid())
+        String uid = currentUser.getUid();
+        
+        // Kiểm tra cache: Chỉ reload nếu user thay đổi hoặc chưa load lần nào
+        if (cachedUserId != null && cachedUserId.equals(uid) && cachedPhotoUrl != null) {
+            Log.d(TAG, "User avatar đã được cache, sử dụng cache");
+            bindUser(cachedPhotoUrl);
+            return;
+        }
+        
+        // Kiểm tra fragment view có còn attached không
+        if (!isAdded() || getView() == null || imgAvatar == null) {
+            Log.w(TAG, "Fragment không còn attached, bỏ qua load user avatar");
+            return;
+        }
+
+        cachedUserId = uid;
+        
+        db.collection("users").document(uid)
                 .get()
                 .addOnSuccessListener(doc -> {
+                    // Kiểm tra lại fragment view trước khi update UI
+                    if (!isAdded() || getView() == null || imgAvatar == null) {
+                        return;
+                    }
+                    
                     if (doc.exists()) {
                         User user = doc.toObject(User.class);
                         if (user != null) {
@@ -156,14 +186,25 @@ public class CommunityFragment extends Fragment {
                                 if (currentUser.getPhotoUrl() != null)
                                     photoUrl = currentUser.getPhotoUrl().toString();
                             }
+                            cachedPhotoUrl = photoUrl; // Cache photo URL
                             bindUser(photoUrl);
                         }
                     } else {
+                        String photoUrl = currentUser.getPhotoUrl() != null ? 
+                                currentUser.getPhotoUrl().toString() : null;
+                        cachedPhotoUrl = photoUrl; // Cache photo URL
                         bindFromAuth(currentUser);
                     }
                 })
                 .addOnFailureListener(e -> {
+                    // Kiểm tra lại fragment view trước khi update UI
+                    if (!isAdded() || getView() == null || imgAvatar == null) {
+                        return;
+                    }
                     Log.e(TAG, "loadUserFromFirestore: " + e.getMessage());
+                    String photoUrl = currentUser.getPhotoUrl() != null ? 
+                            currentUser.getPhotoUrl().toString() : null;
+                    cachedPhotoUrl = photoUrl; // Cache photo URL
                     bindFromAuth(currentUser);
                 });
     }

@@ -227,7 +227,8 @@ public class NotificationFragment extends Fragment {
                 case "workout":
                     shouldInclude = notification.getType() != null && 
                                   (notification.getType().contains("workout") || 
-                                   notification.getType().contains("reminder"));
+                                   notification.getType().contains("reminder") ||
+                                   notification.getType().equals("ai_plan_update")); // Bao gồm thông báo lịch sắp tới
                     break;
                 case "social":
                     shouldInclude = notification.getType() != null && 
@@ -288,8 +289,16 @@ public class NotificationFragment extends Fragment {
             startActivity(intent);
         } else if ("view_progress".equals(actionType)) {
             // Chuyển sang ProfileFragment
-            // TODO: Implement navigation to ProfileFragment
-            Toast.makeText(getContext(), "Xem tiến độ", Toast.LENGTH_SHORT).show();
+            // Lấy MainActivity và mở ProfileFragment
+            if (getActivity() instanceof MainActivity) {
+                MainActivity mainActivity = (MainActivity) getActivity();
+                mainActivity.openProfileFragment();
+            } else {
+                // Nếu không phải MainActivity, mở MainActivity với intent
+                Intent intent = new Intent(getContext(), MainActivity.class);
+                intent.putExtra("openFragment", "profile");
+                startActivity(intent);
+            }
         } else {
             // Không có action cụ thể, chỉ hiển thị thông báo đã đọc
             Toast.makeText(getContext(), "Đã đánh dấu đã đọc", Toast.LENGTH_SHORT).show();
