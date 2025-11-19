@@ -28,11 +28,11 @@
             android:id="@+id/homeBtn"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="0.25"
+            android:layout_weight="1"
             android:orientation="vertical"
             android:gravity="center"
             android:background="?attr/selectableItemBackground"
-            android:padding="16dp">
+            android:padding="4dp">
 
             <ImageView
                 android:layout_width="24dp"
@@ -43,22 +43,25 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="2dp"
                 android:text="Trang chủ"
                 android:textAlignment="center"
                 android:textColor="@color/white"
-                android:textSize="12sp" />
+                android:textSize="10sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
         </LinearLayout>
 
+        <!-- Community Button -->
         <LinearLayout
             android:id="@+id/Community"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="0.25"
+            android:layout_weight="1"
             android:orientation="vertical"
             android:gravity="center"
             android:background="?attr/selectableItemBackground"
-            android:padding="8dp">
+            android:padding="4dp">
 
             <ImageView
                 android:id="@+id/icon_community"
@@ -70,22 +73,25 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="2dp"
                 android:text="Cộng đồng"
                 android:textAlignment="center"
                 android:textColor="@color/white"
-                android:textSize="12sp" />
+                android:textSize="10sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
         </LinearLayout>
 
+        <!-- Personal Button -->
         <LinearLayout
             android:id="@+id/personalBtn"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="0.25"
+            android:layout_weight="1"
             android:orientation="vertical"
             android:gravity="center"
             android:background="?attr/selectableItemBackground"
-            android:padding="8dp">
+            android:padding="4dp">
 
             <ImageView
                 android:id="@+id/icon_personal"
@@ -97,23 +103,25 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="2dp"
                 android:text="Cá nhân"
                 android:textAlignment="center"
                 android:textColor="@color/white"
-                android:textSize="12sp" />
+                android:textSize="10sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
         </LinearLayout>
 
-
+        <!-- Daily Button -->
         <LinearLayout
             android:id="@+id/dailyBtn"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="0.25"
+            android:layout_weight="1"
             android:orientation="vertical"
             android:gravity="center"
             android:background="?attr/selectableItemBackground"
-            android:padding="8dp">
+            android:padding="4dp">
 
             <ImageView
                 android:id="@+id/icon_daily"
@@ -125,12 +133,13 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="2dp"
                 android:text="Hằng ngày"
                 android:textAlignment="center"
                 android:textColor="@color/white"
-                android:textSize="11sp"
-                android:textStyle="bold" />
+                android:textSize="10sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
         </LinearLayout>
 
         <!-- Profile Button -->
@@ -138,11 +147,11 @@
             android:id="@+id/profileBtn"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="0.25"
+            android:layout_weight="1"
             android:orientation="vertical"
             android:gravity="center"
             android:background="?attr/selectableItemBackground"
-            android:padding="16dp">
+            android:padding="4dp">
 
             <ImageView
                 android:layout_width="24dp"
@@ -153,11 +162,13 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="2dp"
                 android:text="Hồ sơ"
                 android:textAlignment="center"
                 android:textColor="@color/white"
-                android:textSize="12sp" />
+                android:textSize="10sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
         </LinearLayout>
 
     </LinearLayout>
