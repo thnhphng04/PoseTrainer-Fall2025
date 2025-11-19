@@ -114,6 +114,15 @@ public class MainActivity extends AppCompatActivity {
         // Track app state: app đang ở foreground
         AppStateHelper.setAppInForeground(true);
         Log.d(TAG, "MainActivity onResume: Ứng dụng ở foreground");
+        
+        // Refresh MyWorkoutFragment nếu đang visible (ví dụ khi quay lại từ PlanPreviewActivity)
+        if (currentFragment instanceof MyWorkoutFragment && currentFragment.isAdded() && currentFragment.isResumed()) {
+            binding.getRoot().postDelayed(() -> {
+                if (currentFragment instanceof MyWorkoutFragment && currentFragment.isAdded()) {
+                    ((MyWorkoutFragment) currentFragment).refreshWorkouts();
+                }
+            }, 500); // Delay 500ms để đảm bảo activity đã resume xong
+        }
     }
     
     @Override
@@ -226,6 +235,16 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, "DailyFragment hiện đang HIỂN THỊ - thông báo sẽ bị ẩn");
             } else {
                 AppStateHelper.setDailyFragmentVisible(false);
+            }
+            
+            // Refresh MyWorkoutFragment khi được show để đảm bảo data mới nhất
+            if (fragment instanceof MyWorkoutFragment) {
+                // Delay một chút để đảm bảo fragment đã được show xong
+                binding.getRoot().postDelayed(() -> {
+                    if (fragment.isAdded() && fragment.isResumed()) {
+                        ((MyWorkoutFragment) fragment).refreshWorkouts();
+                    }
+                }, 300); // Delay 300ms
             }
             
             Log.d(TAG, "Đã chuyển sang fragment: " + fragment.getClass().getSimpleName());

@@ -20,9 +20,14 @@ import com.google.firebase.functions.FirebaseFunctions;
 import com.google.firebase.functions.FirebaseFunctionsException;
 import com.google.firebase.functions.HttpsCallableResult;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import fpt.fall2025.posetrainer.Domain.Schedule;
+import fpt.fall2025.posetrainer.Domain.UserWorkout;
+import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.R;
 
 public class PlanPreviewActivity extends AppCompatActivity {
@@ -253,28 +258,284 @@ public class PlanPreviewActivity extends AppCompatActivity {
         }
 
         setLoading(true);
-        tvSub.setText("Đang kích hoạt kế hoạch...");
+        tvSub.setText("Đang xóa kế hoạch cũ...");
 
-        Map<String, Object> data = new HashMap<>();
-        data.put("uid", uid);
+        // Xóa workouts cũ từ AI trước khi lưu mới
+        deleteOldAIWorkouts();
+    }
 
-        FirebaseFunctions.getInstance("us-central1")
-                .getHttpsCallable("acceptPlan")
-                .call(data)
-                .addOnSuccessListener(r -> {
-                    setLoading(false);
-                    String successMsg = "Kế hoạch đã được kích hoạt thành công!";
-                    tvSub.setText(successMsg);
-                    Toast.makeText(this, successMsg, Toast.LENGTH_LONG).show();
-                    Log.d(TAG, "acceptPlan success");
+    /**
+     * Xóa tất cả workouts cũ có source="ai" của user
+     */
+    private void deleteOldAIWorkouts() {
+        tvSub.setText("Đang tìm và xóa kế hoạch cũ...");
+        
+        // Query tất cả workouts có source="ai" của user này
+        db.collection("user_workouts")
+                .whereEqualTo("uid", uid)
+                .whereEqualTo("source", "ai")
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    int totalOldWorkouts = queryDocumentSnapshots.size();
+                    Log.d(TAG, "Tìm thấy " + totalOldWorkouts + " workout cũ từ AI");
+                    
+                    if (totalOldWorkouts == 0) {
+                        // Không có workout cũ, tiếp tục lưu mới
+                        convertPlanToWorkoutsAndSchedule();
+                        return;
+                    }
+                    
+                    // Xóa từng workout
+                    int[] deletedCount = {0};
+                    for (com.google.firebase.firestore.DocumentSnapshot doc : queryDocumentSnapshots) {
+                        String workoutId = doc.getId();
+                        Log.d(TAG, "Đang xóa workout cũ: " + workoutId);
+                        
+                        db.collection("user_workouts")
+                                .document(workoutId)
+                                .delete()
+                                .addOnSuccessListener(aVoid -> {
+                                    deletedCount[0]++;
+                                    Log.d(TAG, "Đã xóa workout " + deletedCount[0] + "/" + totalOldWorkouts);
+                                    
+                                    // Khi đã xóa hết, xóa schedule cũ và tiếp tục lưu mới
+                                    if (deletedCount[0] == totalOldWorkouts) {
+                                        deleteOldSchedule();
+                                    }
+                                })
+                                .addOnFailureListener(e -> {
+                                    Log.e(TAG, "Lỗi khi xóa workout: " + workoutId, e);
+                                    deletedCount[0]++;
+                                    // Vẫn tiếp tục dù có lỗi
+                                    if (deletedCount[0] == totalOldWorkouts) {
+                                        deleteOldSchedule();
+                                    }
+                                });
+                    }
                 })
                 .addOnFailureListener(e -> {
-                    setLoading(false);
-                    String errorMsg = getErrorMessage(e);
-                    tvSub.setText(errorMsg);
-                    Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
-                    Log.e(TAG, "acceptPlan failed", e);
+                    Log.e(TAG, "Lỗi khi query workouts cũ", e);
+                    // Vẫn tiếp tục lưu mới dù có lỗi
+                    deleteOldSchedule();
                 });
+    }
+
+    /**
+     * Xóa schedule cũ (nếu có title là "Kế hoạch tập luyện AI")
+     */
+    private void deleteOldSchedule() {
+        tvSub.setText("Đang xóa lịch tập cũ...");
+        
+        db.collection("schedules")
+                .whereEqualTo("uid", uid)
+                .whereEqualTo("title", "Kế hoạch tập luyện AI")
+                .limit(1)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        com.google.firebase.firestore.DocumentSnapshot doc = queryDocumentSnapshots.getDocuments().get(0);
+                        String scheduleId = doc.getId();
+                        Log.d(TAG, "Đang xóa schedule cũ: " + scheduleId);
+                        
+                        db.collection("schedules")
+                                .document(scheduleId)
+                                .delete()
+                                .addOnSuccessListener(aVoid -> {
+                                    Log.d(TAG, "Đã xóa schedule cũ");
+                                    convertPlanToWorkoutsAndSchedule();
+                                })
+                                .addOnFailureListener(e -> {
+                                    Log.e(TAG, "Lỗi khi xóa schedule cũ", e);
+                                    // Vẫn tiếp tục lưu mới dù có lỗi
+                                    convertPlanToWorkoutsAndSchedule();
+                                });
+                    } else {
+                        Log.d(TAG, "Không tìm thấy schedule cũ");
+                        convertPlanToWorkoutsAndSchedule();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Lỗi khi query schedule cũ", e);
+                    // Vẫn tiếp tục lưu mới dù có lỗi
+                    convertPlanToWorkoutsAndSchedule();
+                });
+    }
+
+    /**
+     * Convert plan thành UserWorkouts và lưu vào Firestore
+     * Mỗi Day trong plan sẽ trở thành một UserWorkout
+     */
+    private void convertPlanToWorkoutsAndSchedule() {
+        tvSub.setText("Đang tạo kế hoạch mới...");
+        List<UserWorkout> workouts = new ArrayList<>();
+        List<Schedule.ScheduleItem> scheduleItems = new ArrayList<>();
+        long currentTime = System.currentTimeMillis() / 1000;
+
+        // Convert mỗi Day thành UserWorkout
+        for (PlanModels.Day day : currentPlan.days) {
+            // Tạo UserWorkout từ Day
+            UserWorkout workout = createUserWorkoutFromDay(day, currentTime);
+            workouts.add(workout);
+
+            // Tạo ScheduleItem cho Day này
+            // dayIndex 1-7 tương ứng với thứ 2-8 (Monday-Sunday)
+            // Chuyển dayIndex thành dayOfWeek (1=Monday, 2=Tuesday, ..., 7=Sunday)
+            int dayOfWeek = day.dayIndex;
+            if (dayOfWeek < 1 || dayOfWeek > 7) {
+                dayOfWeek = ((day.dayIndex - 1) % 7) + 1; // Đảm bảo trong khoảng 1-7
+            }
+
+            List<Integer> daysOfWeek = new ArrayList<>();
+            daysOfWeek.add(dayOfWeek);
+
+            Schedule.ScheduleItem scheduleItem = new Schedule.ScheduleItem(
+                daysOfWeek,
+                "08:00", // Mặc định 8:00 sáng, user có thể chỉnh sau
+                workout.getId() // Link đến workout ID
+            );
+            scheduleItems.add(scheduleItem);
+        }
+
+        // Lưu tất cả workouts vào Firestore
+        saveWorkoutsToFirestore(workouts, scheduleItems);
+    }
+
+    /**
+     * Tạo UserWorkout từ một Day trong plan
+     */
+    private UserWorkout createUserWorkoutFromDay(PlanModels.Day day, long currentTime) {
+        UserWorkout workout = new UserWorkout();
+        
+        // Generate unique ID - sử dụng timestamp và dayIndex để đảm bảo unique
+        // Format: ai_<timestamp>_<dayIndex>
+        String workoutId = "ai_" + currentTime + "_" + day.dayIndex;
+        workout.setId(workoutId);
+        workout.setUid(uid);
+        
+        // Tạo title từ dayIndex và focus
+        String focusText = day.focus != null && !day.focus.isEmpty() ? day.focus : "fullbody";
+        String title = "Ngày " + day.dayIndex + ": " + capitalizeFirst(focusText);
+        workout.setTitle(title);
+        
+        // Tạo description
+        String description = String.format("Kế hoạch tập luyện AI - %d phút", day.estMinutes);
+        workout.setDescription(description);
+        
+        // Set source là "ai"
+        workout.setSource("ai");
+        
+        // Set timestamps
+        workout.setCreatedAt(currentTime);
+        workout.setUpdatedAt(currentTime);
+        
+        // Convert items từ PlanModels.Item sang UserWorkout.UserWorkoutItem
+        List<UserWorkout.UserWorkoutItem> workoutItems = new ArrayList<>();
+        for (int i = 0; i < day.items.size(); i++) {
+            PlanModels.Item planItem = day.items.get(i);
+            
+            // Tạo ExerciseConfig từ plan item
+            UserWorkout.ExerciseConfig config = new UserWorkout.ExerciseConfig(
+                planItem.sets,
+                planItem.reps,
+                planItem.restSec,
+                "medium" // Mặc định difficulty
+            );
+            
+            // Tạo UserWorkoutItem
+            UserWorkout.UserWorkoutItem workoutItem = new UserWorkout.UserWorkoutItem(
+                i + 1, // order
+                planItem.exerciseId,
+                config
+            );
+            
+            workoutItems.add(workoutItem);
+        }
+        
+        workout.setItems(workoutItems);
+        
+        return workout;
+    }
+
+    /**
+     * Lưu tất cả workouts vào Firestore, sau đó tạo Schedule
+     */
+    private void saveWorkoutsToFirestore(List<UserWorkout> workouts, List<Schedule.ScheduleItem> scheduleItems) {
+        if (workouts.isEmpty()) {
+            setLoading(false);
+            Toast.makeText(this, "Không có workout để lưu", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        tvSub.setText("Đang lưu " + workouts.size() + " bài tập...");
+
+        // Lưu từng workout
+        int[] savedCount = {0};
+        int totalCount = workouts.size();
+
+        for (UserWorkout workout : workouts) {
+            FirebaseService.getInstance().saveUserWorkout(workout, success -> {
+                savedCount[0]++;
+                Log.d(TAG, "Saved workout " + savedCount[0] + "/" + totalCount + ": " + workout.getTitle());
+
+                // Khi đã lưu hết workouts, tạo Schedule
+                if (savedCount[0] == totalCount) {
+                    createScheduleFromItems(scheduleItems);
+                }
+            });
+        }
+    }
+
+    /**
+     * Tạo Schedule từ scheduleItems và lưu vào Firestore
+     */
+    private void createScheduleFromItems(List<Schedule.ScheduleItem> scheduleItems) {
+        tvSub.setText("Đang tạo lịch tập luyện...");
+
+        // Tạo NotificationSettings mặc định
+        Schedule.NotificationSettings notificationSettings = new Schedule.NotificationSettings(
+            true, // enabled
+            15, // remindBeforeMin (15 minutes)
+            "default" // sound
+        );
+
+        // Tạo Schedule
+        Schedule schedule = new Schedule(
+            null, // id - sẽ được tạo bởi Firestore
+            uid,
+            "Kế hoạch tập luyện AI",
+            java.util.TimeZone.getDefault().getID(),
+            scheduleItems,
+            notificationSettings
+        );
+
+        // Lưu Schedule vào Firestore
+        FirebaseService.getInstance().saveSchedule(schedule, success -> {
+            setLoading(false);
+            if (success) {
+                String successMsg = "Đã lưu " + scheduleItems.size() + " bài tập vào lịch tập luyện!";
+                tvSub.setText(successMsg);
+                Toast.makeText(this, successMsg, Toast.LENGTH_LONG).show();
+                Log.d(TAG, "Schedule saved successfully with " + scheduleItems.size() + " items");
+                
+                // Đóng activity sau khi lưu thành công
+                finish();
+            } else {
+                String errorMsg = "Lỗi khi lưu lịch tập luyện";
+                tvSub.setText(errorMsg);
+                Toast.makeText(this, errorMsg, Toast.LENGTH_SHORT).show();
+                Log.e(TAG, "Failed to save schedule");
+            }
+        });
+    }
+
+    /**
+     * Capitalize first letter of string
+     */
+    private String capitalizeFirst(String str) {
+        if (str == null || str.isEmpty()) {
+            return str;
+        }
+        return str.substring(0, 1).toUpperCase() + str.substring(1).toLowerCase();
     }
 
     /**
