@@ -19,7 +19,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import fpt.fall2025.posetrainer.Activity.EditGoalsActivity;
 import fpt.fall2025.posetrainer.Activity.EditProfileActivity;
 import fpt.fall2025.posetrainer.Activity.LoginActivity;
-import fpt.fall2025.posetrainer.Activity.PlanPreviewActivity;
+import fpt.fall2025.posetrainer.Activity.WorkoutHistoryActivity;
 import fpt.fall2025.posetrainer.Domain.User;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.databinding.FragmentProfileBinding;
@@ -77,12 +77,12 @@ public class ProfileFragment extends Fragment {
         binding.menuSupport.setOnClickListener(v ->
                 startActivity(new Intent(requireContext(), EditGoalsActivity.class))
         );
-        View.OnClickListener openPlanPreview = v ->
-                startActivity(new Intent(requireContext(), PlanPreviewActivity.class));
+        View.OnClickListener openWorkoutHistory = v ->
+                startActivity(new Intent(requireContext(), WorkoutHistoryActivity.class));
 
-        // ✅ mở màn PlanPreviewActivity
-        binding.menuWorkouts.setOnClickListener(openPlanPreview);   // bấm cả hàng
-        binding.areaMyWorkouts.setOnClickListener(openPlanPreview); // bấm vùng chữ
+        // ✅ mở màn WorkoutHistoryActivity
+        binding.menuWorkouts.setOnClickListener(openWorkoutHistory);   // bấm cả hàng
+        binding.areaMyWorkouts.setOnClickListener(openWorkoutHistory); // bấm vùng chữ
 
 
         // Menu Sync

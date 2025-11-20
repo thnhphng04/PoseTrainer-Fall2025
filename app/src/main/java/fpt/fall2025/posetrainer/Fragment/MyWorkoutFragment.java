@@ -1,5 +1,6 @@
 package fpt.fall2025.posetrainer.Fragment;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -17,6 +18,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import fpt.fall2025.posetrainer.Activity.PlanPreviewActivity;
 import fpt.fall2025.posetrainer.Adapter.UserWorkoutCardAdapter;
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
 import fpt.fall2025.posetrainer.R;
@@ -72,6 +74,9 @@ public class MyWorkoutFragment extends Fragment {
         
         // Setup delete listeners
         setupDeleteListeners();
+        
+        // Setup click listener for create AI workout button
+        setupCreateAIWorkoutButton();
         
         // Load user info and workouts
         loadUserFromFirestore();
@@ -179,6 +184,16 @@ public class MyWorkoutFragment extends Fragment {
                 : null;
 
         updateUserUI(name, photoUrl);
+    }
+
+    /**
+     * Setup click listener cho nút tạo buổi tập với AI
+     */
+    private void setupCreateAIWorkoutButton() {
+        binding.btnCreateAiWorkout.setOnClickListener(v -> {
+            Intent intent = new Intent(requireContext(), PlanPreviewActivity.class);
+            startActivity(intent);
+        });
     }
 
     /**
