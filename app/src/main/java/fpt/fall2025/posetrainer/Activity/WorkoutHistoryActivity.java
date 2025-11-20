@@ -48,6 +48,7 @@ public class WorkoutHistoryActivity extends AppCompatActivity {
     private Toolbar toolbar;
     private TabLayout tabLayout;
     private Spinner spinnerFilter;
+    private LinearLayout layoutFilterSection;
     private RecyclerView recyclerViewSessions;
     private TextView tvDateRange;
     private TextView tvSummary;
@@ -95,6 +96,7 @@ public class WorkoutHistoryActivity extends AppCompatActivity {
         toolbar = findViewById(R.id.toolbar);
         tabLayout = findViewById(R.id.tab_layout);
         spinnerFilter = findViewById(R.id.spinner_filter);
+        layoutFilterSection = findViewById(R.id.layout_filter_section);
         recyclerViewSessions = findViewById(R.id.recycler_view_sessions);
         tvDateRange = findViewById(R.id.tv_date_range);
         tvSummary = findViewById(R.id.tv_summary);
@@ -143,14 +145,14 @@ public class WorkoutHistoryActivity extends AppCompatActivity {
                 if (currentTab == 2) {
                     // Tab Yêu thích: hiển thị favorite workout templates
                     loadFavoriteWorkoutTemplates();
-                    // Ẩn filter spinner và date range/summary cho tab Yêu thích
-                    spinnerFilter.setVisibility(View.GONE);
+                    // Ẩn filter section và date range/summary cho tab Yêu thích
+                    layoutFilterSection.setVisibility(View.GONE);
                     findViewById(R.id.layout_date_summary).setVisibility(View.GONE);
                 } else {
                     // Tab Lịch sử hoặc Gần đây: hiển thị sessions
                     filterSessionsByTab();
-                    // Hiển thị filter spinner và date range/summary
-                    spinnerFilter.setVisibility(View.VISIBLE);
+                    // Hiển thị filter section và date range/summary
+                    layoutFilterSection.setVisibility(View.VISIBLE);
                     findViewById(R.id.layout_date_summary).setVisibility(View.VISIBLE);
                 }
             }

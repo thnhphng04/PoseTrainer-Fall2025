@@ -1,5 +1,6 @@
 package fpt.fall2025.posetrainer.Fragment;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -17,6 +18,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import fpt.fall2025.posetrainer.Activity.PlanPreviewActivity;
 import fpt.fall2025.posetrainer.Adapter.UserWorkoutCardAdapter;
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
 import fpt.fall2025.posetrainer.R;
@@ -32,8 +34,10 @@ import java.util.ArrayList;
 public class MyWorkoutFragment extends Fragment {
     private static final String TAG = "MyWorkoutFragment";
     private FragmentMyworkoutBinding binding;
-    private ArrayList<UserWorkout> userWorkouts;
-    private UserWorkoutCardAdapter userWorkoutAdapter;
+    private ArrayList<UserWorkout> userWorkouts; // Workouts của user (không phải AI)
+    private ArrayList<UserWorkout> aiWorkouts; // Workouts từ AI
+    private UserWorkoutCardAdapter userWorkoutAdapter; // Adapter cho user workouts
+    private UserWorkoutCardAdapter aiWorkoutAdapter; // Adapter cho AI workouts
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
     
@@ -56,12 +60,23 @@ public class MyWorkoutFragment extends Fragment {
 
         // Initialize data
         userWorkouts = new ArrayList<>();
+        aiWorkouts = new ArrayList<>();
 
-        // Setup RecyclerView with vertical layout for card view
+        // Setup RecyclerView cho user workouts
         binding.userWorkoutsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false));
-        // Set adapter immediately to avoid "No adapter attached" warning
         userWorkoutAdapter = new UserWorkoutCardAdapter(userWorkouts);
         binding.userWorkoutsRecyclerView.setAdapter(userWorkoutAdapter);
+        
+        // Setup RecyclerView cho AI workouts
+        binding.aiWorkoutsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false));
+        aiWorkoutAdapter = new UserWorkoutCardAdapter(aiWorkouts);
+        binding.aiWorkoutsRecyclerView.setAdapter(aiWorkoutAdapter);
+        
+        // Setup delete listeners
+        setupDeleteListeners();
+        
+        // Setup click listener for create AI workout button
+        setupCreateAIWorkoutButton();
         
         // Load user info and workouts
         loadUserFromFirestore();
@@ -172,6 +187,97 @@ public class MyWorkoutFragment extends Fragment {
     }
 
     /**
+     * Setup click listener cho nút tạo buổi tập với AI
+     */
+    private void setupCreateAIWorkoutButton() {
+        binding.btnCreateAiWorkout.setOnClickListener(v -> {
+            Intent intent = new Intent(requireContext(), PlanPreviewActivity.class);
+            startActivity(intent);
+        });
+    }
+
+    /**
+     * Setup delete listeners cho cả 2 adapter
+     */
+    private void setupDeleteListeners() {
+        if (userWorkoutAdapter != null) {
+            userWorkoutAdapter.setOnUserWorkoutDeletedListener(() -> {
+                // Refresh the list when an item is deleted
+                isWorkoutsLoaded = false;
+                FirebaseUser currentUser = mAuth.getCurrentUser();
+                if (currentUser != null) {
+                    loadUserWorkouts(currentUser.getUid());
+                }
+            });
+        }
+        
+        if (aiWorkoutAdapter != null) {
+            aiWorkoutAdapter.setOnUserWorkoutDeletedListener(() -> {
+                // Refresh the list when an item is deleted
+                isWorkoutsLoaded = false;
+                FirebaseUser currentUser = mAuth.getCurrentUser();
+                if (currentUser != null) {
+                    loadUserWorkouts(currentUser.getUid());
+                }
+            });
+        }
+    }
+
+    /**
+     * Filter workouts và hiển thị vào 2 RecyclerView riêng biệt
+     */
+    private void filterAndDisplayWorkouts(ArrayList<UserWorkout> allWorkouts) {
+        if (allWorkouts == null || allWorkouts.isEmpty()) {
+            Log.d(TAG, "Không có workouts để filter");
+            userWorkouts.clear();
+            aiWorkouts.clear();
+            updateWorkoutCounts();
+            return;
+        }
+
+        // Filter workouts
+        userWorkouts.clear();
+        aiWorkouts.clear();
+        
+        for (UserWorkout workout : allWorkouts) {
+            String source = workout.getSource();
+            if (source != null && source.equals("ai")) {
+                aiWorkouts.add(workout);
+            } else {
+                userWorkouts.add(workout);
+            }
+        }
+
+        // Cập nhật adapters
+        userWorkoutAdapter = new UserWorkoutCardAdapter(userWorkouts);
+        aiWorkoutAdapter = new UserWorkoutCardAdapter(aiWorkouts);
+        
+        // Setup delete listeners lại
+        setupDeleteListeners();
+        
+        // Update RecyclerViews
+        binding.userWorkoutsRecyclerView.setAdapter(userWorkoutAdapter);
+        binding.aiWorkoutsRecyclerView.setAdapter(aiWorkoutAdapter);
+        
+        // Cập nhật count texts
+        updateWorkoutCounts();
+        
+        Log.d(TAG, "Đã filter: " + userWorkouts.size() + " user workouts, " + aiWorkouts.size() + " AI workouts");
+    }
+
+    /**
+     * Cập nhật số lượng workouts cho cả 2 section
+     */
+    private void updateWorkoutCounts() {
+        if (binding.userWorkoutCountText != null) {
+            binding.userWorkoutCountText.setText(userWorkouts.size() + " bài tập");
+        }
+        if (binding.aiWorkoutCountText != null) {
+            binding.aiWorkoutCountText.setText(aiWorkouts.size() + " bài tập");
+        }
+    }
+
+    /**
      * Load user workouts from Firebase
      * Đã tối ưu với cache và reuse adapter để tránh lag
      */
@@ -198,7 +304,6 @@ public class MyWorkoutFragment extends Fragment {
                 Log.d(TAG, "========== CALLBACK TẢI BÀI TẬP ==========");
                 Log.d(TAG, "Đã nhận được " + (workouts != null ? workouts.size() : 0) + " bài tập");
                 
-                userWorkouts = workouts != null ? workouts : new ArrayList<>();
                 isWorkoutsLoaded = true;
                 
                 // Kiểm tra fragment view có còn attached không
@@ -206,36 +311,8 @@ public class MyWorkoutFragment extends Fragment {
                     return;
                 }
                 
-                if (userWorkouts.isEmpty()) {
-                    Log.d(TAG, "Không tìm thấy bài tập nào, hiển thị trạng thái trống");
-                    showEmptyState("Chưa có bài tập đã lưu.\nTạo hoặc chỉnh sửa bài tập để lưu ở đây!");
-                } else {
-                    Log.d(TAG, "Tìm thấy " + userWorkouts.size() + " bài tập, đang cập nhật adapter");
-                    showWorkoutsList();
-                    
-                    // Reuse adapter thay vì tạo mới mỗi lần
-                    if (userWorkoutAdapter == null) {
-                        userWorkoutAdapter = new UserWorkoutCardAdapter(userWorkouts);
-                        userWorkoutAdapter.setOnUserWorkoutDeletedListener(() -> {
-                            // Refresh the list when an item is deleted
-                            isWorkoutsLoaded = false; // Reset flag để reload
-                            loadUserWorkouts(userId);
-                        });
-                        binding.userWorkoutsRecyclerView.setAdapter(userWorkoutAdapter);
-                    } else {
-                        // Update adapter với data mới
-                        // Giả sử UserWorkoutCardAdapter có method updateList, nếu không thì tạo adapter mới
-                        userWorkoutAdapter = new UserWorkoutCardAdapter(userWorkouts);
-                        userWorkoutAdapter.setOnUserWorkoutDeletedListener(() -> {
-                            // Refresh the list when an item is deleted
-                            isWorkoutsLoaded = false; // Reset flag để reload
-                            loadUserWorkouts(userId);
-                        });
-                        binding.userWorkoutsRecyclerView.setAdapter(userWorkoutAdapter);
-                    }
-                    
-                    Log.d(TAG, "Adapter đã được cập nhật với " + userWorkouts.size() + " mục");
-                }
+                // Filter và hiển thị workouts vào 2 RecyclerView riêng biệt
+                filterAndDisplayWorkouts(workouts != null ? workouts : new ArrayList<>());
                 
                 Log.d(TAG, "========== KẾT THÚC CALLBACK TẢI BÀI TẬP ==========");
             }
@@ -243,35 +320,36 @@ public class MyWorkoutFragment extends Fragment {
     }
 
     private void showEmptyState(String message) {
-        binding.emptyStateLayout.setVisibility(View.VISIBLE);
-        binding.userWorkoutsRecyclerView.setVisibility(View.GONE);
-        binding.emptyStateText.setText(message);
-    }
-
-    private void showWorkoutsList() {
-        binding.emptyStateLayout.setVisibility(View.GONE);
-        binding.userWorkoutsRecyclerView.setVisibility(View.VISIBLE);
+        // Empty state chỉ hiển thị khi cả 2 section đều trống
+        if ((userWorkouts == null || userWorkouts.isEmpty()) && 
+            (aiWorkouts == null || aiWorkouts.isEmpty())) {
+            binding.emptyStateLayout.setVisibility(View.VISIBLE);
+            binding.emptyStateText.setText(message);
+        } else {
+            binding.emptyStateLayout.setVisibility(View.GONE);
+        }
     }
 
     private boolean isDataLoaded = false;
     
     /**
      * Refresh the list when returning to this fragment
-     * Đã tối ưu với cache để tránh reload không cần thiết
+     * Luôn reload workouts để đảm bảo data mới nhất
      */
     @Override
     public void onResume() {
         super.onResume();
-        // Chỉ load data lần đầu để tránh reload không cần thiết
         if (isVisible() && isAdded()) {
             if (!isDataLoaded) {
                 // Lần đầu load
                 loadUserFromFirestore();
                 isDataLoaded = true;
             } else {
-                // Chỉ load workouts nếu cần, user info đã được cache
+                // Reload workouts mỗi khi fragment resume để đảm bảo data mới nhất
                 FirebaseUser currentUser = mAuth.getCurrentUser();
                 if (currentUser != null) {
+                    Log.d(TAG, "Fragment resume - reloading workouts để cập nhật data mới");
+                    isWorkoutsLoaded = false; // Reset flag để force reload
                     loadUserWorkouts(currentUser.getUid());
                 }
             }
@@ -281,10 +359,28 @@ public class MyWorkoutFragment extends Fragment {
     @Override
     public void onHiddenChanged(boolean hidden) {
         super.onHiddenChanged(hidden);
-        // Không reload khi fragment trở nên visible để tối ưu hiệu năng
-        // Data đã được cache, chỉ reload nếu cần
+        // Reload workouts khi fragment được show lại từ hidden state
         if (!hidden && isAdded() && isResumed()) {
-            Log.d(TAG, "Fragment visible, kiểm tra cache");
+            Log.d(TAG, "Fragment được show lại - reloading workouts");
+            FirebaseUser currentUser = mAuth.getCurrentUser();
+            if (currentUser != null) {
+                isWorkoutsLoaded = false; // Reset flag để force reload
+                loadUserWorkouts(currentUser.getUid());
+            }
+        }
+    }
+    
+    /**
+     * Public method để refresh workouts từ bên ngoài (ví dụ từ Activity)
+     */
+    public void refreshWorkouts() {
+        if (isAdded() && isResumed()) {
+            Log.d(TAG, "Manual refresh workouts được gọi");
+            FirebaseUser currentUser = mAuth.getCurrentUser();
+            if (currentUser != null) {
+                isWorkoutsLoaded = false; // Reset flag để force reload
+                loadUserWorkouts(currentUser.getUid());
+            }
         }
     }
 
