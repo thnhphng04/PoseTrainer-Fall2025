@@ -20,10 +20,14 @@ import com.google.firebase.functions.FirebaseFunctions;
 import com.google.firebase.functions.FirebaseFunctionsException;
 import com.google.firebase.functions.HttpsCallableResult;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import fpt.fall2025.posetrainer.Domain.Schedule;
+import fpt.fall2025.posetrainer.Domain.UserWorkout;
+import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.R;
 
 public class PlanPreviewActivity extends AppCompatActivity {
@@ -68,6 +72,12 @@ public class PlanPreviewActivity extends AppCompatActivity {
 
         // Setup click listeners
         btnGenerate.setOnClickListener(v -> checkProfileAndGenerate());
+        // Long click để force regenerate
+        btnGenerate.setOnLongClickListener(v -> {
+            Toast.makeText(this, "Đang tạo lại kế hoạch mới...", Toast.LENGTH_SHORT).show();
+            generatePlan(true);
+            return true;
+        });
         btnAccept.setOnClickListener(v -> acceptPlan());
     }
 
@@ -79,7 +89,8 @@ public class PlanPreviewActivity extends AppCompatActivity {
             btnGenerate.setEnabled(!loading);
         }
         if (btnAccept != null) {
-            btnAccept.setEnabled(!loading && currentPlan != null && currentPlan.days != null && currentPlan.days.size() > 0);
+            btnAccept.setEnabled(!loading && currentPlan != null && 
+                    currentPlan.days != null && currentPlan.days.size() > 0);
         }
     }
 
@@ -126,13 +137,16 @@ public class PlanPreviewActivity extends AppCompatActivity {
             return;
         }
 
-        tvSub.setText("Đang tạo kế hoạch tập luyện...");
+        setLoading(true);
+        tvSub.setText(force ? "Đang tạo lại kế hoạch tập luyện..." : "Đang tạo kế hoạch tập luyện...");
 
         Map<String, Object> data = new HashMap<>();
         data.put("uid", uid);
         if (force) {
             data.put("force", true);
         }
+
+        Log.d(TAG, "Gọi generatePlan với uid: " + uid + ", force: " + force);
 
         FirebaseFunctions.getInstance("us-central1")
                 .getHttpsCallable("generatePlan")
@@ -150,6 +164,22 @@ public class PlanPreviewActivity extends AppCompatActivity {
                         }
 
                         Map res = (Map) obj;
+                        
+                        // ✅ Xử lý cached response
+                        Object statusObj = res.get("status");
+                        String status = statusObj != null ? String.valueOf(statusObj) : "unknown";
+                        Log.d(TAG, "Response status: " + status);
+                        
+                        if ("cached".equals(status)) {
+                            Log.d(TAG, "Nhận được plan từ cache");
+                            tvSub.setText("Đang tải kế hoạch đã lưu...");
+                        } else {
+                            Log.d(TAG, "Nhận được plan mới từ AI");
+                            Object modelObj = res.get("model");
+                            String model = modelObj != null ? String.valueOf(modelObj) : "unknown";
+                            Log.d(TAG, "Model sử dụng: " + model);
+                        }
+                        
                         Object planObj = res.get("plan");
                         
                         if (planObj == null || !(planObj instanceof Map)) {
@@ -157,7 +187,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
                             String errorMsg = "Không tìm thấy kế hoạch trong phản hồi";
                             tvSub.setText(errorMsg);
                             Toast.makeText(this, errorMsg, Toast.LENGTH_SHORT).show();
-                            Log.e(TAG, "Plan not found in response");
+                            Log.e(TAG, "Plan not found in response. Response keys: " + res.keySet());
                             return;
                         }
 
@@ -175,7 +205,10 @@ public class PlanPreviewActivity extends AppCompatActivity {
 
                         render(currentPlan);
                         setLoading(false);
-                        Toast.makeText(this, "Tạo kế hoạch thành công!", Toast.LENGTH_SHORT).show();
+                        
+                        String successMsg = "cached".equals(status) ? 
+                                "Đã tải kế hoạch đã lưu!" : "Tạo kế hoạch thành công!";
+                        Toast.makeText(this, successMsg, Toast.LENGTH_SHORT).show();
                         Log.d(TAG, "Plan generated successfully: " + currentPlan.days.size() + " days");
                     } catch (Exception e) {
                         setLoading(false);
@@ -187,24 +220,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(e -> {
                     setLoading(false);
-                    
-                    // Log detailed error information for debugging
-                    Log.e(TAG, "=== generatePlan FAILED ===");
-                    Log.e(TAG, "Exception type: " + e.getClass().getName());
-                    Log.e(TAG, "Exception message: " + e.getMessage());
-                    
-                    if (e instanceof FirebaseFunctionsException) {
-                        FirebaseFunctionsException ffe = (FirebaseFunctionsException) e;
-                        Log.e(TAG, "Error Code: " + ffe.getCode());
-                        Log.e(TAG, "Error Details: " + ffe.getDetails());
-                        Log.e(TAG, "Error Message: " + ffe.getMessage());
-                        Log.e(TAG, "Stack trace:", e);
-                        
-                        // Log thông tin để debug
-                        Log.e(TAG, "UID being used: " + uid);
-                        Log.e(TAG, "Function region: us-central1");
-                        Log.e(TAG, "Function name: generatePlan");
-                    }
+                    Log.e(TAG, "generatePlan failed", e);
                     
                     String errorMsg = getErrorMessage(e);
                     tvSub.setText(errorMsg);
@@ -216,6 +232,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
     private void render(PlanModels.Plan plan) {
         if (plan == null || plan.days == null || plan.days.isEmpty()) {
             tvSub.setText("Kế hoạch trống");
+            Log.w(TAG, "Plan is null or empty in render()");
             return;
         }
 
@@ -241,39 +258,284 @@ public class PlanPreviewActivity extends AppCompatActivity {
         }
 
         setLoading(true);
-        tvSub.setText("Đang kích hoạt kế hoạch...");
+        tvSub.setText("Đang xóa kế hoạch cũ...");
 
-        Map<String, Object> data = new HashMap<>();
-        data.put("uid", uid);
+        // Xóa workouts cũ từ AI trước khi lưu mới
+        deleteOldAIWorkouts();
+    }
 
-        FirebaseFunctions.getInstance("us-central1")
-                .getHttpsCallable("acceptPlan")
-                .call(data)
-                .addOnSuccessListener(r -> {
-                    setLoading(false);
-                    String successMsg = "Kế hoạch đã được kích hoạt thành công!";
-                    tvSub.setText(successMsg);
-                    Toast.makeText(this, successMsg, Toast.LENGTH_LONG).show();
-                    Log.d(TAG, "acceptPlan success");
+    /**
+     * Xóa tất cả workouts cũ có source="ai" của user
+     */
+    private void deleteOldAIWorkouts() {
+        tvSub.setText("Đang tìm và xóa kế hoạch cũ...");
+        
+        // Query tất cả workouts có source="ai" của user này
+        db.collection("user_workouts")
+                .whereEqualTo("uid", uid)
+                .whereEqualTo("source", "ai")
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    int totalOldWorkouts = queryDocumentSnapshots.size();
+                    Log.d(TAG, "Tìm thấy " + totalOldWorkouts + " workout cũ từ AI");
                     
-                    // Optionally finish activity or show success state
-                    // finish();
+                    if (totalOldWorkouts == 0) {
+                        // Không có workout cũ, tiếp tục lưu mới
+                        convertPlanToWorkoutsAndSchedule();
+                        return;
+                    }
+                    
+                    // Xóa từng workout
+                    int[] deletedCount = {0};
+                    for (com.google.firebase.firestore.DocumentSnapshot doc : queryDocumentSnapshots) {
+                        String workoutId = doc.getId();
+                        Log.d(TAG, "Đang xóa workout cũ: " + workoutId);
+                        
+                        db.collection("user_workouts")
+                                .document(workoutId)
+                                .delete()
+                                .addOnSuccessListener(aVoid -> {
+                                    deletedCount[0]++;
+                                    Log.d(TAG, "Đã xóa workout " + deletedCount[0] + "/" + totalOldWorkouts);
+                                    
+                                    // Khi đã xóa hết, xóa schedule cũ và tiếp tục lưu mới
+                                    if (deletedCount[0] == totalOldWorkouts) {
+                                        deleteOldSchedule();
+                                    }
+                                })
+                                .addOnFailureListener(e -> {
+                                    Log.e(TAG, "Lỗi khi xóa workout: " + workoutId, e);
+                                    deletedCount[0]++;
+                                    // Vẫn tiếp tục dù có lỗi
+                                    if (deletedCount[0] == totalOldWorkouts) {
+                                        deleteOldSchedule();
+                                    }
+                                });
+                    }
                 })
                 .addOnFailureListener(e -> {
-                    setLoading(false);
-                    String errorMsg = getErrorMessage(e);
-                    tvSub.setText(errorMsg);
-                    Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
-                    Log.e(TAG, "acceptPlan failed", e);
-                    
-                    // Log detailed error information
-                    if (e instanceof FirebaseFunctionsException) {
-                        FirebaseFunctionsException ffe = (FirebaseFunctionsException) e;
-                        Log.e(TAG, "Error Code: " + ffe.getCode());
-                        Log.e(TAG, "Error Details: " + ffe.getDetails());
-                        Log.e(TAG, "Error Message: " + ffe.getMessage());
-                    }
+                    Log.e(TAG, "Lỗi khi query workouts cũ", e);
+                    // Vẫn tiếp tục lưu mới dù có lỗi
+                    deleteOldSchedule();
                 });
+    }
+
+    /**
+     * Xóa schedule cũ (nếu có title là "Kế hoạch tập luyện AI")
+     */
+    private void deleteOldSchedule() {
+        tvSub.setText("Đang xóa lịch tập cũ...");
+        
+        db.collection("schedules")
+                .whereEqualTo("uid", uid)
+                .whereEqualTo("title", "Kế hoạch tập luyện AI")
+                .limit(1)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        com.google.firebase.firestore.DocumentSnapshot doc = queryDocumentSnapshots.getDocuments().get(0);
+                        String scheduleId = doc.getId();
+                        Log.d(TAG, "Đang xóa schedule cũ: " + scheduleId);
+                        
+                        db.collection("schedules")
+                                .document(scheduleId)
+                                .delete()
+                                .addOnSuccessListener(aVoid -> {
+                                    Log.d(TAG, "Đã xóa schedule cũ");
+                                    convertPlanToWorkoutsAndSchedule();
+                                })
+                                .addOnFailureListener(e -> {
+                                    Log.e(TAG, "Lỗi khi xóa schedule cũ", e);
+                                    // Vẫn tiếp tục lưu mới dù có lỗi
+                                    convertPlanToWorkoutsAndSchedule();
+                                });
+                    } else {
+                        Log.d(TAG, "Không tìm thấy schedule cũ");
+                        convertPlanToWorkoutsAndSchedule();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Lỗi khi query schedule cũ", e);
+                    // Vẫn tiếp tục lưu mới dù có lỗi
+                    convertPlanToWorkoutsAndSchedule();
+                });
+    }
+
+    /**
+     * Convert plan thành UserWorkouts và lưu vào Firestore
+     * Mỗi Day trong plan sẽ trở thành một UserWorkout
+     */
+    private void convertPlanToWorkoutsAndSchedule() {
+        tvSub.setText("Đang tạo kế hoạch mới...");
+        List<UserWorkout> workouts = new ArrayList<>();
+        List<Schedule.ScheduleItem> scheduleItems = new ArrayList<>();
+        long currentTime = System.currentTimeMillis() / 1000;
+
+        // Convert mỗi Day thành UserWorkout
+        for (PlanModels.Day day : currentPlan.days) {
+            // Tạo UserWorkout từ Day
+            UserWorkout workout = createUserWorkoutFromDay(day, currentTime);
+            workouts.add(workout);
+
+            // Tạo ScheduleItem cho Day này
+            // dayIndex 1-7 tương ứng với thứ 2-8 (Monday-Sunday)
+            // Chuyển dayIndex thành dayOfWeek (1=Monday, 2=Tuesday, ..., 7=Sunday)
+            int dayOfWeek = day.dayIndex;
+            if (dayOfWeek < 1 || dayOfWeek > 7) {
+                dayOfWeek = ((day.dayIndex - 1) % 7) + 1; // Đảm bảo trong khoảng 1-7
+            }
+
+            List<Integer> daysOfWeek = new ArrayList<>();
+            daysOfWeek.add(dayOfWeek);
+
+            Schedule.ScheduleItem scheduleItem = new Schedule.ScheduleItem(
+                daysOfWeek,
+                "08:00", // Mặc định 8:00 sáng, user có thể chỉnh sau
+                workout.getId() // Link đến workout ID
+            );
+            scheduleItems.add(scheduleItem);
+        }
+
+        // Lưu tất cả workouts vào Firestore
+        saveWorkoutsToFirestore(workouts, scheduleItems);
+    }
+
+    /**
+     * Tạo UserWorkout từ một Day trong plan
+     */
+    private UserWorkout createUserWorkoutFromDay(PlanModels.Day day, long currentTime) {
+        UserWorkout workout = new UserWorkout();
+        
+        // Generate unique ID - sử dụng timestamp và dayIndex để đảm bảo unique
+        // Format: ai_<timestamp>_<dayIndex>
+        String workoutId = "ai_" + currentTime + "_" + day.dayIndex;
+        workout.setId(workoutId);
+        workout.setUid(uid);
+        
+        // Tạo title từ dayIndex và focus
+        String focusText = day.focus != null && !day.focus.isEmpty() ? day.focus : "fullbody";
+        String title = "Ngày " + day.dayIndex + ": " + capitalizeFirst(focusText);
+        workout.setTitle(title);
+        
+        // Tạo description
+        String description = String.format("Kế hoạch tập luyện AI - %d phút", day.estMinutes);
+        workout.setDescription(description);
+        
+        // Set source là "ai"
+        workout.setSource("ai");
+        
+        // Set timestamps
+        workout.setCreatedAt(currentTime);
+        workout.setUpdatedAt(currentTime);
+        
+        // Convert items từ PlanModels.Item sang UserWorkout.UserWorkoutItem
+        List<UserWorkout.UserWorkoutItem> workoutItems = new ArrayList<>();
+        for (int i = 0; i < day.items.size(); i++) {
+            PlanModels.Item planItem = day.items.get(i);
+            
+            // Tạo ExerciseConfig từ plan item
+            UserWorkout.ExerciseConfig config = new UserWorkout.ExerciseConfig(
+                planItem.sets,
+                planItem.reps,
+                planItem.restSec,
+                "medium" // Mặc định difficulty
+            );
+            
+            // Tạo UserWorkoutItem
+            UserWorkout.UserWorkoutItem workoutItem = new UserWorkout.UserWorkoutItem(
+                i + 1, // order
+                planItem.exerciseId,
+                config
+            );
+            
+            workoutItems.add(workoutItem);
+        }
+        
+        workout.setItems(workoutItems);
+        
+        return workout;
+    }
+
+    /**
+     * Lưu tất cả workouts vào Firestore, sau đó tạo Schedule
+     */
+    private void saveWorkoutsToFirestore(List<UserWorkout> workouts, List<Schedule.ScheduleItem> scheduleItems) {
+        if (workouts.isEmpty()) {
+            setLoading(false);
+            Toast.makeText(this, "Không có workout để lưu", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        tvSub.setText("Đang lưu " + workouts.size() + " bài tập...");
+
+        // Lưu từng workout
+        int[] savedCount = {0};
+        int totalCount = workouts.size();
+
+        for (UserWorkout workout : workouts) {
+            FirebaseService.getInstance().saveUserWorkout(workout, success -> {
+                savedCount[0]++;
+                Log.d(TAG, "Saved workout " + savedCount[0] + "/" + totalCount + ": " + workout.getTitle());
+
+                // Khi đã lưu hết workouts, tạo Schedule
+                if (savedCount[0] == totalCount) {
+                    createScheduleFromItems(scheduleItems);
+                }
+            });
+        }
+    }
+
+    /**
+     * Tạo Schedule từ scheduleItems và lưu vào Firestore
+     */
+    private void createScheduleFromItems(List<Schedule.ScheduleItem> scheduleItems) {
+        tvSub.setText("Đang tạo lịch tập luyện...");
+
+        // Tạo NotificationSettings mặc định
+        Schedule.NotificationSettings notificationSettings = new Schedule.NotificationSettings(
+            true, // enabled
+            15, // remindBeforeMin (15 minutes)
+            "default" // sound
+        );
+
+        // Tạo Schedule
+        Schedule schedule = new Schedule(
+            null, // id - sẽ được tạo bởi Firestore
+            uid,
+            "Kế hoạch tập luyện AI",
+            java.util.TimeZone.getDefault().getID(),
+            scheduleItems,
+            notificationSettings
+        );
+
+        // Lưu Schedule vào Firestore
+        FirebaseService.getInstance().saveSchedule(schedule, success -> {
+            setLoading(false);
+            if (success) {
+                String successMsg = "Đã lưu " + scheduleItems.size() + " bài tập vào lịch tập luyện!";
+                tvSub.setText(successMsg);
+                Toast.makeText(this, successMsg, Toast.LENGTH_LONG).show();
+                Log.d(TAG, "Schedule saved successfully with " + scheduleItems.size() + " items");
+                
+                // Đóng activity sau khi lưu thành công
+                finish();
+            } else {
+                String errorMsg = "Lỗi khi lưu lịch tập luyện";
+                tvSub.setText(errorMsg);
+                Toast.makeText(this, errorMsg, Toast.LENGTH_SHORT).show();
+                Log.e(TAG, "Failed to save schedule");
+            }
+        });
+    }
+
+    /**
+     * Capitalize first letter of string
+     */
+    private String capitalizeFirst(String str) {
+        if (str == null || str.isEmpty()) {
+            return str;
+        }
+        return str.substring(0, 1).toUpperCase() + str.substring(1).toLowerCase();
     }
 
     /**
@@ -287,55 +549,9 @@ public class PlanPreviewActivity extends AppCompatActivity {
             
             Log.d(TAG, "FirebaseFunctionsException - Code: " + code + ", Message: " + message);
             
-            // Handle specific error codes
             switch (ffe.getCode()) {
                 case INTERNAL:
-                    // Lỗi INTERNAL thường do lỗi trong Firebase Function code
-                    // Có thể là: Gemini API error, missing profile, hoặc lỗi logic
-                    StringBuilder detailedMsg = new StringBuilder();
-                    detailedMsg.append("❌ Lỗi nội bộ server (INTERNAL)\n\n");
-                    detailedMsg.append("🔍 Nguyên nhân có thể:\n");
-                    detailedMsg.append("1. Firebase Function chưa được deploy\n");
-                    detailedMsg.append("   → Chạy: firebase deploy --only functions\n\n");
-                    detailedMsg.append("2. Gemini API key chưa được cấu hình\n");
-                    detailedMsg.append("   → Chạy: firebase functions:config:set gemini.api_key=\"YOUR_KEY\"\n\n");
-                    detailedMsg.append("3. Function có lỗi trong code\n");
-                    detailedMsg.append("   → Xem logs: Firebase Console → Functions → Logs\n\n");
-                    detailedMsg.append("4. Profile thiếu thông tin\n");
-                    detailedMsg.append("   → Kiểm tra collection 'profiles/{uid}' trong Firestore\n\n");
-                    detailedMsg.append("📋 Xem file FIREBASE_FUNCTIONS_SETUP.md để biết chi tiết");
-                    
-                    if (message != null && (message.contains("Gemini") || message.contains("Ask Gemini") || message.contains("API key not valid"))) {
-                        detailedMsg = new StringBuilder();
-                        detailedMsg.append("❌ Lỗi từ AI Gemini\n\n");
-                        
-                        // Kiểm tra nếu là lỗi API key
-                        if (message.contains("API key not valid") || message.contains("API_KEY_INVALID")) {
-                            detailedMsg.append("🔑 API key không hợp lệ!\n\n");
-                            detailedMsg.append("🔧 Các bước khắc phục:\n\n");
-                            detailedMsg.append("1. Lấy API key mới từ:\n");
-                            detailedMsg.append("   https://aistudio.google.com/app/apikey\n\n");
-                            detailedMsg.append("2. Set lại secret:\n");
-                            detailedMsg.append("   echo \"YOUR_API_KEY\" | firebase functions:secrets:set GEMINI_API_KEY\n\n");
-                            detailedMsg.append("3. Deploy lại functions:\n");
-                            detailedMsg.append("   firebase deploy --only functions\n\n");
-                            detailedMsg.append("4. Kiểm tra API key có quyền:\n");
-                            detailedMsg.append("   - Enable Generative Language API\n");
-                            detailedMsg.append("   - Không restrict API key\n\n");
-                        } else {
-                            detailedMsg.append("🔧 Các bước khắc phục:\n\n");
-                            detailedMsg.append("1. Kiểm tra Firebase Functions đã deploy:\n");
-                            detailedMsg.append("   firebase functions:list\n\n");
-                            detailedMsg.append("2. Cấu hình Gemini API key:\n");
-                            detailedMsg.append("   echo \"YOUR_KEY\" | firebase functions:secrets:set GEMINI_API_KEY\n");
-                            detailedMsg.append("   firebase deploy --only functions\n\n");
-                            detailedMsg.append("3. Kiểm tra quota/rate limit của Gemini API\n\n");
-                            detailedMsg.append("4. Xem logs chi tiết:\n");
-                            detailedMsg.append("   Firebase Console → Functions → generatePlan → Logs\n\n");
-                        }
-                        detailedMsg.append("📄 Xem FIX_GEMINI_API_KEY.md để biết thêm");
-                    }
-                    return detailedMsg.toString();
+                    return "Lỗi nội bộ server. Vui lòng thử lại sau hoặc kiểm tra Firebase Functions logs.";
                     
                 case NOT_FOUND:
                     return "Không tìm thấy function. Vui lòng kiểm tra cấu hình Firebase Functions.";
@@ -356,7 +572,14 @@ public class PlanPreviewActivity extends AppCompatActivity {
                     return "Tài nguyên đã hết. Vui lòng thử lại sau.";
                     
                 case FAILED_PRECONDITION:
-                    return "Điều kiện không đáp ứng. Vui lòng kiểm tra profile của bạn.";
+                    // ✅ Cải thiện error message cho trường hợp profile not found
+                    if (message != null && message.contains("Profile not found")) {
+                        return "Chưa có hồ sơ. Vui lòng hoàn thành questionnaire trước khi tạo kế hoạch tập luyện.";
+                    }
+                    if (message != null && message.contains("No suitable exercises")) {
+                        return "Không tìm thấy bài tập phù hợp. Vui lòng kiểm tra collection 'exercises' trong Firestore.";
+                    }
+                    return "Điều kiện không đáp ứng. " + (message != null ? message : "Vui lòng kiểm tra profile của bạn.");
                     
                 case ABORTED:
                     return "Yêu cầu bị hủy. Vui lòng thử lại.";
@@ -375,10 +598,6 @@ public class PlanPreviewActivity extends AppCompatActivity {
                     
                 default:
                     if (message != null && !message.isEmpty()) {
-                        // Try to extract meaningful message
-                        if (message.contains("Ask Gemini")) {
-                            return "Lỗi từ AI Gemini. Vui lòng kiểm tra:\n1. Firebase Functions đã được deploy\n2. Gemini API key đã được cấu hình\n3. Thử lại sau vài phút";
-                        }
                         return "Lỗi: " + message;
                     }
                     return "Không thể tạo kế hoạch. Vui lòng thử lại sau.";
@@ -393,5 +612,4 @@ public class PlanPreviewActivity extends AppCompatActivity {
         
         return "Không thể tạo kế hoạch. Vui lòng thử lại sau.";
     }
-
 }

@@ -75,6 +75,29 @@
 
         </androidx.cardview.widget.CardView>
 
+        <!-- Button: Tạo buổi tập với AI -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_create_ai_workout"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="12dp"
+            android:text="🤖 Tạo buổi tập với AI"
+            android:textAllCaps="false"
+            android:textStyle="bold"
+            android:textSize="15sp"
+            android:textColor="@color/mainColor"
+            android:backgroundTint="@android:color/white"
+            android:paddingTop="14dp"
+            android:paddingBottom="14dp"
+            android:elevation="4dp"
+            app:cornerRadius="20dp"
+            app:layout_constraintTop_toBottomOf="@+id/header_card"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
         <!-- Empty State Card -->
         <androidx.cardview.widget.CardView
             android:id="@+id/emptyStateLayout"
@@ -89,7 +112,7 @@
             app:cardCornerRadius="20dp"
             app:cardElevation="2dp"
             app:cardBackgroundColor="#ff2a3142"
-            app:layout_constraintTop_toBottomOf="@+id/header_card"
+            app:layout_constraintTop_toBottomOf="@+id/btn_create_ai_workout"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             tools:layout_editor_absoluteY="120dp"
@@ -134,20 +157,20 @@
 
         </androidx.cardview.widget.CardView>
 
-        <!-- Workouts List Card -->
+        <!-- Kế hoạch tập luyện của bạn -->
         <androidx.cardview.widget.CardView
-            android:id="@+id/workouts_card"
+            android:id="@+id/user_workouts_card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:layout_marginTop="12dp"
             android:layout_marginEnd="16dp"
-            android:layout_marginBottom="16dp"
-            android:minHeight="200dp"
+            android:layout_marginBottom="12dp"
+            android:minHeight="150dp"
             app:cardCornerRadius="20dp"
             app:cardElevation="4dp"
             app:cardBackgroundColor="#ff2a3142"
-            app:layout_constraintTop_toBottomOf="@+id/header_card"
+            app:layout_constraintTop_toBottomOf="@+id/btn_create_ai_workout"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent">
 
@@ -179,13 +202,13 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Bài tập của tôi"
+                        android:text="Kế hoạch tập luyện của bạn"
                         android:textColor="@color/white"
                         android:textSize="16sp"
                         android:textStyle="bold" />
 
                     <TextView
-                        android:id="@+id/workout_count_text"
+                        android:id="@+id/user_workout_count_text"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="0 bài tập"
@@ -203,9 +226,91 @@
                     android:layout_marginBottom="8dp"
                     android:background="#252837" />
 
-                <!-- RecyclerView for Workouts -->
+                <!-- RecyclerView for User Workouts -->
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/userWorkoutsRecyclerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="8dp"
+                    android:clipToPadding="false"
+                    android:nestedScrollingEnabled="false" />
+
+            </LinearLayout>
+
+        </androidx.cardview.widget.CardView>
+
+        <!-- Kế hoạch tập luyện của AI -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/ai_workouts_card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="0dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="16dp"
+            android:minHeight="150dp"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="#ff2a3142"
+            app:layout_constraintTop_toBottomOf="@+id/user_workouts_card"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <!-- Section Title -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🤖"
+                        android:textSize="20sp"
+                        android:layout_marginEnd="8dp" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Kế hoạch tập luyện của AI"
+                        android:textColor="@color/white"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/ai_workout_count_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0 bài tập"
+                        android:textColor="#99ffffff"
+                        android:textSize="12sp" />
+
+                </LinearLayout>
+
+                <!-- Divider -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    android:layout_marginBottom="8dp"
+                    android:background="#252837" />
+
+                <!-- RecyclerView for AI Workouts -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/aiWorkoutsRecyclerView"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:padding="8dp"

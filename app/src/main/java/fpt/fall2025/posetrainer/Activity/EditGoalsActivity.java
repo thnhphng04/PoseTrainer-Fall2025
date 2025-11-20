@@ -37,9 +37,9 @@ public class EditGoalsActivity extends AppCompatActivity {
 
     // ===== Views =====
     private TextInputLayout tilBirthday, tilGender, tilHeight, tilWeight,
-            tilDailyMinutes, tilWeeklyGoal, tilExperience, tilTargetWeight;
+            tilDailyMinutes, tilWeeklyGoal, tilTargetWeight;
     private TextInputEditText etBirthday, etHeight, etWeight, etDailyMinutes, etWeeklyGoal, etTargetWeight;
-    private MaterialAutoCompleteTextView ddGender, ddExperience;
+    private MaterialAutoCompleteTextView ddGender;
     private ProgressBar progress;
 
     // Grid: body hiện tại
@@ -52,18 +52,24 @@ public class EditGoalsActivity extends AppCompatActivity {
     private ImageView[] targetImages;
     private TextView[] targetTexts;
 
+    // Grid: experience
+    private MaterialCardView[] experienceCards;
+
     // ===== State =====
     private String currentBodyType = null; // very_lean|lean|normal|overweight|obese
     private String targetBodyType  = null; // very_lean|lean|normal|overweight|obese
+    private String selectedExperienceLevel = null; // beginner|intermediate|advanced
 
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
     private String uid;
 
     private final String[] genders   = {"male", "female"};
+    private final String[] genderLabels = {"Nam", "Nữ"};
     private final String[] expLevels = {"beginner", "intermediate", "advanced"};
+    private final String[] expLabels = {"Người mới bắt đầu", "Trung bình", "Nâng cao"};
     private final String[] bodyTypes = {"very_lean", "lean", "normal", "overweight", "obese"};
-    private final String[] bodyLabels= {"Very Lean", "Lean", "Normal", "Overweight", "Obese"};
+    private final String[] bodyLabels= {"Rất gầy", "Gầy", "Bình thường", "Thừa cân", "Béo phì"};
 
     // 10 ảnh mẫu theo giới tính
     private final int[] maleBodies = {
@@ -102,6 +108,7 @@ public class EditGoalsActivity extends AppCompatActivity {
         setupBirthdayPicker();
         setupCurrentGrid();
         setupTargetGrid();
+        setupExperienceGrid();
 
         loadProfile();
 
@@ -118,7 +125,6 @@ public class EditGoalsActivity extends AppCompatActivity {
         tilWeight       = findViewById(R.id.til_weight);
         tilDailyMinutes = findViewById(R.id.til_daily_minutes);
         tilWeeklyGoal   = findViewById(R.id.til_weekly_goal);
-        tilExperience   = findViewById(R.id.til_experience);
         tilTargetWeight = findViewById(R.id.til_target_weight);
 
         // Inputs
@@ -129,8 +135,7 @@ public class EditGoalsActivity extends AppCompatActivity {
         etWeeklyGoal   = findViewById(R.id.et_weekly_goal);
         etTargetWeight = findViewById(R.id.et_target_weight);
 
-        ddGender     = findViewById(R.id.dd_gender);
-        ddExperience = findViewById(R.id.dd_experience);
+        ddGender = findViewById(R.id.dd_gender);
 
         progress = findViewById(R.id.progress);
 
@@ -179,18 +184,25 @@ public class EditGoalsActivity extends AppCompatActivity {
                 findViewById(R.id.tvTarget4),
                 findViewById(R.id.tvTarget5)
         };
+
+        // experience
+        experienceCards = new MaterialCardView[]{
+                findViewById(R.id.card_experience_1),
+                findViewById(R.id.card_experience_2),
+                findViewById(R.id.card_experience_3)
+        };
     }
 
     private void setupDropdowns() {
-        ddGender.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, genders));
-        ddExperience.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, expLevels));
+        ddGender.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, genderLabels));
 
         // mặc định female (trùng ảnh trong XML)
-        ddGender.setText("female", false);
+        ddGender.setText("Nữ", false);
         updateAllBodyImages("female");
 
         ddGender.setOnItemClickListener((p, v, pos, id) -> {
-            String g = ddGender.getText() != null ? ddGender.getText().toString().toLowerCase() : "female";
+            String selected = ddGender.getText() != null ? ddGender.getText().toString() : "Nữ";
+            String g = selected.equals("Nam") ? "male" : "female";
             updateAllBodyImages(g);
         });
     }
@@ -290,6 +302,14 @@ public class EditGoalsActivity extends AppCompatActivity {
         }
     }
 
+    private void setupExperienceGrid() {
+        for (int i = 0; i < experienceCards.length; i++) {
+            experienceCards[i].setTag(expLevels[i]);
+            final int idx = i;
+            experienceCards[i].setOnClickListener(v -> selectExperienceCard(idx));
+        }
+    }
+
     /** Cập nhật ảnh + nhãn cho CẢ 2 lưới theo giới tính */
     private void updateAllBodyImages(String gender) {
         int[] drawables = "male".equalsIgnoreCase(gender) ? maleBodies : femaleBodies;
@@ -323,6 +343,14 @@ public class EditGoalsActivity extends AppCompatActivity {
             setCardStroke(targetCards[i], i == index);
         }
         targetBodyType = String.valueOf(targetCards[index].getTag());
+    }
+
+    /** Chọn duy nhất 1 card (experience) */
+    private void selectExperienceCard(int index) {
+        for (int i = 0; i < experienceCards.length; i++) {
+            setCardStroke(experienceCards[i], i == index);
+        }
+        selectedExperienceLevel = String.valueOf(experienceCards[index].getTag());
     }
 
     private void setCardStroke(MaterialCardView card, boolean selected) {
@@ -366,7 +394,8 @@ public class EditGoalsActivity extends AppCompatActivity {
         // gender trước để chọn bộ ảnh
         String gender = doc.getString("gender");
         if (TextUtils.isEmpty(gender)) gender = "female";
-        ddGender.setText(gender, false);
+        String genderLabel = "male".equals(gender) ? "Nam" : "Nữ";
+        ddGender.setText(genderLabel, false);
         updateAllBodyImages(gender);
 
         // base
@@ -375,7 +404,15 @@ public class EditGoalsActivity extends AppCompatActivity {
         setInt(etWeight, doc.getLong("weightKg"));
         setInt(etDailyMinutes, doc.getLong("dailyTrainingMinutes"));
         setInt(etWeeklyGoal, doc.getLong("weeklyGoal"));
-        setText(ddExperience, doc.getString("experienceLevel"));
+        String exp = doc.getString("experienceLevel");
+        if (exp != null) {
+            for (int i = 0; i < experienceCards.length; i++) {
+                if (exp.equals(experienceCards[i].getTag())) {
+                    selectExperienceCard(i);
+                    break;
+                }
+            }
+        }
 
         // select current body
         String cur = doc.getString("currentBodyType");
@@ -408,23 +445,24 @@ public class EditGoalsActivity extends AppCompatActivity {
         clearErrors();
 
         String birthday = txt(etBirthday);
-        String gender   = txt(ddGender);
+        String genderLabel = txt(ddGender);
+        String gender = genderLabel.equals("Nam") ? "male" : "female";
         String heightStr= txt(etHeight);
         String weightStr= txt(etWeight);
         String dailyStr = txt(etDailyMinutes);
         String weeklyStr = txt(etWeeklyGoal);
-        String exp      = txt(ddExperience);
+        String exp = selectedExperienceLevel;
         String targetWeightStr = txt(etTargetWeight);
 
         if (TextUtils.isEmpty(birthday)) { tilBirthday.setError("Chọn ngày sinh"); return; }
-        if (TextUtils.isEmpty(gender))   { tilGender.setError("Chọn giới tính"); return; }
+        if (TextUtils.isEmpty(genderLabel))   { tilGender.setError("Chọn giới tính"); return; }
         if (TextUtils.isEmpty(heightStr)){ tilHeight.setError("Nhập chiều cao"); return; }
         if (TextUtils.isEmpty(weightStr)){ tilWeight.setError("Nhập cân nặng"); return; }
-        if (currentBodyType == null)     { Toast.makeText(this, "Chọn body hiện tại", Toast.LENGTH_SHORT).show(); return; }
-        if (targetBodyType == null)      { Toast.makeText(this, "Chọn body mục tiêu", Toast.LENGTH_SHORT).show(); return; }
+        if (currentBodyType == null)     { Toast.makeText(this, "Chọn cơ thể hiện tại", Toast.LENGTH_SHORT).show(); return; }
+        if (targetBodyType == null)      { Toast.makeText(this, "Chọn cơ thể mục tiêu", Toast.LENGTH_SHORT).show(); return; }
         if (TextUtils.isEmpty(dailyStr)) { tilDailyMinutes.setError("Nhập phút tập/ngày"); return; }
         if (TextUtils.isEmpty(weeklyStr)) { tilWeeklyGoal.setError("Nhập số ngày tập/tuần"); return; }
-        if (TextUtils.isEmpty(exp))      { tilExperience.setError("Chọn kinh nghiệm"); return; }
+        if (TextUtils.isEmpty(exp))      { Toast.makeText(this, "Chọn kinh nghiệm tập luyện", Toast.LENGTH_SHORT).show(); return; }
         if (TextUtils.isEmpty(targetWeightStr)){ tilTargetWeight.setError("Nhập cân nặng mục tiêu"); return; }
 
         int height = pInt(heightStr), weight = pInt(weightStr),
@@ -486,7 +524,6 @@ public class EditGoalsActivity extends AppCompatActivity {
         tilWeight.setError(null);
         tilDailyMinutes.setError(null);
         tilWeeklyGoal.setError(null);
-        tilExperience.setError(null);
         tilTargetWeight.setError(null);
     }
 }
