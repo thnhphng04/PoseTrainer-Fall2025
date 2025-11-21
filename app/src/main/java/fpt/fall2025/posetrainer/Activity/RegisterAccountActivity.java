@@ -238,7 +238,7 @@ public class RegisterAccountActivity extends AppCompatActivity {
     /* ======================== Helpers ======================== */
 
     private void goToQuestionnaire(String uid) {
-        Intent intent = new Intent(getApplicationContext(), EditGoalsActivity.class);
+        Intent intent = new Intent(getApplicationContext(), RegistrationInfoActivity.class);
         startActivity(intent);
         finish();
     }

@@ -61,6 +61,9 @@
             android:name=".Activity.EditGoalsActivity"
             android:exported="false"/>
         <activity
+            android:name=".Activity.RegistrationInfoActivity"
+            android:exported="false"/>
+        <activity
             android:name=".Activity.EditProfileActivity"
             android:exported="false"/>
         <activity
