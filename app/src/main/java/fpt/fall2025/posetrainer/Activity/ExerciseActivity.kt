@@ -165,19 +165,7 @@ class ExerciseActivity : AppCompatActivity() {
                     initializeExercise(exercise)
                 } else { //nếu không lấy được dữ liệu từ firebase
                     Log.e("ExerciseActivity", "Failed to load exercise from Firebase, creating fallback")
-                    val fallbackName = when (perExercise.exerciseId) {
-                        "ex_jumping_jack" -> "Jumping Jack"
-                        "ex_pushup" -> "Push-Up"
-                        "ex_squat" -> "Bodyweight Squat"
-                        "ex_burpee" -> "Burpee"
-                        "ex_high_knee" -> "High Knee"
-                        "ex_mountain_climber" -> "Mountain Climber"
-                        "ex_leg_raise" -> "Leg Raise"
-                        "ex_russian_twist" -> "Russian Twist"
-                        "ex_sit_up" -> "Sit-Up"
-                        "ex_sit_up_twist" -> "Sit-Up Twist"
-                        else -> "Exercise ${perExercise.exerciseNo}"
-                    }
+                    val fallbackName = perExercise.exerciseId;
                     
                     val fallbackExercise = Exercise().apply {
                         id = perExercise.exerciseId

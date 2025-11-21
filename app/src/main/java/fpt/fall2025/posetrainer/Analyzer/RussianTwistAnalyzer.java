@@ -262,7 +262,9 @@ public class RussianTwistAnalyzer implements ExerciseAnalyzerInterface {
             ExerciseFeedback feedback = new ExerciseFeedback(
                     correctCount, incorrectCount, message, cameraWarning, offsetAngle, new ArrayList<>(feedbackList)
             );
-            feedback.setCurrentState(currState + " " + String.format("%.2f", ratio) + " " + hipAngle + " " + kneeAngle);
+            String right = String.format("%.3f", rightShoulder.getOrDefault("z", 0f));
+            String left = String.format("%.3f", leftShoulder.getOrDefault("z", 0f));
+            feedback.setCurrentState(currState + " " + String.format("%.2f", ratio) + " " + hipAngle + " " + kneeAngle + " " + right + " " + left);
 
             return feedback;
         }
@@ -445,15 +447,15 @@ public class RussianTwistAnalyzer implements ExerciseAnalyzerInterface {
 
         public static RussianTwistThresholds defaultBeginner() {
             return new RussianTwistThresholds(
-                    new float[]{0.3f, 0.45f}, new int[]{60, 100}, new int[]{90, 140},
-                    35, 15.0, 50
+                    new float[]{0.3f, 0.4f}, new int[]{60, 100}, new int[]{90, 140},
+                    45, 15.0, 50
             );
         }
 
         public static RussianTwistThresholds defaultPro() {
             return new RussianTwistThresholds(
-                    new float[]{0.3f, 0.55f}, new int[]{70, 90}, new int[]{90, 130},
-                    35, 15.0, 50
+                    new float[]{0.3f, 0.5f}, new int[]{70, 90}, new int[]{90, 130},
+                    45, 15.0, 50
             );
         }
 

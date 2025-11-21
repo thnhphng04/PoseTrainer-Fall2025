@@ -103,30 +103,18 @@ public class SitUpAnalyzer implements ExerciseAnalyzerInterface {
             inactiveTimeFront = 0.0;
             startInactiveTimeFront = now;
 
-            // Chọn bên để phân tích dựa trên visibility score
-            // Tính average visibility cho mỗi bên
-            float leftAvgVis = (
-                leftShoulder.getOrDefault("visibility", 0f) +
-                leftHip.getOrDefault("visibility", 0f) +
-                leftKnee.getOrDefault("visibility", 0f) +
-                leftAnkle.getOrDefault("visibility", 0f)
-            ) / 4.0f;
-            
-            float rightAvgVis = (
-                rightShoulder.getOrDefault("visibility", 0f) +
-                rightHip.getOrDefault("visibility", 0f) +
-                rightKnee.getOrDefault("visibility", 0f) +
-                rightAnkle.getOrDefault("visibility", 0f)
-            ) / 4.0f;
+            // Chọn bên chân trụ (dựa vào khoảng cách vai-bàn chân)
+            float distL = Math.abs(leftFoot.get("y") - leftShoulder.get("y"));
+            float distR = Math.abs(rightFoot.get("y") - rightShoulder.get("y"));
 
             List<Map<String, Float>> points;
-            if (leftAvgVis > rightAvgVis) {
-                // Bên trái nhìn rõ hơn
+            if (distL > distR) {
+                // Sử dụng bên trái
                 points = Arrays.asList(
                         leftEar, leftShoulder, leftHip, leftKnee, leftAnkle, leftFoot
                 );
             } else {
-                // Bên phải nhìn rõ hơn
+                // Sử dụng bên phải
                 points = Arrays.asList(
                         rightEar, rightShoulder, rightHip, rightKnee, rightAnkle, rightFoot
                 );
@@ -403,17 +391,17 @@ public class SitUpAnalyzer implements ExerciseAnalyzerInterface {
 
         public static SitUpThresholds defaultBeginner() {
             return new SitUpThresholds(
-                    new int[]{60, 140},      // Hip: <60 là ngồi, >140 là nằm
-                    new int[]{55, 110},      // Knee: nên giữ ~80-100 độ
-                    35, 15.0, 50
+                    new int[]{70, 140},
+                    new int[]{70, 110},
+                    45, 15.0, 50
             );
         }
 
         public static SitUpThresholds defaultPro() {
             return new SitUpThresholds(
-                    new int[]{50, 150},      // Hip: strict hơn
-                    new int[]{60, 105},      // Knee: strict hơn
-                    35, 15.0, 50
+                    new int[]{60, 150},
+                    new int[]{75, 105},
+                    45, 15.0, 50
             );
         }
 

@@ -16,21 +16,6 @@ public class ExerciseFeedback {
     private boolean cameraWarning;
     private int offsetAngle;
     private List<String> feedbackList;
-
-    // Góc đo cho squat
-    private int hipAngle;
-    private int kneeAngle;
-    private int ankleAngle;
-
-    // Góc đo cho pushup
-    private int shoulderAngle;
-    private int earElbowHipAngle;
-
-    // Góc đo cho jumping jack
-    private int leftArmAngle;
-    private int leftLegAngle;
-    private int rightArmAngle;
-    private int rightLegAngle;
     
     // Trạng thái khác
     private boolean lowerHips;
@@ -123,78 +108,6 @@ public class ExerciseFeedback {
     
     public void setCurrentState(String currentState) {
         this.currentState = currentState;
-    }
-
-    public int getHipAngle() {
-        return hipAngle;
-    }
-
-    public void setHipAngle(int hipAngle) {
-        this.hipAngle = hipAngle;
-    }
-
-    public int getKneeAngle() {
-        return kneeAngle;
-    }
-
-    public void setKneeAngle(int kneeAngle) {
-        this.kneeAngle = kneeAngle;
-    }
-
-    public int getAnkleAngle() {
-        return ankleAngle;
-    }
-
-    public void setAnkleAngle(int ankleAngle) {
-        this.ankleAngle = ankleAngle;
-    }
-
-    public int getShoulderAngle() {
-        return shoulderAngle;
-    }
-
-    public void setShoulderAngle(int shoulderAngle) {
-        this.shoulderAngle = shoulderAngle;
-    }
-
-    public int getEarElbowHipAngle() {
-        return earElbowHipAngle;
-    }
-
-    public void setEarElbowHipAngle(int earElbowHipAngle) {
-        this.earElbowHipAngle = earElbowHipAngle;
-    }
-
-    public int getLeftArmAngle() {
-        return leftArmAngle;
-    }
-
-    public void setLeftArmAngle(int leftArmAngle) {
-        this.leftArmAngle = leftArmAngle;
-    }
-
-    public int getLeftLegAngle() {
-        return leftLegAngle;
-    }
-
-    public void setLeftLegAngle(int leftLegAngle) {
-        this.leftLegAngle = leftLegAngle;
-    }
-
-    public int getRightArmAngle() {
-        return rightArmAngle;
-    }
-
-    public void setRightArmAngle(int rightArmAngle) {
-        this.rightArmAngle = rightArmAngle;
-    }
-
-    public int getRightLegAngle() {
-        return rightLegAngle;
-    }
-
-    public void setRightLegAngle(int rightLegAngle) {
-        this.rightLegAngle = rightLegAngle;
     }
 
     /**

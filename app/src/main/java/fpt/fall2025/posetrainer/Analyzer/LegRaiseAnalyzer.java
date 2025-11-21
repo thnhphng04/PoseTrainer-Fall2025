@@ -152,7 +152,6 @@ public class LegRaiseAnalyzer implements ExerciseAnalyzerInterface {
             // Đếm Leg Raise đúng/sai
             String message = "";
             if ("s1".equals(currState)) {
-                // Đếm khi về s1 (hoàn thành: s2 -> s3 -> s2 -> s1)
                 if (stateSequence.size() == 3 && !incorrectPosture) {
                     correctCount++;
                     message = "CORRECT";
@@ -163,7 +162,6 @@ public class LegRaiseAnalyzer implements ExerciseAnalyzerInterface {
                 stateSequence.clear();
                 incorrectPosture = false;
             } else if ("s2".equals(currState) || "s3".equals(currState)) {
-                // Bắt lỗi khi ở s2 (transition) hoặc s3 (up)
                 if (kneeAngle < thresholds.getKneeThresholds()[0]) {
                     displayText[0] = true;
                     incorrectPosture = true;
@@ -384,7 +382,7 @@ public class LegRaiseAnalyzer implements ExerciseAnalyzerInterface {
             return new LegRaiseThresholds(
                     new int[]{95, 150},
                     new int[]{140},
-                    35, 15.0, 50
+                    45, 15.0, 50
             );
         }
 
@@ -392,7 +390,7 @@ public class LegRaiseAnalyzer implements ExerciseAnalyzerInterface {
             return new LegRaiseThresholds(
                     new int[]{90, 160},
                     new int[]{145},
-                    35, 15.0, 50
+                    45, 15.0, 50
             );
         }
 

@@ -30,6 +30,8 @@ public class BurpeeAnalyzer implements ExerciseAnalyzerInterface {
     private int offsetAngle;
     private List<String> feedbackList;
 
+    float footYs4 = 0; //sử dụng cho s4
+
     public BurpeeAnalyzer() {
         this.thresholds = BurpeesThresholds.defaultBeginner();
         this.stateSequence = new ArrayList<>();
@@ -110,17 +112,17 @@ public class BurpeeAnalyzer implements ExerciseAnalyzerInterface {
             // Chọn bên để phân tích dựa trên visibility score
             // Tính average visibility cho mỗi bên
             float leftAvgVis = (
-                    leftShoulder.getOrDefault("visibility", 0f) +
-                            leftElbow.getOrDefault("visibility", 0f) +
-                            leftHip.getOrDefault("visibility", 0f) +
-                            leftKnee.getOrDefault("visibility", 0f)
+                leftShoulder.getOrDefault("visibility", 0f) +
+                leftElbow.getOrDefault("visibility", 0f) +
+                leftHip.getOrDefault("visibility", 0f) +
+                leftKnee.getOrDefault("visibility", 0f)
             ) / 4.0f;
-
+            
             float rightAvgVis = (
-                    rightShoulder.getOrDefault("visibility", 0f) +
-                            rightElbow.getOrDefault("visibility", 0f) +
-                            rightHip.getOrDefault("visibility", 0f) +
-                            rightKnee.getOrDefault("visibility", 0f)
+                rightShoulder.getOrDefault("visibility", 0f) +
+                rightElbow.getOrDefault("visibility", 0f) +
+                rightHip.getOrDefault("visibility", 0f) +
+                rightKnee.getOrDefault("visibility", 0f)
             ) / 4.0f;
 
             List<Map<String, Float>> points;
@@ -155,7 +157,7 @@ public class BurpeeAnalyzer implements ExerciseAnalyzerInterface {
             int earElbowHipAngle = calculateAngle(ear, elbow, hip); // Góc ear-elbow-hip (đỉnh là elbow)
 
 
-            float footYs4 = 0; //sử dụng cho s4
+
             float footY = foot.get("y");
             float kneeY = knee.get("y");
 
@@ -173,14 +175,17 @@ public class BurpeeAnalyzer implements ExerciseAnalyzerInterface {
                 if (complete && incorrectPosture) {
                     incorrectCount++;
                     message = "INCORRECT";
+                    stateSequence.clear();
+                    incorrectPosture = false;
                 } else if (complete && !incorrectPosture) {
-                    if ((footY - footYs4) > (kneeY - footY) / 10) {
+                    if ((footY - footYs4) < (kneeY - footY) / 10) { //trục y hướng từ trên xuống
                         correctCount++;
                         message = "CORRECT";
+                        stateSequence.clear();
+                        incorrectPosture = false;
                     }
                 }
-                stateSequence.clear();
-                incorrectPosture = false;
+
             } else if ("s2".equals(currState) || "s3".equals(currState)) { //ở state pushup
                 // Feedback động tác
                 if (shldrAngle < thresholds.getShldrMin()) {
@@ -241,7 +246,7 @@ public class BurpeeAnalyzer implements ExerciseAnalyzerInterface {
                     correctCount, incorrectCount, message, cameraWarning, offsetAngle, new ArrayList<>(feedbackList)
             );
 
-            feedback.setCurrentState(currState);
+            feedback.setCurrentState(currState + " " + footYs4 + " " +((footY - footYs4) < (kneeY - footY) / 10));
 
             return feedback;
         }
@@ -390,7 +395,7 @@ public class BurpeeAnalyzer implements ExerciseAnalyzerInterface {
             System.out.println("s3");
             return "s3";
         } else if (kneeAngle < thresholds.getKneePreJump() &&
-                positionCheck < 45) {
+                positionCheck > 30) {
             System.out.println("s4");
             return "s4";
         } else if (kneeAngle >= thresholds.getKneeMin()&&
@@ -463,7 +468,7 @@ public class BurpeeAnalyzer implements ExerciseAnalyzerInterface {
             return new BurpeesThresholds(
                     150, 120, new int[]{125, 150}, new int[]{155, 180},
                     120, 160, 150, 120,
-                    35, 15.0, 50
+                    45, 15.0, 50
             );
         }
 
@@ -471,7 +476,7 @@ public class BurpeeAnalyzer implements ExerciseAnalyzerInterface {
             return new BurpeesThresholds(
                     150, 120, new int[]{125, 150}, new int[]{155, 180},
                     135, 160, 160, 120,
-                    35, 15.0, 50
+                    45, 15.0, 50
             );
         }
 

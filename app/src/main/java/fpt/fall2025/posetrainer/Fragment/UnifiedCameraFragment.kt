@@ -24,6 +24,36 @@ import fpt.fall2025.posetrainer.Analyzer.LegRaiseAnalyzer
 import fpt.fall2025.posetrainer.Analyzer.RussianTwistAnalyzer
 import fpt.fall2025.posetrainer.Analyzer.SitUpAnalyzer
 import fpt.fall2025.posetrainer.Analyzer.SitUpTwistAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.KneePushUpAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.LungeAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.SideLungeAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.JumpingSquatAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.SquatJackAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.PileSquatAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.OneLegPushUpAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.JumpingPushUpAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.FloorTricepDipAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.PlankLegUpAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.StraightArmPlankToPikeAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.VUpAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.SupermanAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.ScissorAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.LegInOutAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.InOutAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.GluteKickBackAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.DonkeyKickAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.OneLegBridgeAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.ButtBridgeAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.ButtKickAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.HipHingeAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.SideLyingLegLiftAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.PilatesLegPullAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.InchWormAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.InchWormPushUpAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.ArmRaiseAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.SideArmRaiseAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.ArmSwingAnalyzer
+import fpt.fall2025.posetrainer.Analyzer.ClapOverHeadAnalyzer
 import fpt.fall2025.posetrainer.Domain.Exercise
 import fpt.fall2025.posetrainer.MediaPipe.LandmarkConverter
 import fpt.fall2025.posetrainer.MediaPipe.PoseLandmarkerHelper
@@ -187,6 +217,36 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
             "ex_russian_twist" -> RussianTwistAnalyzer()
             "ex_sit_up" -> SitUpAnalyzer()
             "ex_sit_up_twist" -> SitUpTwistAnalyzer()
+            "ex_knee_pushup" -> KneePushUpAnalyzer()
+            "ex_lunge" -> LungeAnalyzer()
+            "ex_side_lunge" -> SideLungeAnalyzer()
+            "ex_jumping_squat" -> JumpingSquatAnalyzer()
+            "ex_squat_jack" -> SquatJackAnalyzer()
+            "ex_pile_squat" -> PileSquatAnalyzer()
+            "ex_one_leg_pushup" -> OneLegPushUpAnalyzer()
+            "ex_jumping_pushup" -> JumpingPushUpAnalyzer()
+            "ex_floor_tricep_dip" -> FloorTricepDipAnalyzer()
+            "ex_plank_leg_up" -> PlankLegUpAnalyzer()
+            "ex_straight_arm_plank_to_pike" -> StraightArmPlankToPikeAnalyzer()
+            "ex_v_up" -> VUpAnalyzer()
+            "ex_superman" -> SupermanAnalyzer()
+            "ex_scissor" -> ScissorAnalyzer()
+            "ex_leg_in_out" -> LegInOutAnalyzer()
+            "ex_in_out" -> InOutAnalyzer()
+            "ex_glute_kickback" -> GluteKickBackAnalyzer()
+            "ex_donkey_kick" -> DonkeyKickAnalyzer()
+            "ex_one_leg_bridge" -> OneLegBridgeAnalyzer()
+            "ex_butt_bridge" -> ButtBridgeAnalyzer()
+            "ex_butt_kick" -> ButtKickAnalyzer()
+            "ex_hip_hinge" -> HipHingeAnalyzer()
+            "ex_side_lying_leg_lift" -> SideLyingLegLiftAnalyzer()
+            "ex_pilates_leg_pull" -> PilatesLegPullAnalyzer()
+            "ex_inch_worm" -> InchWormAnalyzer()
+            "ex_inch_worm_pushup" -> InchWormPushUpAnalyzer()
+            "ex_arm_raise" -> ArmRaiseAnalyzer()
+            "ex_side_arm_raise" -> SideArmRaiseAnalyzer()
+            "ex_arm_swing" -> ArmSwingAnalyzer()
+            "ex_clap_overhead" -> ClapOverHeadAnalyzer()
             else -> SquatAnalyzer() // Default
         }
     }

@@ -7,12 +7,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * PushUp Analyzer - Phân tích bài tập Push-Up
+ * StraightArmPlankToPike Analyzer - Phân tích bài tập StraightArmPlankToPike
  * Implement ExerciseAnalyzerInterface để có thể sử dụng chung CameraFragment
  */
-public class PushUpAnalyzer implements ExerciseAnalyzerInterface {
+public class StraightArmPlankToPikeAnalyzer implements ExerciseAnalyzerInterface {
 
-    private PushUpThresholds thresholds;
+    private StraightArmPlankToPikeThresholds thresholds;
     private List<String> stateSequence;
     private int correctCount;
     private int incorrectCount;
@@ -30,8 +30,8 @@ public class PushUpAnalyzer implements ExerciseAnalyzerInterface {
     private int offsetAngle;
     private List<String> feedbackList;
 
-    public PushUpAnalyzer() {
-        this.thresholds = PushUpThresholds.defaultBeginner();
+    public StraightArmPlankToPikeAnalyzer() {
+        this.thresholds = StraightArmPlankToPikeThresholds.defaultBeginner();
         this.stateSequence = new ArrayList<>();
         this.correctCount = 0;
         this.incorrectCount = 0;
@@ -50,7 +50,7 @@ public class PushUpAnalyzer implements ExerciseAnalyzerInterface {
         this.feedbackList = new ArrayList<>();
     }
 
-    public PushUpAnalyzer(PushUpThresholds thresholds) {
+    public StraightArmPlankToPikeAnalyzer(StraightArmPlankToPikeThresholds thresholds) {
         this();
         this.thresholds = thresholds;
     }
@@ -149,57 +149,49 @@ public class PushUpAnalyzer implements ExerciseAnalyzerInterface {
             Map<String, Float> foot = points.get(7);
 
             // Tính các góc mới
-            int elbowAngle = calculateAngle(shldr, elbow, wrist);
-            int shldrAngle = calculateAngle(ear, shldr, hip);
-            int hipAngle = calculateAngleContainingDownVertical(shldr, hip, knee);
+            int hipAngle = calculateAngle(shldr, hip, knee);
+            int shldrAngle = calculateAngle(hip, shldr, elbow);
             int kneeAngle = calculateAngle(hip, knee, ankle);
-            int earElbowHipAngle = calculateAngle(ear, elbow, hip); // Góc ear-elbow-hip (đỉnh là elbow)
 
-            positionCheck = calculateAngleWithUpVertical(ankle, shldr);
 
             // State machine
-            currState = getState(elbowAngle, earElbowHipAngle, positionCheck);
+            currState = getState(hipAngle, shldrAngle);
             updateStateSequence(currState);
 
+            int hipCheck = calculateAngleContainingDownVertical(shldr, hip, knee);
 
-            // Đếm pushup đúng/sai
+            // Đếm StraightArmPlankToPike đúng/sai
             String message = "";
             if ("s1".equals(currState)) {
-                if (stateSequence.size() == 3 && !incorrectPosture) {
-                    correctCount++;
-                    message = "CORRECT";
-                } else if (stateSequence.size() == 3 && incorrectPosture) {
-                    incorrectCount++;
-                    message = "INCORRECT";
+                //feedback khi đang đứng
+                if (kneeAngle < thresholds.getKneeMin()) {
+                    displayText[0] = true;
+                    incorrectPosture = true;
+                    feedbackList.add("Bent Knee");
+                }
+            }
+            else if("s2".equals(currState)) {
+                Boolean complete = stateSequence.contains("s1");
+                // Feedback động tác
+
+                if (complete) {
+                    if (kneeAngle < thresholds.getKneeMin()) {
+                        displayText[0] = true;
+                        incorrectPosture = true;
+                        feedbackList.add("Bent Knee");
+                    }
+
+                    // Nếu không có lỗi thì đếm là đúng
+                    if (!incorrectPosture) {
+                        correctCount++;
+                        message = "CORRECT";
+                    }
                 }
                 stateSequence.clear();
                 incorrectPosture = false;
-            } else if("s2".equals(currState) || "s3".equals(currState)) { //không còn ở state 1
-                // Feedback động tác
-                if (shldrAngle < thresholds.getShldrMin()) {
-                    displayText[0] = true;
-                    incorrectPosture = true;
-                    feedbackList.add("BENT NECK");
-                }
-                if (hipAngle > thresholds.getHipMax()) {
-                    displayText[1] = true;
-                    incorrectPosture = true;
-                    feedbackList.add("Lower back sag");
-                }
-                if (kneeAngle < thresholds.getKneeMin()) {
-                    displayText[2] = true;
-                    incorrectPosture = true;
-                    feedbackList.add("BENT KNEE");
-                }
-                /*
-                if (earElbowHipAngle >= thresholds.getEarElbowHipTrans()[0] &&
-                        earElbowHipAngle <= thresholds.getEarElbowHipTrans()[1] &&
-                        stateSequence.stream().filter(s -> s.equals("s2")).count() == 1) {
-                    lowerHips = true;
-                    feedbackList.add("Continue lowering");
-                }
-                */
             }
+
+
 
             // Inactivity logic
             if (currState != null && currState.equals(prevState)) {
@@ -233,7 +225,7 @@ public class PushUpAnalyzer implements ExerciseAnalyzerInterface {
                     correctCount, incorrectCount, message, cameraWarning, offsetAngle, new ArrayList<>(feedbackList)
             );
 
-            feedback.setCurrentState(currState + " " + earElbowHipAngle);
+            feedback.setCurrentState(currState + " " + hipAngle);
 
             return feedback;
         }
@@ -246,7 +238,7 @@ public class PushUpAnalyzer implements ExerciseAnalyzerInterface {
 
     @Override
     public String getExerciseType() {
-        return "pushup";
+        return "StraightArmPlankToPike";
     }
 
     @Override
@@ -258,37 +250,27 @@ public class PushUpAnalyzer implements ExerciseAnalyzerInterface {
     public Map<String, Object> getThresholds(String level) {
         Map<String, Object> result = new HashMap<>();
         if ("pro".equals(level)) {
-            PushUpThresholds proThresholds = PushUpThresholds.defaultPro();
-            result.put("elbowNormal", proThresholds.getElbowNormal());
-            result.put("earElbowHipNormal", proThresholds.getEarElbowHipNormal());
-            result.put("earElbowHipTrans", proThresholds.getEarElbowHipTrans());
-            result.put("earElbowHipPass", proThresholds.getEarElbowHipPass());
-            result.put("shldrMin", proThresholds.getShldrMin());
-            result.put("hipMax", proThresholds.getHipMax());
+            StraightArmPlankToPikeThresholds proThresholds = StraightArmPlankToPikeThresholds.defaultPro();
+            result.put("hipThresholds", proThresholds.getHipThresholds());
+            result.put("shldrThresholds", proThresholds.getShldrThresholds());
             result.put("kneeMin", proThresholds.getKneeMin());
+            result.put("offsetThresh", proThresholds.getOffsetThresh());
+            result.put("inactiveThresh", proThresholds.getInactiveThresh());
+            result.put("cntFrameThresh", proThresholds.getCntFrameThresh());
         } else {
-            result.put("elbowNormal", thresholds.getElbowNormal());
-            result.put("earElbowHipNormal", thresholds.getEarElbowHipNormal());
-            result.put("earElbowHipTrans", thresholds.getEarElbowHipTrans());
-            result.put("earElbowHipPass", thresholds.getEarElbowHipPass());
-            result.put("shldrMin", thresholds.getShldrMin());
-            result.put("hipMax", thresholds.getHipMax());
+            result.put("hipThresholds", thresholds.getHipThresholds());
+            result.put("shldrThresholds", thresholds.getShldrThresholds());
             result.put("kneeMin", thresholds.getKneeMin());
+            result.put("offsetThresh", thresholds.getOffsetThresh());
+            result.put("inactiveThresh", thresholds.getInactiveThresh());
+            result.put("cntFrameThresh", thresholds.getCntFrameThresh());
         }
         return result;
     }
 
     @Override
     public void updateThresholds(Map<String, Object> thresholds) {
-        if (thresholds.containsKey("shldrMin")) {
-            this.thresholds.setShldrMin((Integer) thresholds.get("shldrMin"));
-        }
-        if (thresholds.containsKey("hipMin")) {
-            this.thresholds.setHipMax((Integer) thresholds.get("hipMax"));
-        }
-        if (thresholds.containsKey("kneeMin")) {
-            this.thresholds.setKneeMin((Integer) thresholds.get("kneeMin"));
-        }
+
     }
 
     @Override
@@ -403,118 +385,112 @@ public class PushUpAnalyzer implements ExerciseAnalyzerInterface {
         return (int) diff;
     }
 
-    private String getState(int elbowAngle, int earElbowHipAngle, int positionCheck) {
-        if (elbowAngle > thresholds.getElbowNormal() &&
-                earElbowHipAngle < thresholds.getEarElbowHipNormal() &&
-                positionCheck > 60) {
+    private String getState(int hipAngle, int shldrAngle) {
+        if (hipAngle > thresholds.getHipThresholds()[1] && shldrAngle < thresholds.getShldrThresholds()[0]) {
             System.out.println("s1");
             return "s1";
-        } else if (earElbowHipAngle >= thresholds.getEarElbowHipTrans()[0] &&
-                earElbowHipAngle <= thresholds.getEarElbowHipTrans()[1] &&
-                positionCheck > 60) {
+        } else if (hipAngle < thresholds.getHipThresholds()[0] && shldrAngle > thresholds.getShldrThresholds()[1]) {
             System.out.println("s2");
             return "s2";
-        } else if (earElbowHipAngle >= thresholds.getEarElbowHipPass()[0] &&
-                earElbowHipAngle <= thresholds.getEarElbowHipPass()[1] &&
-                positionCheck > 60) {
-            System.out.println("s3");
-            return "s3";
         }
+
         return null;
     }
 
     private void updateStateSequence(String state) {
         if (state == null) return;
+        if ("s1".equals(state) && stateSequence.isEmpty()) {
+            stateSequence.add(state);
+        }
         if ("s2".equals(state)) {
-            if ((!stateSequence.contains("s3") && stateSequence.stream().filter(s -> s.equals("s2")).count() == 0) ||
-                    (stateSequence.contains("s3") && stateSequence.stream().filter(s -> s.equals("s2")).count() == 1)) {
-                stateSequence.add(state);
-            }
-        } else if ("s3".equals(state)) {
-            if (!stateSequence.contains(state) && stateSequence.contains("s2")) {
+            if (!stateSequence.contains("s2")) {
                 stateSequence.add(state);
             }
         }
     }
 
-    // Inner class for PushUpThresholds
-    public static class PushUpThresholds {
-        private int elbowNormal;
-        private int earElbowHipNormal;
-        private int[] earElbowHipTrans;
-        private int[] earElbowHipPass;
-        private int shldrMin;
-        private int hipMax;
+    // Inner class for StraightArmPlankToPikeThresholds
+    public static class StraightArmPlankToPikeThresholds {
+        private int[] hipThresholds;
+        private int[] shldrThresholds;
         private int kneeMin;
         private int offsetThresh;
         private double inactiveThresh;
         private int cntFrameThresh;
 
-        public PushUpThresholds() {}
+        public StraightArmPlankToPikeThresholds() {}
 
-        public PushUpThresholds(int elbowNormal, int earElbowHipNormal, int[] earElbowHipTrans,
-                                int[] earElbowHipPass, int shldrMin, int hipMax, int kneeMin,
-                                int offsetThresh, double inactiveThresh, int cntFrameThresh) {
-            this.elbowNormal = elbowNormal;
-            this.earElbowHipNormal = earElbowHipNormal;
-            this.earElbowHipTrans = earElbowHipTrans;
-            this.earElbowHipPass = earElbowHipPass;
-            this.shldrMin = shldrMin;
-            this.hipMax = hipMax;
+        public StraightArmPlankToPikeThresholds(int[] hipThresholds, int[] shldrThresholds,
+                                  int kneeMin, int offsetThresh, double inactiveThresh, int cntFrameThresh) {
+            this.hipThresholds = hipThresholds;
+            this.shldrThresholds = shldrThresholds;
             this.kneeMin = kneeMin;
             this.offsetThresh = offsetThresh;
             this.inactiveThresh = inactiveThresh;
             this.cntFrameThresh = cntFrameThresh;
         }
 
-        public static PushUpThresholds defaultBeginner() {
-            return new PushUpThresholds(
-                    150, 120, new int[]{125, 150}, new int[]{155, 180},
-                    120, 200, 150, 45, 15.0, 50
+        public static StraightArmPlankToPikeThresholds defaultBeginner() {
+            return new StraightArmPlankToPikeThresholds(
+                    new int[]{110, 155}, new int[]{90, 150},
+                    150, 45, 15.0, 50
             );
         }
 
-        public static PushUpThresholds defaultPro() {
-            return new PushUpThresholds(
-                    150, 120, new int[]{125, 150}, new int[]{155, 180},
-                    130, 190, 160, 45, 15.0, 50
+        public static StraightArmPlankToPikeThresholds defaultPro() {
+            return new StraightArmPlankToPikeThresholds(
+                    new int[]{100, 155}, new int[]{90, 150},
+                    155, 45, 15.0, 50
             );
         }
 
-        // Getters and Setters
-        public int getElbowNormal() { return elbowNormal; }
-        public void setElbowNormal(int elbowNormal) { this.elbowNormal = elbowNormal; }
-
-        public int getEarElbowHipNormal() { return earElbowHipNormal; }
-        public void setEarElbowHipNormal(int earElbowHipNormal) { this.earElbowHipNormal = earElbowHipNormal; }
-
-        public int[] getEarElbowHipTrans() { return earElbowHipTrans; }
-        public void setEarElbowHipTrans(int[] earElbowHipTrans) { this.earElbowHipTrans = earElbowHipTrans; }
-
-        public int[] getEarElbowHipPass() { return earElbowHipPass; }
-        public void setEarElbowHipPass(int[] earElbowHipPass) { this.earElbowHipPass = earElbowHipPass; }
-
-        public int getShldrMin() { return shldrMin; }
-        public void setShldrMin(int shldrMin) { this.shldrMin = shldrMin; }
-
-        public int getHipMax() {
-            return hipMax;
+        public int[] getHipThresholds() {
+            return hipThresholds;
         }
 
-        public void setHipMax(int hipMax) {
-            this.hipMax = hipMax;
+        public void setHipThresholds(int[] hipThresholds) {
+            this.hipThresholds = hipThresholds;
         }
 
-        public int getKneeMin() { return kneeMin; }
-        public void setKneeMin(int kneeMin) { this.kneeMin = kneeMin; }
+        public int[] getShldrThresholds() {
+            return shldrThresholds;
+        }
 
-        public int getOffsetThresh() { return offsetThresh; }
-        public void setOffsetThresh(int offsetThresh) { this.offsetThresh = offsetThresh; }
+        public void setShldrThresholds(int[] shldrThresholds) {
+            this.shldrThresholds = shldrThresholds;
+        }
 
-        public double getInactiveThresh() { return inactiveThresh; }
-        public void setInactiveThresh(double inactiveThresh) { this.inactiveThresh = inactiveThresh; }
+        public int getKneeMin() {
+            return kneeMin;
+        }
 
-        public int getCntFrameThresh() { return cntFrameThresh; }
-        public void setCntFrameThresh(int cntFrameThresh) { this.cntFrameThresh = cntFrameThresh; }
+        public void setKneeMin(int kneeMin) {
+            this.kneeMin = kneeMin;
+        }
+
+        public int getOffsetThresh() {
+            return offsetThresh;
+        }
+
+        public void setOffsetThresh(int offsetThresh) {
+            this.offsetThresh = offsetThresh;
+        }
+
+        public double getInactiveThresh() {
+            return inactiveThresh;
+        }
+
+        public void setInactiveThresh(double inactiveThresh) {
+            this.inactiveThresh = inactiveThresh;
+        }
+
+        public int getCntFrameThresh() {
+            return cntFrameThresh;
+        }
+
+        public void setCntFrameThresh(int cntFrameThresh) {
+            this.cntFrameThresh = cntFrameThresh;
+        }
+
     }
 }

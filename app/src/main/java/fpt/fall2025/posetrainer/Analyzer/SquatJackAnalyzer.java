@@ -1,18 +1,17 @@
 package fpt.fall2025.posetrainer.Analyzer;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Squat Analyzer - Phân tích bài tập Squat
+ * SquatJack Analyzer - Phân tích bài tập SquatJack
  * Implement ExerciseAnalyzerInterface để có thể sử dụng chung CameraFragment
  */
-public class SquatAnalyzer implements ExerciseAnalyzerInterface {
-    
-    private SquatThresholds thresholds;
+public class SquatJackAnalyzer implements ExerciseAnalyzerInterface {
+
+    private SquatJackThresholds thresholds;
     private List<String> stateSequence;
     private int correctCount;
     private int incorrectCount;
@@ -21,7 +20,6 @@ public class SquatAnalyzer implements ExerciseAnalyzerInterface {
     private String currState;
     private boolean[] displayText;
     private int[] countFrames;
-    private boolean lowerHips;
     private double inactiveTime;
     private double inactiveTimeFront;
     private double startInactiveTime;
@@ -29,18 +27,17 @@ public class SquatAnalyzer implements ExerciseAnalyzerInterface {
     private boolean cameraWarning;
     private int offsetAngle;
     private List<String> feedbackList;
-    
-    public SquatAnalyzer() {
-        this.thresholds = SquatThresholds.defaultBeginner();
+
+    public SquatJackAnalyzer() {
+        this.thresholds = SquatJackThresholds.defaultBeginner();
         this.stateSequence = new ArrayList<>();
         this.correctCount = 0;
         this.incorrectCount = 0;
         this.incorrectPosture = false;
         this.prevState = null;
         this.currState = null;
-        this.displayText = new boolean[4];
+        this.displayText = new boolean[2];
         this.countFrames = new int[4];
-        this.lowerHips = false;
         this.inactiveTime = 0.0;
         this.inactiveTimeFront = 0.0;
         this.startInactiveTime = System.nanoTime() / 1e9;
@@ -49,8 +46,8 @@ public class SquatAnalyzer implements ExerciseAnalyzerInterface {
         this.offsetAngle = 0;
         this.feedbackList = new ArrayList<>();
     }
-    
-    public SquatAnalyzer(SquatThresholds thresholds) {
+
+    public SquatJackAnalyzer(SquatJackThresholds thresholds) {
         this();
         this.thresholds = thresholds;
     }
@@ -66,18 +63,20 @@ public class SquatAnalyzer implements ExerciseAnalyzerInterface {
         Map<String, Float> nose = getLandmark(landmarks, 0);
         Map<String, Float> leftShoulder = getLandmark(landmarks, 11);
         Map<String, Float> rightShoulder = getLandmark(landmarks, 12);
+        Map<String, Float> leftElbow = getLandmark(landmarks, 13);
+        Map<String, Float> rightElbow = getLandmark(landmarks, 14);
+        Map<String, Float> leftWrist = getLandmark(landmarks, 15);
+        Map<String, Float> rightWrist = getLandmark(landmarks, 16);
         Map<String, Float> leftHip = getLandmark(landmarks, 23);
         Map<String, Float> rightHip = getLandmark(landmarks, 24);
         Map<String, Float> leftKnee = getLandmark(landmarks, 25);
         Map<String, Float> rightKnee = getLandmark(landmarks, 26);
         Map<String, Float> leftAnkle = getLandmark(landmarks, 27);
         Map<String, Float> rightAnkle = getLandmark(landmarks, 28);
-        Map<String, Float> leftFoot = getLandmark(landmarks, 31);
-        Map<String, Float> rightFoot = getLandmark(landmarks, 32);
         
         // Tính offset angle để phát hiện lệch camera
         offsetAngle = calculateOffsetAngle(leftShoulder, nose, rightShoulder);
-        cameraWarning = offsetAngle > thresholds.getOffsetThresh();
+        cameraWarning = offsetAngle < 80;
         feedbackList.clear();
         
         double now = System.nanoTime() / 1e9;
@@ -101,93 +100,32 @@ public class SquatAnalyzer implements ExerciseAnalyzerInterface {
             inactiveTimeFront = 0.0;
             startInactiveTimeFront = now;
             
-            // Chọn bên để phân tích dựa trên visibility score
-            // Tính average visibility cho mỗi bên
-            float leftAvgVis = (
-                leftShoulder.getOrDefault("visibility", 0f) +
-                leftHip.getOrDefault("visibility", 0f) +
-                leftKnee.getOrDefault("visibility", 0f) +
-                leftAnkle.getOrDefault("visibility", 0f)
-            ) / 4.0f;
+            // Tính các góc mới
+            int leftArmAngle = calculateAngleWithDownVertical(leftShoulder, leftWrist);
+            int leftLegAngle = calculateAngleWithDownVertical(leftHip, leftKnee);
+
             
-            float rightAvgVis = (
-                rightShoulder.getOrDefault("visibility", 0f) +
-                rightHip.getOrDefault("visibility", 0f) +
-                rightKnee.getOrDefault("visibility", 0f) +
-                rightAnkle.getOrDefault("visibility", 0f)
-            ) / 4.0f;
-            
-            List<Map<String, Float>> points;
-            if (leftAvgVis > rightAvgVis) {
-                // Bên trái nhìn rõ hơn
-                points = Arrays.asList(
-                    leftShoulder, getLandmark(landmarks, 13), getLandmark(landmarks, 15),
-                    leftHip, leftKnee, leftAnkle, leftFoot
-                );
-            } else {
-                // Bên phải nhìn rõ hơn
-                points = Arrays.asList(
-                    rightShoulder, getLandmark(landmarks, 14), getLandmark(landmarks, 16),
-                    rightHip, rightKnee, rightAnkle, rightFoot
-                );
-            }
-            
-            Map<String, Float> shldr = points.get(0);
-            Map<String, Float> hip = points.get(3);
-            Map<String, Float> knee = points.get(4);
-            Map<String, Float> ankle = points.get(5);
-            
-            // Tính các góc
-            int hipAngle = calculateAngleWithUpVertical(hip, shldr);
-            int kneeAngle = calculateAngleWithUpVertical(knee, hip);
-            int ankleAngle = calculateAngleWithUpVertical(ankle, knee);
-            
-            int s1check = calculateAngleWithUpVertical(ankle, shldr);
+            int rightArmAngle = calculateAngleWithDownVertical(rightShoulder, rightWrist);
+            int rightLegAngle = calculateAngleWithDownVertical(rightHip, rightKnee);
             
             // State machine
-            currState = getState(kneeAngle, s1check);
+            currState = getState(leftArmAngle, leftLegAngle, rightArmAngle, rightLegAngle);
             updateStateSequence(currState);
             
-            // Đếm squat đúng/sai
+            // Đếm SquatJack đúng/sai
             String message = "";
             if ("s1".equals(currState)) {
                 if (stateSequence.size() == 3 && !incorrectPosture) {
                     correctCount++;
                     message = "CORRECT";
-                } else if (stateSequence.contains("s2") && stateSequence.size() == 1) {
-                    incorrectCount++;
-                    message = "INCORRECT";
                 } else if (incorrectPosture) {
                     incorrectCount++;
                     message = "INCORRECT";
                 }
                 stateSequence.clear();
                 incorrectPosture = false;
-            } else if("s2".equals(currState) || "s3".equals(currState)){
-                // Feedback động tác
-                if (hipAngle > thresholds.getHipMax()) {
-                    displayText[0] = true;
-                    feedbackList.add("BEND BACKWARDS");
-                }
-                if (hipAngle < thresholds.getHipMin() && stateSequence.stream().filter(s -> s.equals("s2")).count() == 1) {
-                    displayText[1] = true;
-                    feedbackList.add("BEND FORWARD");
-                }
-                if (kneeAngle > thresholds.getKneeMax()) {
-                    displayText[3] = true;
-                    incorrectPosture = true;
-                    feedbackList.add("SQUAT TOO DEEP");
-                }
-                if (ankleAngle > thresholds.getAnkleMax()) {
-                    displayText[2] = true;
-                    incorrectPosture = true;
-                    feedbackList.add("KNEE OVER TOE");
-                }
-                if (kneeAngle >= (thresholds.getKneeMin() + 1) && kneeAngle < thresholds.getKneeMax() && 
-                    stateSequence.stream().filter(s -> s.equals("s2")).count() == 1 && !stateSequence.contains("s3")) {
-                    lowerHips = true;
-                    feedbackList.add("LOWER YOUR HIPS");
-                }
+            } else { //không ở state 1
+                
             }
             
             // Inactivity logic
@@ -203,9 +141,6 @@ public class SquatAnalyzer implements ExerciseAnalyzerInterface {
                 inactiveTime = 0.0;
             }
             
-            if (stateSequence.contains("s3") || "s1".equals(currState)) {
-                lowerHips = false;
-            }
             prevState = currState;
             
             // Reset feedback nếu quá lâu
@@ -235,47 +170,35 @@ public class SquatAnalyzer implements ExerciseAnalyzerInterface {
     
     @Override
     public String getExerciseType() {
-        return "squat";
+        return "SquatJack";
     }
     
     @Override
     public int[] getRequiredLandmarks() {
-        return new int[]{0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28, 31, 32}; // All required landmarks
+        return new int[]{0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28}; // All required landmarks
     }
     
     @Override
     public Map<String, Object> getThresholds(String level) {
         Map<String, Object> result = new HashMap<>();
         if ("pro".equals(level)) {
-            SquatThresholds proThresholds = SquatThresholds.defaultPro();
-            result.put("kneeNormal", proThresholds.getKneeNormal());
-            result.put("kneeTrans", proThresholds.getKneeTrans());
-            result.put("kneePass", proThresholds.getKneePass());
-            result.put("hipMin", proThresholds.getHipMin());
-            result.put("hipMax", proThresholds.getHipMax());
-            result.put("ankleMax", proThresholds.getAnkleMax());
-            result.put("kneeMax", proThresholds.getKneeMax());
-            result.put("kneeMin", proThresholds.getKneeMin());
+            SquatJackThresholds proThresholds = SquatJackThresholds.defaultPro();
+            result.put("armPass", proThresholds.getArmPass());
+            result.put("legNormal", proThresholds.getLegNormal());
+            result.put("legPass", proThresholds.getLegPass());
         } else {
-            result.put("kneeNormal", thresholds.getKneeNormal());
-            result.put("kneeTrans", thresholds.getKneeTrans());
-            result.put("kneePass", thresholds.getKneePass());
-            result.put("hipMin", thresholds.getHipMin());
-            result.put("hipMax", thresholds.getHipMax());
-            result.put("ankleMax", thresholds.getAnkleMax());
-            result.put("kneeMax", thresholds.getKneeMax());
-            result.put("kneeMin", thresholds.getKneeMin());
+            result.put("armPass", thresholds.getArmPass());
+            result.put("legNormal", thresholds.getLegNormal());
+            result.put("legPass", thresholds.getLegPass());
         }
         return result;
     }
     
     @Override
     public void updateThresholds(Map<String, Object> thresholds) {
-        // Implementation để cập nhật thresholds
-        if (thresholds.containsKey("hipMin")) {
-            this.thresholds.setHipMin((Integer) thresholds.get("hipMin"));
+        if (thresholds.containsKey("legNormal")) {
+            this.thresholds.setLegNormal((int) thresholds.get("legNormal"));
         }
-        // Thêm các threshold khác...
     }
     
     @Override
@@ -287,7 +210,6 @@ public class SquatAnalyzer implements ExerciseAnalyzerInterface {
         this.currState = null;
         this.stateSequence.clear();
         this.feedbackList.clear();
-        this.lowerHips = false;
         this.inactiveTime = 0.0;
         this.inactiveTimeFront = 0.0;
         this.startInactiveTime = System.nanoTime() / 1e9;
@@ -325,10 +247,23 @@ public class SquatAnalyzer implements ExerciseAnalyzerInterface {
         return (int) Math.toDegrees(theta);
     }
     
-    private int calculateAngleWithUpVertical(Map<String, Float> from, Map<String, Float> to) {
+    private int calculateAngle(Map<String, Float> p1, Map<String, Float> p2, Map<String, Float> p3) {
+        if (p1 == null || p2 == null || p3 == null) return 0;
+        
+        float[] a = {p1.get("x") - p2.get("x"), p1.get("y") - p2.get("y")};
+        float[] b = {p3.get("x") - p2.get("x"), p3.get("y") - p2.get("y")};
+        float dot = a[0] * b[0] + a[1] * b[1];
+        float normA = (float) Math.sqrt(a[0] * a[0] + a[1] * a[1]);
+        float normB = (float) Math.sqrt(b[0] * b[0] + b[1] * b[1]);
+        float cosTheta = Math.max(-1f, Math.min(1f, dot / (normA * normB)));
+        double theta = Math.acos(cosTheta);
+        return (int) Math.toDegrees(theta);
+    }
+    
+    private int calculateAngleWithDownVertical(Map<String, Float> from, Map<String, Float> to) {
         if (from == null || to == null) return 0;
         
-        float[] v1 = {0f, -1f}; // vector thẳng đứng hướng lên
+        float[] v1 = {0f, 1f}; // vector thẳng đứng hướng xuống
         float[] v2 = {to.get("x") - from.get("x"), to.get("y") - from.get("y")};
         float dot = v1[0] * v2[0] + v1[1] * v2[1];
         float norm1 = (float) Math.sqrt(v1[0] * v1[0] + v1[1] * v1[1]);
@@ -338,12 +273,17 @@ public class SquatAnalyzer implements ExerciseAnalyzerInterface {
         return (int) Math.toDegrees(theta);
     }
     
-    private String getState(int kneeAngle, int s1check) {
-        if (kneeAngle >= thresholds.getKneeNormal()[0] && kneeAngle <= thresholds.getKneeNormal()[1] && s1check < 30) {
+    private String getState(int leftArmAngle, int leftLegAngle, int rightArmAngle, int rightLegAngle) {
+        if (leftArmAngle >= thresholds.getArmPass() &&
+            rightArmAngle >= thresholds.getArmPass() &&
+            leftLegAngle <= thresholds.getLegNormal() &&
+            rightLegAngle <= thresholds.getLegNormal()) {
             return "s1";
-        } else if (kneeAngle >= thresholds.getKneeTrans()[0] && kneeAngle <= thresholds.getKneeTrans()[1]) {
+        } else if (leftLegAngle > thresholds.getLegNormal() && leftLegAngle < thresholds.getLegPass() &&
+                   rightLegAngle > thresholds.getLegNormal() && leftLegAngle < thresholds.getLegPass()) {
             return "s2";
-        } else if (kneeAngle >= thresholds.getKneePass()[0]) {
+        } else if (leftLegAngle >= thresholds.getLegPass() &&
+                   rightLegAngle >= thresholds.getLegPass()) {
             return "s3";
         }
         return null;
@@ -363,76 +303,61 @@ public class SquatAnalyzer implements ExerciseAnalyzerInterface {
         }
     }
     
-    // Inner class for SquatThresholds
-    public static class SquatThresholds {
-        private int[] kneeNormal;
-        private int[] kneeTrans;
-        private int[] kneePass;
-        private int hipMin;
-        private int hipMax;
-        private int ankleMax;
-        private int kneeMax;
-        private int kneeMin;
+    // Inner class for SquatJackThresholds
+    public static class SquatJackThresholds {
+        private int armPass;
+        private int legNormal;
+        private int legPass;
         private int offsetThresh;
         private double inactiveThresh;
         private int cntFrameThresh;
         
-        public SquatThresholds() {}
+        public SquatJackThresholds() {}
         
-        public SquatThresholds(int[] kneeNormal, int[] kneeTrans, int[] kneePass, 
-                              int hipMin, int hipMax, int ankleMax, int kneeMax, int kneeMin,
-                              int offsetThresh, double inactiveThresh, int cntFrameThresh) {
-            this.kneeNormal = kneeNormal;
-            this.kneeTrans = kneeTrans;
-            this.kneePass = kneePass;
-            this.hipMin = hipMin;
-            this.hipMax = hipMax;
-            this.ankleMax = ankleMax;
-            this.kneeMax = kneeMax;
-            this.kneeMin = kneeMin;
+        public SquatJackThresholds( int armPass,
+                                    int legNormal, int legPass,
+                                    int offsetThresh, double inactiveThresh, int cntFrameThresh) {
+
+            this.armPass = armPass;
+            this.legNormal = legNormal;
+            this.legPass = legPass;
             this.offsetThresh = offsetThresh;
             this.inactiveThresh = inactiveThresh;
             this.cntFrameThresh = cntFrameThresh;
         }
         
-        public static SquatThresholds defaultBeginner() {
-            return new SquatThresholds(
-                new int[]{0, 32}, new int[]{35, 65}, new int[]{70, 95},
-                10, 50, 45, 95, 50, 45, 15.0, 50
+        public static SquatJackThresholds defaultBeginner() {
+            return new SquatJackThresholds(
+                150,
+                10, 100,
+                45, 15.0, 50
             );
         }
         
-        public static SquatThresholds defaultPro() {
-            return new SquatThresholds(
-                new int[]{0, 32}, new int[]{35, 65}, new int[]{80, 95},
-                15, 50, 30, 95, 50, 45, 15.0, 50
+        public static SquatJackThresholds defaultPro() {
+            return new SquatJackThresholds(
+                150,
+                10, 95,
+                45, 15.0, 50
             );
         }
         
         // Getters and Setters
-        public int[] getKneeNormal() { return kneeNormal; }
-        public void setKneeNormal(int[] kneeNormal) { this.kneeNormal = kneeNormal; }
+
+
+        public int getArmPass() {
+            return armPass;
+        }
+
+        public void setArmPass(int armPass) {
+            this.armPass = armPass;
+        }
+
+        public int getLegNormal() { return legNormal; }
+        public void setLegNormal(int legNormal) { this.legNormal = legNormal; }
         
-        public int[] getKneeTrans() { return kneeTrans; }
-        public void setKneeTrans(int[] kneeTrans) { this.kneeTrans = kneeTrans; }
-        
-        public int[] getKneePass() { return kneePass; }
-        public void setKneePass(int[] kneePass) { this.kneePass = kneePass; }
-        
-        public int getHipMin() { return hipMin; }
-        public void setHipMin(int hipMin) { this.hipMin = hipMin; }
-        
-        public int getHipMax() { return hipMax; }
-        public void setHipMax(int hipMax) { this.hipMax = hipMax; }
-        
-        public int getAnkleMax() { return ankleMax; }
-        public void setAnkleMax(int ankleMax) { this.ankleMax = ankleMax; }
-        
-        public int getKneeMax() { return kneeMax; }
-        public void setKneeMax(int kneeMax) { this.kneeMax = kneeMax; }
-        
-        public int getKneeMin() { return kneeMin; }
-        public void setKneeMin(int kneeMin) { this.kneeMin = kneeMin; }
+        public int getLegPass() { return legPass;}
+        public void setLegPass(int legPass) { this.legPass = legPass;}
         
         public int getOffsetThresh() { return offsetThresh; }
         public void setOffsetThresh(int offsetThresh) { this.offsetThresh = offsetThresh; }

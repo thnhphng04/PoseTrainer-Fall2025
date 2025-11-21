@@ -7,13 +7,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * SitUpTwist Analyzer - Phân tích bài tập Sit-Up Twist
- * Kết hợp Sit-Up (hip angle) + Russian Twist (shoulder ratio)
- * 3 States: s1 (down) → s2 (up center) → s3 (twist) → s1
+ * Superman Analyzer - Phân tích bài tập Superman
+ * Implement ExerciseAnalyzerInterface để có thể sử dụng chung CameraFragment
  */
-public class SitUpTwistAnalyzer implements ExerciseAnalyzerInterface {
+public class SupermanAnalyzer implements ExerciseAnalyzerInterface {
 
-    private SitUpTwistThresholds thresholds;
+    private SupermanThresholds thresholds;
     private List<String> stateSequence;
     private int correctCount;
     private int incorrectCount;
@@ -30,16 +29,16 @@ public class SitUpTwistAnalyzer implements ExerciseAnalyzerInterface {
     private int offsetAngle;
     private List<String> feedbackList;
 
-    public SitUpTwistAnalyzer() {
-        this.thresholds = SitUpTwistThresholds.defaultBeginner();
+    public SupermanAnalyzer() {
+        this.thresholds = SupermanThresholds.defaultBeginner();
         this.stateSequence = new ArrayList<>();
         this.correctCount = 0;
         this.incorrectCount = 0;
         this.incorrectPosture = false;
         this.prevState = null;
         this.currState = null;
-        this.displayText = new boolean[4];
-        this.countFrames = new int[4];
+        this.displayText = new boolean[3];
+        this.countFrames = new int[3];
         this.inactiveTime = 0.0;
         this.inactiveTimeFront = 0.0;
         this.startInactiveTime = System.nanoTime() / 1e9;
@@ -49,7 +48,7 @@ public class SitUpTwistAnalyzer implements ExerciseAnalyzerInterface {
         this.feedbackList = new ArrayList<>();
     }
 
-    public SitUpTwistAnalyzer(SitUpTwistThresholds thresholds) {
+    public SupermanAnalyzer(SupermanThresholds thresholds) {
         this();
         this.thresholds = thresholds;
     }
@@ -61,7 +60,7 @@ public class SitUpTwistAnalyzer implements ExerciseAnalyzerInterface {
             return new ExerciseFeedback();
         }
 
-        // Lấy các điểm cần thiết
+        // Lấy các điểm cần thiết từ toàn bộ landmarks (33 điểm MediaPipe)
         Map<String, Float> nose = getLandmark(landmarks, 0);
         Map<String, Float> leftEar = getLandmark(landmarks, 7);
         Map<String, Float> rightEar = getLandmark(landmarks, 8);
@@ -79,7 +78,7 @@ public class SitUpTwistAnalyzer implements ExerciseAnalyzerInterface {
         // Tính offset angle để phát hiện lệch camera
         offsetAngle = calculateOffsetAngle(leftShoulder, nose, rightShoulder);
         int positionCheck = calculateAngleWithUpVertical(leftAnkle, leftShoulder);
-        cameraWarning = positionCheck < 30;
+        cameraWarning = positionCheck < 45;
 
         feedbackList.clear();
 
@@ -104,33 +103,24 @@ public class SitUpTwistAnalyzer implements ExerciseAnalyzerInterface {
             inactiveTimeFront = 0.0;
             startInactiveTimeFront = now;
 
-            // Chọn bên để phân tích dựa trên visibility score
-            // Tính average visibility cho mỗi bên
-            float leftAvgVis = (
-                leftShoulder.getOrDefault("visibility", 0f) +
-                leftHip.getOrDefault("visibility", 0f) +
-                leftKnee.getOrDefault("visibility", 0f) +
-                leftAnkle.getOrDefault("visibility", 0f)
-            ) / 4.0f;
-            
-            float rightAvgVis = (
-                rightShoulder.getOrDefault("visibility", 0f) +
-                rightHip.getOrDefault("visibility", 0f) +
-                rightKnee.getOrDefault("visibility", 0f) +
-                rightAnkle.getOrDefault("visibility", 0f)
-            ) / 4.0f;
+            // Chọn bên chân trụ (dựa vào khoảng cách vai-bàn chân)
+            float distL = Math.abs(leftFoot.get("y") - leftShoulder.get("y"));
+            float distR = Math.abs(rightFoot.get("y") - rightShoulder.get("y"));
 
             List<Map<String, Float>> points;
-            if (leftAvgVis > rightAvgVis) {
-                // Bên trái nhìn rõ hơn
+            Boolean check = null;
+            if (distL > distR) {
+                // Sử dụng bên trái
                 points = Arrays.asList(
                         leftEar, leftShoulder, leftHip, leftKnee, leftAnkle, leftFoot
                 );
+                check = leftShoulder.get("x") > leftAnkle.get("x");
             } else {
-                // Bên phải nhìn rõ hơn
+                // Sử dụng bên phải
                 points = Arrays.asList(
                         rightEar, rightShoulder, rightHip, rightKnee, rightAnkle, rightFoot
                 );
+                check = rightShoulder.get("x") < rightAnkle.get("x");
             }
 
             Map<String, Float> ear = points.get(0);
@@ -140,63 +130,31 @@ public class SitUpTwistAnalyzer implements ExerciseAnalyzerInterface {
             Map<String, Float> ankle = points.get(4);
             Map<String, Float> foot = points.get(5);
 
-            // Tính các góc - từ Sit-Up
-            int hipAngle = calculateAngle(shldr, hip, knee);      // Góc shoulder-hip-knee
-            int kneeAngle = calculateAngle(hip, knee, ankle);     // Góc hip-knee-ankle
-            
-            // Tính ratio - từ Russian Twist
-            float dx1 = rightShoulder.get("x") - leftShoulder.get("x");
-            float dy1 = rightShoulder.get("y") - leftShoulder.get("y");
-            float shoulderWidth = (float) Math.sqrt(dx1 * dx1 + dy1 * dy1);
+            // Tính các góc
+            int hipAngle = calculateAngleContainingUpVertical(shldr, hip, knee);       // Góc shoulder-hip-knee
 
-            float dx2 = shldr.get("x") - hip.get("x");
-            float dy2 = shldr.get("y") - hip.get("y");
-            float torsoLength = (float) Math.sqrt(dx2 * dx2 + dy2 * dy2);
 
-            float ratio = shoulderWidth / torsoLength;
-
-            // State machine - 3 states dựa vào hip angle + ratio
-            currState = getState(hipAngle, ratio);
+            // State machine - phân biệt nằm vs ngồi dựa vào hip angle
+            currState = getState(hipAngle, check);
             updateStateSequence(currState);
 
-            // Đếm Sit-Up Twist đúng/sai
+            // Đếm Sit-Up đúng/sai
             String message = "";
             
-            // bắt lỗi khi ở s2 (up center)
-            if ("s2".equals(currState)) {
-                if (kneeAngle < thresholds.getKneeThresholds()[0]) {
-                    displayText[0] = true;
-                    incorrectPosture = true;
-                    feedbackList.add("Keep knees at 90 degrees");
-                }
-                if (kneeAngle > thresholds.getKneeThresholds()[1]) {
-                    displayText[1] = true;
-                    incorrectPosture = true;
-                    feedbackList.add("Bend knees more");
-                }
+            // Chỉ hiển thị feedback khi đang ở trạng thái s1 (nằm xuống)
+            if ("s1".equals(currState)) {
+                // Feedback động tác khi nằm
+
             }
 
-            // Đếm ngay khi đến s3 (twist) - đã đi qua s1 và s2
-            if ("s3".equals(currState)) {
-                Boolean complete = stateSequence.contains("s1") && stateSequence.contains("s2");
-                
-                // Kiểm tra lỗi khi xoay
-                if (kneeAngle < thresholds.getKneeThresholds()[0]) {
-                    displayText[0] = true;
-                    incorrectPosture = true;
-                    feedbackList.add("Keep knees at 90 degrees");
-                } else if (kneeAngle > thresholds.getKneeThresholds()[1]) {
-                    displayText[1] = true;
-                    incorrectPosture = true;
-                    feedbackList.add("Bend knees more");
-                }
-                
-                // Đếm rep khi complete
+            // Khi hoàn thành 1 rep (từ s1 -> s2)
+            if ("s2".equals(currState)) {
+                Boolean complete = stateSequence.contains("s1");
                 if (complete) {
-                    if (incorrectPosture) {
-                        incorrectCount++;
-                        message = "INCORRECT";
-                    } else {
+
+                    
+                    // Nếu không có lỗi thì đếm là đúng
+                    if (!incorrectPosture) {
                         correctCount++;
                         message = "CORRECT";
                     }
@@ -233,7 +191,7 @@ public class SitUpTwistAnalyzer implements ExerciseAnalyzerInterface {
             ExerciseFeedback feedback = new ExerciseFeedback(
                     correctCount, incorrectCount, message, cameraWarning, offsetAngle, new ArrayList<>(feedbackList)
             );
-            feedback.setCurrentState(currState + " | Hip: " + hipAngle + " | Knee: " + kneeAngle + "° | Ratio: " + String.format("%.2f", ratio));
+            feedback.setCurrentState(currState + " | Hip: " + hipAngle);
 
             return feedback;
         }
@@ -246,29 +204,25 @@ public class SitUpTwistAnalyzer implements ExerciseAnalyzerInterface {
 
     @Override
     public String getExerciseType() {
-        return "situptwist";
+        return "Superman";
     }
 
     @Override
     public int[] getRequiredLandmarks() {
-        return new int[]{0, 7, 8, 11, 12, 23, 24, 25, 26, 27, 28, 31, 32};
+        return new int[]{0, 7, 8, 11, 12, 23, 24, 25, 26, 27, 28, 31, 32}; // Required landmarks for sit-up
     }
 
     @Override
     public Map<String, Object> getThresholds(String level) {
         Map<String, Object> result = new HashMap<>();
         if ("pro".equals(level)) {
-            SitUpTwistThresholds proThresholds = SitUpTwistThresholds.defaultPro();
+            SupermanThresholds proThresholds = SupermanThresholds.defaultPro();
             result.put("hipThresholds", proThresholds.getHipThresholds());
-            result.put("kneeThresholds", proThresholds.getKneeThresholds());
-            result.put("ratioThreshold", proThresholds.getRatioThreshold());
             result.put("offsetThresh", proThresholds.getOffsetThresh());
             result.put("inactiveThresh", proThresholds.getInactiveThresh());
             result.put("cntFrameThresh", proThresholds.getCntFrameThresh());
         } else {
             result.put("hipThresholds", thresholds.getHipThresholds());
-            result.put("kneeThresholds", thresholds.getKneeThresholds());
-            result.put("ratioThreshold", thresholds.getRatioThreshold());
             result.put("offsetThresh", thresholds.getOffsetThresh());
             result.put("inactiveThresh", thresholds.getInactiveThresh());
             result.put("cntFrameThresh", thresholds.getCntFrameThresh());
@@ -280,12 +234,6 @@ public class SitUpTwistAnalyzer implements ExerciseAnalyzerInterface {
     public void updateThresholds(Map<String, Object> thresholds) {
         if (thresholds.containsKey("hipThresholds")) {
             this.thresholds.setHipThresholds((int[]) thresholds.get("hipThresholds"));
-        }
-        if (thresholds.containsKey("kneeThresholds")) {
-            this.thresholds.setKneeThresholds((int[]) thresholds.get("kneeThresholds"));
-        }
-        if (thresholds.containsKey("ratioThreshold")) {
-            this.thresholds.setRatioThreshold((float[]) thresholds.get("ratioThreshold"));
         }
         if (thresholds.containsKey("offsetThresh")) {
             this.thresholds.setOffsetThresh((Integer) thresholds.get("offsetThresh"));
@@ -313,6 +261,7 @@ public class SitUpTwistAnalyzer implements ExerciseAnalyzerInterface {
         this.startInactiveTimeFront = System.nanoTime() / 1e9;
         this.cameraWarning = false;
         this.offsetAngle = 0;
+        // Reset display text and count frames
         for (int i = 0; i < displayText.length; i++) {
             displayText[i] = false;
             countFrames[i] = 0;
@@ -359,7 +308,7 @@ public class SitUpTwistAnalyzer implements ExerciseAnalyzerInterface {
     private int calculateAngleWithUpVertical(Map<String, Float> from, Map<String, Float> to) {
         if (from == null || to == null) return 0;
 
-        float[] v1 = {0f, -1f};
+        float[] v1 = {0f, -1f}; // vector thẳng đứng hướng lên
         float[] v2 = {to.get("x") - from.get("x"), to.get("y") - from.get("y")};
         float dot = v1[0] * v2[0] + v1[1] * v2[1];
         float norm1 = (float) Math.sqrt(v1[0] * v1[0] + v1[1] * v1[1]);
@@ -369,76 +318,95 @@ public class SitUpTwistAnalyzer implements ExerciseAnalyzerInterface {
         return (int) Math.toDegrees(theta);
     }
 
-    private String getState(int hipAngle, float ratio) {
-        // s1: Down (nằm xuống) - hip angle lớn
-        if (hipAngle > thresholds.getHipThresholds()[1]) {
+    private int calculateAngleContainingUpVertical(Map<String, Float> p1, Map<String, Float> p2, Map<String, Float> p3) {
+        if (p1 == null || p2 == null || p3 == null) return 0;
+
+        // Vector p2→p1 và p2→p3
+        float v1x = p1.get("x") - p2.get("x");
+        float v1y = p1.get("y") - p2.get("y");
+        float v2x = p3.get("x") - p2.get("x");
+        float v2y = p3.get("y") - p2.get("y");
+
+        // ⚠ atan2(vx, vy) => 0° hướng xuống (do vy là trục Y dương)
+        double a1 = Math.toDegrees(Math.atan2(v1x, v1y));
+        double a2 = Math.toDegrees(Math.atan2(v2x, v2y));
+
+        // Chuẩn hóa về [0, 360)
+        a1 = (a1 + 360) % 360;
+        a2 = (a2 + 360) % 360;
+
+        // 🔼 Up vertical = 180° (trục Y âm)
+        double up = 180.0;
+
+        // Tính góc theo chiều kim đồng hồ từ a1 → a2
+        double diff = (a2 - a1 + 360) % 360;
+
+        // Kiểm tra xem 180° có nằm trong cung a1→a2 hay không
+        boolean containsUp;
+        if (a1 <= a2) {
+            containsUp = (up >= a1 && up <= a2);
+        } else {
+            // Cung đi qua 0°
+            containsUp = (up >= a1 || up <= a2);
+        }
+
+        // Nếu không chứa hướng lên → lấy phần bù
+        if (!containsUp) {
+            diff = 360 - diff;
+        }
+
+        return (int) diff;
+    }
+
+
+    private String getState(int hipAngle, Boolean check) {
+        if (hipAngle > thresholds.getHipThresholds()[1] && check) {
             return "s1";
+        } else if (hipAngle < thresholds.getHipThresholds()[0] && check) {
+            return "s2";
         }
-        
-        // s2 & s3: Up (ngồi lên) - hip angle nhỏ
-        // Phân biệt s2 (center) vs s3 (twist) bằng ratio
-        if (hipAngle < thresholds.getHipThresholds()[0]) {
-            if (ratio < thresholds.getRatioThreshold()[0]) {
-                return "s2";  // Up Center - chưa xoay (ratio nhỏ)
-            } else if (ratio > thresholds.getRatioThreshold()[1]) {
-                return "s3";  // Twist - đã xoay (ratio lớn)
-            }
-        }
-        
-        return prevState; // Giữ nguyên state nếu đang transition
+        return prevState;
     }
 
     private void updateStateSequence(String state) {
         if (state == null) return;
-        
         if ("s1".equals(state) && stateSequence.isEmpty()) {
             stateSequence.add(state);
-        } else if ("s2".equals(state)) {
+        }
+        if ("s2".equals(state)) {
             if (!stateSequence.contains(state) && stateSequence.contains("s1")) {
-                stateSequence.add(state);
-            }
-        } else if ("s3".equals(state)) {
-            if (!stateSequence.contains(state) && (stateSequence.contains("s1") || stateSequence.contains("s2"))) {
                 stateSequence.add(state);
             }
         }
     }
 
-    // Inner class for SitUpTwistThresholds
-    public static class SitUpTwistThresholds {
-        private int[] hipThresholds;      // [min, max] để phân biệt nằm/ngồi
-        private int[] kneeThresholds;     // [min, max] góc knee
-        private float[] ratioThreshold;   // [min, max] để phân biệt center/twist
+    // Inner class for SupermanThresholds
+    public static class SupermanThresholds {
+        private int[] hipThresholds;
         private int offsetThresh;
         private double inactiveThresh;
         private int cntFrameThresh;
 
-        public SitUpTwistThresholds() {}
+        public SupermanThresholds() {}
 
-        public SitUpTwistThresholds(int[] hipThresholds, int[] kneeThresholds, float[] ratioThreshold,
-                                   int offsetThresh, double inactiveThresh, int cntFrameThresh) {
+        public SupermanThresholds(int[] hipThresholds,
+                              int offsetThresh, double inactiveThresh, int cntFrameThresh) {
             this.hipThresholds = hipThresholds;
-            this.kneeThresholds = kneeThresholds;
-            this.ratioThreshold = ratioThreshold;
             this.offsetThresh = offsetThresh;
             this.inactiveThresh = inactiveThresh;
             this.cntFrameThresh = cntFrameThresh;
         }
 
-        public static SitUpTwistThresholds defaultBeginner() {
-            return new SitUpTwistThresholds(
-                    new int[]{60, 140},
-                    new int[]{50, 110},
-                    new float[]{0.3f, 0.45f},
+        public static SupermanThresholds defaultBeginner() {
+            return new SupermanThresholds(
+                    new int[]{160, 170},
                     45, 15.0, 50
             );
         }
 
-        public static SitUpTwistThresholds defaultPro() {
-            return new SitUpTwistThresholds(
-                    new int[]{50, 150},
-                    new int[]{55, 105},
-                    new float[]{0.3f, 0.5f},
+        public static SupermanThresholds defaultPro() {
+            return new SupermanThresholds(
+                    new int[]{160, 170},
                     45, 15.0, 50
             );
         }
@@ -450,22 +418,6 @@ public class SitUpTwistAnalyzer implements ExerciseAnalyzerInterface {
 
         public void setHipThresholds(int[] hipThresholds) {
             this.hipThresholds = hipThresholds;
-        }
-
-        public int[] getKneeThresholds() {
-            return kneeThresholds;
-        }
-
-        public void setKneeThresholds(int[] kneeThresholds) {
-            this.kneeThresholds = kneeThresholds;
-        }
-
-        public float[] getRatioThreshold() {
-            return ratioThreshold;
-        }
-
-        public void setRatioThreshold(float[] ratioThreshold) {
-            this.ratioThreshold = ratioThreshold;
         }
 
         public int getOffsetThresh() {
@@ -493,4 +445,3 @@ public class SitUpTwistAnalyzer implements ExerciseAnalyzerInterface {
         }
     }
 }
-

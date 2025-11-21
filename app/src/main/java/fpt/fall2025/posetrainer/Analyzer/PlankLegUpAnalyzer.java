@@ -10,9 +10,9 @@ import java.util.Map;
  * Mountain Climber Analyzer - Phân tích bài tập Mountain Climber
  * Implement ExerciseAnalyzerInterface để có thể sử dụng chung CameraFragment
  */
-public class HighKneeAnalyzer implements ExerciseAnalyzerInterface {
+public class PlankLegUpAnalyzer implements ExerciseAnalyzerInterface {
 
-    private HighKneeThresholds thresholds;
+    private PlankLegUpThresholds thresholds;
     private List<String> nearStateSequence;
     private List<String> farStateSequence;
     private int correctCount;
@@ -34,8 +34,8 @@ public class HighKneeAnalyzer implements ExerciseAnalyzerInterface {
     private int offsetAngle;
     private List<String> feedbackList;
 
-    public HighKneeAnalyzer() {
-        this.thresholds = HighKneeThresholds.defaultBeginner();
+    public PlankLegUpAnalyzer() {
+        this.thresholds = PlankLegUpThresholds.defaultBeginner();
         this.nearStateSequence = new ArrayList<>();
         this.farStateSequence = new ArrayList<>();
         this.correctCount = 0;
@@ -56,7 +56,7 @@ public class HighKneeAnalyzer implements ExerciseAnalyzerInterface {
         this.feedbackList = new ArrayList<>();
     }
 
-    public HighKneeAnalyzer(HighKneeThresholds thresholds) {
+    public PlankLegUpAnalyzer(PlankLegUpThresholds thresholds) {
         this();
         this.thresholds = thresholds;
     }
@@ -89,7 +89,8 @@ public class HighKneeAnalyzer implements ExerciseAnalyzerInterface {
 
         // Tính offset angle để phát hiện lệch camera
         offsetAngle = calculateOffsetAngle(leftShoulder, nose, rightShoulder);
-        cameraWarning = offsetAngle > thresholds.getOffsetThresh();
+        int positionCheck = calculateAngleWithUpVertical(leftHip, leftShoulder);
+        cameraWarning = offsetAngle > thresholds.getOffsetThresh() || positionCheck < 60;
         feedbackList.clear();
 
         double now = System.nanoTime() / 1e9;
@@ -157,19 +158,19 @@ public class HighKneeAnalyzer implements ExerciseAnalyzerInterface {
 
 
             // Tính các góc mới
+            int backCheck = calculateAngleWithDownVertical(shldr, nearHip);
 
-            int positionCheck = calculateAngleWithUpVertical(nearHip, shldr);
+            positionCheck = calculateAngleWithUpVertical(nearAnkle, shldr);
 
-            int nearKneeAngle = calculateAngle(nearHip, nearKnee, nearAnkle);
-            int farKneeAngle = calculateAngle(farHip, farKnee, farAnkle);
+            int nearHipAngle = calculateAngle(nearKnee, nearHip, shldr);
+            int farHipAngle = calculateAngle(farKnee, farHip, shldr);
 
-            int nearHipAngle = calculateAngle(shldr, nearHip, nearKnee);
-            int farHipAngle = calculateAngle(shldr, farHip, farKnee);
+            int thighSeparationAngle = calculateAngle(nearKnee, nearHip, farKnee);
 
 
             // State machine
-            nearCurrState = getState(nearHipAngle, positionCheck);
-            farCurrState = getState(farHipAngle, positionCheck);
+            nearCurrState = getState(positionCheck, nearHipAngle, thighSeparationAngle);
+            farCurrState = getState(positionCheck, farHipAngle, thighSeparationAngle);
 
 
             updateNearStateSequence(nearCurrState);
@@ -178,13 +179,13 @@ public class HighKneeAnalyzer implements ExerciseAnalyzerInterface {
             String message = "";
 
             // Kiểm tra chân near
-            if ("s3".equals(nearCurrState) ) {
+            if ("s3".equals(nearCurrState)) {
                 // Kiểm tra nếu đã hoàn thành chu kỳ đầy đủ (có s2 và s3)
                 boolean nearComplete = nearStateSequence.contains("s2");
-                if (nearComplete && nearKneeAngle > thresholds.getKneeThreshold()) {
+                if (nearComplete && backCheck > thresholds.getBackNormal()) {
                     displayText[0] = true;
                     nearIncorrectPosture = true;
-                    feedbackList.add("OVEREXTENDING THE LEG");
+                    feedbackList.add("HIPS TOO HIGH");
                     incorrectCount++;
                     message = "INCORRECT";
                 }
@@ -200,10 +201,10 @@ public class HighKneeAnalyzer implements ExerciseAnalyzerInterface {
             if ("s3".equals(farCurrState)) {
                 // Kiểm tra nếu đã hoàn thành chu kỳ đầy đủ (có s2 và s3)
                 boolean farComplete = farStateSequence.contains("s2");
-                if (farComplete && farKneeAngle > thresholds.getKneeThreshold()) {
+                if (farComplete && backCheck > thresholds.getBackNormal()) {
                     displayText[0] = true;
                     farIncorrectPosture = true;
-                    feedbackList.add("OVEREXTENDING THE LEG");
+                    feedbackList.add("HIPS TOO HIGH");
                     incorrectCount++;
                     message = "INCORRECT";
                 }
@@ -215,57 +216,6 @@ public class HighKneeAnalyzer implements ExerciseAnalyzerInterface {
                 farStateSequence.clear();
                 farIncorrectPosture = false;
             }
-
-
-            /*
-            // Kiểm tra chân near
-            if ("s1".equals(nearCurrState)) {
-                // Kiểm tra nếu đã hoàn thành chu kỳ đầy đủ (có s2 và s3)
-                boolean nearComplete = nearStateSequence.contains("s2") && nearStateSequence.contains("s3");
-                if (nearComplete && !nearIncorrectPosture) {
-                    correctCount++;
-                    repCompleted = true;
-                    message = "CORRECT";
-                } else if (nearIncorrectPosture) {
-                    incorrectCount++;
-                    message = "INCORRECT";
-                }
-                nearStateSequence.clear();
-                nearIncorrectPosture = false;
-            }
-            else if ("s2".equals(nearCurrState) || "s3".equals(nearCurrState)) { //đang trong quá trình thực hiện
-                // Feedback động tác
-                if (backCheck > thresholds.getBackNormal()) {
-                    displayText[0] = true;
-                    nearIncorrectPosture = true;
-                    feedbackList.add("HIPS TOO HIGH");
-                }
-            }
-            
-            // Kiểm tra chân far
-            if ("s1".equals(farCurrState)) {
-                // Kiểm tra nếu đã hoàn thành chu kỳ đầy đủ (có s2 và s3)
-                boolean farComplete = farStateSequence.contains("s2") && farStateSequence.contains("s3");
-                if (farComplete && !farIncorrectPosture) {
-                    correctCount++;
-                    repCompleted = true;
-                    message = "CORRECT";
-                } else if (farIncorrectPosture && !repCompleted) {
-                    incorrectCount++;
-                    message = "INCORRECT";
-                }
-                farStateSequence.clear();
-                farIncorrectPosture = false;
-            }
-            else if ("s2".equals(farCurrState) || "s3".equals(farCurrState)) { //đang trong quá trình thực hiện
-                // Feedback động tác
-                if (backCheck > thresholds.getBackNormal()) {
-                    displayText[0] = true;
-                    farIncorrectPosture = true;
-                    feedbackList.add("HIPS TOO HIGH");
-                }
-            }
-             */
 
             // Inactivity logic - kiểm tra nếu cả hai chân đều không thay đổi
             boolean bothStatesUnchanged = (nearCurrState != null && nearCurrState.equals(prevState)) && 
@@ -297,10 +247,10 @@ public class HighKneeAnalyzer implements ExerciseAnalyzerInterface {
             ExerciseFeedback feedback = new ExerciseFeedback(
                     correctCount, incorrectCount, message, cameraWarning, offsetAngle, new ArrayList<>(feedbackList)
             );
-
             // Tạo state string kết hợp cho cả hai chân
-            String combinedState = "Near:" + (nearCurrState != null ? nearCurrState : "null") +
-                                 " Far:" + (farCurrState != null ? farCurrState : "null");
+            String combinedState = "Near:" + (nearCurrState != null ? nearCurrState : "null") + " " + nearHipAngle +
+                                 " Far:" + (farCurrState != null ? farCurrState : "null") + " " + farHipAngle +
+                                 " " + thighSeparationAngle;
             System.out.println(combinedState);
             feedback.setCurrentState(combinedState);
 
@@ -316,7 +266,7 @@ public class HighKneeAnalyzer implements ExerciseAnalyzerInterface {
 
     @Override
     public String getExerciseType() {
-        return "highknee";
+        return "planklegup";
     }
 
     @Override
@@ -328,19 +278,19 @@ public class HighKneeAnalyzer implements ExerciseAnalyzerInterface {
     public Map<String, Object> getThresholds(String level) {
         Map<String, Object> result = new HashMap<>();
         if ("pro".equals(level)) {
-            HighKneeThresholds proThresholds = HighKneeThresholds.defaultPro();
-            result.put("kneeThreshold", proThresholds.getKneeThreshold());
-            result.put("hipNormal", proThresholds.getHipNormal());
-            result.put("hipTrans", proThresholds.getHipTrans());
-            result.put("hipPass", proThresholds.getHipPass());
+            PlankLegUpThresholds proThresholds = PlankLegUpThresholds.defaultPro();
+            result.put("backNormal", proThresholds.getBackNormal());
+            result.put("kneeNormal", proThresholds.getKneeNormal());
+            result.put("hipThreshold", proThresholds.getHipThreshold());
+            result.put("thighSeparationThreshold", proThresholds.getThighSeparationThreshold());
             result.put("offsetThresh", proThresholds.getOffsetThresh());
             result.put("inactiveThresh", proThresholds.getInactiveThresh());
             result.put("cntFrameThresh", proThresholds.getCntFrameThresh());
         } else {
-            result.put("kneeThreshold", thresholds.getKneeThreshold());
-            result.put("hipNormal", thresholds.getHipNormal());
-            result.put("hipTrans", thresholds.getHipTrans());
-            result.put("hipPass", thresholds.getHipPass());
+            result.put("backNormal", thresholds.getBackNormal());
+            result.put("kneeNormal", thresholds.getKneeNormal());
+            result.put("hipThreshold", thresholds.getHipThreshold());
+            result.put("thighSeparationThreshold", thresholds.getThighSeparationThreshold());
             result.put("offsetThresh", thresholds.getOffsetThresh());
             result.put("inactiveThresh", thresholds.getInactiveThresh());
             result.put("cntFrameThresh", thresholds.getCntFrameThresh());
@@ -350,17 +300,17 @@ public class HighKneeAnalyzer implements ExerciseAnalyzerInterface {
 
     @Override
     public void updateThresholds(Map<String, Object> thresholds) {
-        if (thresholds.containsKey("kneeThreshold")) {
-            this.thresholds.setKneeThreshold((Integer) thresholds.get("kneeThreshold"));
+        if (thresholds.containsKey("backNormal")) {
+            this.thresholds.setBackNormal((Integer) thresholds.get("backNormal"));
         }
-        if (thresholds.containsKey("hipNormal")) {
-            this.thresholds.setHipNormal((Integer) thresholds.get("hipNormal"));
+        if (thresholds.containsKey("kneeNormal")) {
+            this.thresholds.setKneeNormal((Integer) thresholds.get("kneeNormal"));
         }
-        if (thresholds.containsKey("hipTrans")) {
-            this.thresholds.setHipTrans((int[]) thresholds.get("hipTrans"));
+        if (thresholds.containsKey("kneeTrans")) {
+            this.thresholds.setHipThreshold((Integer) thresholds.get("hipThreshold"));
         }
-        if (thresholds.containsKey("hipPass")) {
-            this.thresholds.setHipPass((Integer) thresholds.get("hipPass"));
+        if (thresholds.containsKey("kneePass")) {
+            this.thresholds.setThighSeparationThreshold((Integer) thresholds.get("thighSeparationThreshold"));
         }
         if (thresholds.containsKey("offsetThresh")) {
             this.thresholds.setOffsetThresh((Integer) thresholds.get("offsetThresh"));
@@ -468,15 +418,14 @@ public class HighKneeAnalyzer implements ExerciseAnalyzerInterface {
         return (int) Math.toDegrees(theta);
     }
 
-    private String getState(int hipAngle, int positionCheck) {
-        if (hipAngle > thresholds.getHipNormal() &&
-            positionCheck < 30) {
-            return "s1";
-        } else if ((hipAngle <= thresholds.getHipTrans()[0] && hipAngle >= thresholds.getHipTrans()[1]) &&
-                    positionCheck < 30) {
+    private String getState(int positionCheck, int hipAngle, int thighSeparationAngle) {
+        if (positionCheck > 60 &&
+            hipAngle < thresholds.getHipThreshold() &&
+            thighSeparationAngle < thresholds.getThighSeparationThreshold()) {
             return "s2";
-        } else if (hipAngle <= thresholds.getHipPass() &&
-                positionCheck < 30) {
+        } else if (positionCheck > 60 &&
+                    hipAngle > thresholds.getHipThreshold() &&
+                    thighSeparationAngle > thresholds.getThighSeparationThreshold()) {
             return "s3";
         }
         return null;
@@ -485,8 +434,7 @@ public class HighKneeAnalyzer implements ExerciseAnalyzerInterface {
     private void updateNearStateSequence(String state) {
         if (state == null) return;
         if ("s2".equals(state)) {
-            if ((!nearStateSequence.contains("s3") && nearStateSequence.stream().filter(s -> s.equals("s2")).count() == 0) ||
-                    (nearStateSequence.contains("s3") && nearStateSequence.stream().filter(s -> s.equals("s2")).count() == 1)) {
+            if (!nearStateSequence.contains(state) && !nearStateSequence.contains("s3")) {
                 nearStateSequence.add(state);
             }
         } else if ("s3".equals(state)) {
@@ -499,8 +447,7 @@ public class HighKneeAnalyzer implements ExerciseAnalyzerInterface {
     private void updateFarStateSequence(String state) {
         if (state == null) return;
         if ("s2".equals(state)) {
-            if ((!farStateSequence.contains("s3") && farStateSequence.stream().filter(s -> s.equals("s2")).count() == 0) ||
-                    (farStateSequence.contains("s3") && farStateSequence.stream().filter(s -> s.equals("s2")).count() == 1)) {
+            if (!farStateSequence.contains(state) && !farStateSequence.contains("s3")) {
                 farStateSequence.add(state);
             }
         } else if ("s3".equals(state)) {
@@ -510,77 +457,75 @@ public class HighKneeAnalyzer implements ExerciseAnalyzerInterface {
         }
     }
 
-    // Inner class for HighKneeThresholds
-    public static class HighKneeThresholds {
-        private int kneeThreshold;
-        private int hipNormal;
-        private int[] hipTrans;
-        private int hipPass;
+    // Inner class for PlankLegUpThresholds
+    public static class PlankLegUpThresholds {
+        private int backNormal;
+        private int kneeNormal;
+        private int hipThreshold;
+        private int thighSeparationThreshold;
         private int offsetThresh;
         private double inactiveThresh;
         private int cntFrameThresh;
 
-        public HighKneeThresholds() {}
+        public PlankLegUpThresholds() {}
 
-        public HighKneeThresholds(int kneeThreshold, int hipNormal, int[] hipTrans,
-                                int hipPass,
+        public PlankLegUpThresholds(int backNormal, int kneeNormal, int hipThreshold,
+                                int thighSeparationThreshold,
                                 int offsetThresh, double inactiveThresh, int cntFrameThresh) {
-            this.kneeThreshold = kneeThreshold;
-            this.hipNormal = hipNormal;
-            this.hipTrans = hipTrans;
-            this.hipPass = hipPass;
+            this.backNormal = backNormal;
+            this.kneeNormal = kneeNormal;
+            this.hipThreshold = hipThreshold;
+            this.thighSeparationThreshold = thighSeparationThreshold;
             this.offsetThresh = offsetThresh;
             this.inactiveThresh = inactiveThresh;
             this.cntFrameThresh = cntFrameThresh;
         }
 
-        public static HighKneeThresholds defaultBeginner() {
-            return new HighKneeThresholds(
-                    80, 160, new int[]{155, 105}, 100,
+        public static PlankLegUpThresholds defaultBeginner() {
+            return new PlankLegUpThresholds(
+                    95, 150, 165, 25,
                     45, 15.0, 50
             );
         }
 
-        public static HighKneeThresholds defaultPro() {
-            return new HighKneeThresholds(
-                    90, 160, new int[]{155, 95}, 90,
+        public static PlankLegUpThresholds defaultPro() {
+            return new PlankLegUpThresholds(
+                    85, 150, 170, 30,
                     45, 15.0, 50
             );
         }
 
         // Getters and Setters
-
-
-        public int getKneeThreshold() {
-            return kneeThreshold;
+        public int getBackNormal() {
+            return backNormal;
         }
 
-        public void setKneeThreshold(int kneeThreshold) {
-            this.kneeThreshold = kneeThreshold;
+        public void setBackNormal(int backNormal) {
+            this.backNormal = backNormal;
         }
 
-        public int getHipNormal() {
-            return hipNormal;
+        public int getKneeNormal() {
+            return kneeNormal;
         }
 
-        public void setHipNormal(int hipNormal) {
-            this.hipNormal = hipNormal;
+        public void setKneeNormal(int kneeNormal) {
+            this.kneeNormal = kneeNormal;
         }
 
-        public int[] getHipTrans() {
-            return hipTrans;
+        public int getHipThreshold() {
+            return hipThreshold;
         }
 
-        public void setHipTrans(int[] hipTrans) {
-            this.hipTrans = hipTrans;
+        public void setHipThreshold(int hipThreshold) {
+            this.hipThreshold = hipThreshold;
         }
 
-        public int getHipPass() {
-            return hipPass;
+        public int getThighSeparationThreshold() {
+            return thighSeparationThreshold;
         }
 
-        public void setHipPass(int hipPass) {
-            this.hipPass = hipPass;
+        public void setThighSeparationThreshold(int thighSeparationThreshold) {
+            this.thighSeparationThreshold = thighSeparationThreshold;
         }
 
         public int getOffsetThresh() {

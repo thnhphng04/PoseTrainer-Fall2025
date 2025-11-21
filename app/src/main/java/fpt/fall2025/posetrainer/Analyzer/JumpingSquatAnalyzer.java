@@ -10,9 +10,9 @@ import java.util.Map;
  * Squat Analyzer - Phân tích bài tập Squat
  * Implement ExerciseAnalyzerInterface để có thể sử dụng chung CameraFragment
  */
-public class SquatAnalyzer implements ExerciseAnalyzerInterface {
-    
-    private SquatThresholds thresholds;
+public class JumpingSquatAnalyzer implements ExerciseAnalyzerInterface {
+
+    private JumpingSquatThresholds thresholds;
     private List<String> stateSequence;
     private int correctCount;
     private int incorrectCount;
@@ -29,9 +29,11 @@ public class SquatAnalyzer implements ExerciseAnalyzerInterface {
     private boolean cameraWarning;
     private int offsetAngle;
     private List<String> feedbackList;
-    
-    public SquatAnalyzer() {
-        this.thresholds = SquatThresholds.defaultBeginner();
+
+    float footYs2 = 0; //sử dụng cho xác định nhảy
+
+    public JumpingSquatAnalyzer() {
+        this.thresholds = JumpingSquatThresholds.defaultBeginner();
         this.stateSequence = new ArrayList<>();
         this.correctCount = 0;
         this.incorrectCount = 0;
@@ -49,8 +51,8 @@ public class SquatAnalyzer implements ExerciseAnalyzerInterface {
         this.offsetAngle = 0;
         this.feedbackList = new ArrayList<>();
     }
-    
-    public SquatAnalyzer(SquatThresholds thresholds) {
+
+    public JumpingSquatAnalyzer(JumpingSquatThresholds thresholds) {
         this();
         this.thresholds = thresholds;
     }
@@ -136,11 +138,15 @@ public class SquatAnalyzer implements ExerciseAnalyzerInterface {
             Map<String, Float> hip = points.get(3);
             Map<String, Float> knee = points.get(4);
             Map<String, Float> ankle = points.get(5);
+            Map<String, Float> foot = points.get(6);
             
             // Tính các góc
             int hipAngle = calculateAngleWithUpVertical(hip, shldr);
             int kneeAngle = calculateAngleWithUpVertical(knee, hip);
             int ankleAngle = calculateAngleWithUpVertical(ankle, knee);
+
+            float footY = foot.get("y");
+            float kneeY = knee.get("y");
             
             int s1check = calculateAngleWithUpVertical(ankle, shldr);
             
@@ -151,25 +157,28 @@ public class SquatAnalyzer implements ExerciseAnalyzerInterface {
             // Đếm squat đúng/sai
             String message = "";
             if ("s1".equals(currState)) {
-                if (stateSequence.size() == 3 && !incorrectPosture) {
-                    correctCount++;
-                    message = "CORRECT";
-                } else if (stateSequence.contains("s2") && stateSequence.size() == 1) {
+                Boolean complete = stateSequence.containsAll(Arrays.asList("s2", "s3"));
+                if (complete && !incorrectPosture) {
+                    if ((footY - footYs2) < (kneeY - footY) / 10) {
+                        correctCount++;
+                        message = "CORRECT";
+                        stateSequence.clear();
+                        incorrectPosture = false;
+                    }
+                } else if (complete && incorrectPosture) {
                     incorrectCount++;
                     message = "INCORRECT";
-                } else if (incorrectPosture) {
-                    incorrectCount++;
-                    message = "INCORRECT";
+                    stateSequence.clear();
+                    incorrectPosture = false;
                 }
-                stateSequence.clear();
-                incorrectPosture = false;
-            } else if("s2".equals(currState) || "s3".equals(currState)){
+
+            } else if("s2".equals(currState) && stateSequence.stream().filter(s -> s.equals("s2")).count() == 1 || "s3".equals(currState)){
                 // Feedback động tác
                 if (hipAngle > thresholds.getHipMax()) {
                     displayText[0] = true;
                     feedbackList.add("BEND BACKWARDS");
                 }
-                if (hipAngle < thresholds.getHipMin() && stateSequence.stream().filter(s -> s.equals("s2")).count() == 1) {
+                if (hipAngle < thresholds.getHipMin()) {
                     displayText[1] = true;
                     feedbackList.add("BEND FORWARD");
                 }
@@ -184,10 +193,14 @@ public class SquatAnalyzer implements ExerciseAnalyzerInterface {
                     feedbackList.add("KNEE OVER TOE");
                 }
                 if (kneeAngle >= (thresholds.getKneeMin() + 1) && kneeAngle < thresholds.getKneeMax() && 
-                    stateSequence.stream().filter(s -> s.equals("s2")).count() == 1 && !stateSequence.contains("s3")) {
+                    stateSequence.stream().filter(s -> s.equals("s2")).count() == 1) {
                     lowerHips = true;
                     feedbackList.add("LOWER YOUR HIPS");
                 }
+            }
+
+            if ("s2".equals(currState) && stateSequence.stream().filter(s -> s.equals("s2")).count() == 2){
+                footYs2 = foot.get("y");
             }
             
             // Inactivity logic
@@ -221,8 +234,11 @@ public class SquatAnalyzer implements ExerciseAnalyzerInterface {
             ExerciseFeedback feedback = new ExerciseFeedback(
                 correctCount, incorrectCount, message, cameraWarning, offsetAngle, new ArrayList<>(feedbackList)
             );
-
-            feedback.setCurrentState(currState);
+            feedback.setHipAngle(hipAngle);
+            feedback.setKneeAngle(kneeAngle);
+            feedback.setAnkleAngle(ankleAngle);
+            feedback.setLowerHips(lowerHips);
+            feedback.setCurrentState(currState + " " + footYs2 + " " + ((footY - footYs2) < (kneeY - footY) / 10));
             
             return feedback;
         }
@@ -235,7 +251,7 @@ public class SquatAnalyzer implements ExerciseAnalyzerInterface {
     
     @Override
     public String getExerciseType() {
-        return "squat";
+        return "jumpingsquat";
     }
     
     @Override
@@ -247,7 +263,7 @@ public class SquatAnalyzer implements ExerciseAnalyzerInterface {
     public Map<String, Object> getThresholds(String level) {
         Map<String, Object> result = new HashMap<>();
         if ("pro".equals(level)) {
-            SquatThresholds proThresholds = SquatThresholds.defaultPro();
+            JumpingSquatThresholds proThresholds = JumpingSquatThresholds.defaultPro();
             result.put("kneeNormal", proThresholds.getKneeNormal());
             result.put("kneeTrans", proThresholds.getKneeTrans());
             result.put("kneePass", proThresholds.getKneePass());
@@ -363,8 +379,8 @@ public class SquatAnalyzer implements ExerciseAnalyzerInterface {
         }
     }
     
-    // Inner class for SquatThresholds
-    public static class SquatThresholds {
+    // Inner class for JumpingSquatThresholds
+    public static class JumpingSquatThresholds {
         private int[] kneeNormal;
         private int[] kneeTrans;
         private int[] kneePass;
@@ -377,9 +393,9 @@ public class SquatAnalyzer implements ExerciseAnalyzerInterface {
         private double inactiveThresh;
         private int cntFrameThresh;
         
-        public SquatThresholds() {}
+        public JumpingSquatThresholds() {}
         
-        public SquatThresholds(int[] kneeNormal, int[] kneeTrans, int[] kneePass, 
+        public JumpingSquatThresholds(int[] kneeNormal, int[] kneeTrans, int[] kneePass,
                               int hipMin, int hipMax, int ankleMax, int kneeMax, int kneeMin,
                               int offsetThresh, double inactiveThresh, int cntFrameThresh) {
             this.kneeNormal = kneeNormal;
@@ -395,17 +411,17 @@ public class SquatAnalyzer implements ExerciseAnalyzerInterface {
             this.cntFrameThresh = cntFrameThresh;
         }
         
-        public static SquatThresholds defaultBeginner() {
-            return new SquatThresholds(
+        public static JumpingSquatThresholds defaultBeginner() {
+            return new JumpingSquatThresholds(
                 new int[]{0, 32}, new int[]{35, 65}, new int[]{70, 95},
-                10, 50, 45, 95, 50, 45, 15.0, 50
+                10, 50, 50, 95, 50, 45, 15.0, 50
             );
         }
         
-        public static SquatThresholds defaultPro() {
-            return new SquatThresholds(
+        public static JumpingSquatThresholds defaultPro() {
+            return new JumpingSquatThresholds(
                 new int[]{0, 32}, new int[]{35, 65}, new int[]{80, 95},
-                15, 50, 30, 95, 50, 45, 15.0, 50
+                15, 50, 35, 95, 50, 45, 15.0, 50
             );
         }
         
