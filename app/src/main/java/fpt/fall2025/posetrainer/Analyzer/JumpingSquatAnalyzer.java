@@ -234,9 +234,7 @@ public class JumpingSquatAnalyzer implements ExerciseAnalyzerInterface {
             ExerciseFeedback feedback = new ExerciseFeedback(
                 correctCount, incorrectCount, message, cameraWarning, offsetAngle, new ArrayList<>(feedbackList)
             );
-            feedback.setHipAngle(hipAngle);
-            feedback.setKneeAngle(kneeAngle);
-            feedback.setAnkleAngle(ankleAngle);
+
             feedback.setLowerHips(lowerHips);
             feedback.setCurrentState(currState + " " + footYs2 + " " + ((footY - footYs2) < (kneeY - footY) / 10));
             

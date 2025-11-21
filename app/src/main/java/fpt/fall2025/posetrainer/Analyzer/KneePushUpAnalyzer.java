@@ -219,10 +219,7 @@ public class KneePushUpAnalyzer implements ExerciseAnalyzerInterface {
             ExerciseFeedback feedback = new ExerciseFeedback(
                     correctCount, incorrectCount, message, cameraWarning, offsetAngle, new ArrayList<>(feedbackList)
             );
-            feedback.setShoulderAngle(shldrAngle);
-            feedback.setEarElbowHipAngle(earElbowHipAngle);
-            feedback.setHipAngle(hipAngle);
-            feedback.setKneeAngle(kneeAngle);
+
             feedback.setLowerHips(lowerHips);
             feedback.setCurrentState(currState + " " + earElbowHipAngle);
 
