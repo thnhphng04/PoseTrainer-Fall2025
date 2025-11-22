@@ -17,8 +17,10 @@ public class Community {
     public String uid;              // UID người đăng
     public Author author;           // Thông tin người đăng tại thời điểm đăng
     public String content;          // Nội dung bài viết
-    public String imageUrl;         // URL ảnh bài viết (có thể null)
-    public String imagePath;        // Đường dẫn trong Storage
+    public String imageUrl;         // URL ảnh bài viết (backward compatibility - ảnh đơn)
+    public String imagePath;        // Đường dẫn trong Storage (backward compatibility)
+    public List<String> imageUrls; // Danh sách URL ảnh (hỗ trợ nhiều ảnh)
+    public List<String> imagePaths; // Danh sách đường dẫn trong Storage
     public long likesCount;         // Tổng lượt thích
     public long commentsCount;      // Tổng lượt bình luận
     public Timestamp createdAt;     // Ngày tạo
@@ -26,7 +28,12 @@ public class Community {
     public List<String> likedBy;    // Danh sách UID người đã like
 
     // ====== Constructor bắt buộc Firestore cần ======
-    public Community() {}
+    public Community() {
+        // Khởi tạo các list để tránh NullPointerException
+        this.imageUrls = new ArrayList<>();
+        this.imagePaths = new ArrayList<>();
+        this.likedBy = new ArrayList<>();
+    }
 
     public Community(String id, String uid, Author author, String content,
                      String imageUrl, String imagePath,
@@ -38,11 +45,27 @@ public class Community {
         this.content = content;
         this.imageUrl = imageUrl;
         this.imagePath = imagePath;
+        this.imageUrls = new ArrayList<>();
+        this.imagePaths = new ArrayList<>();
         this.likesCount = likesCount;
         this.commentsCount = commentsCount;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.likedBy = likedBy != null ? likedBy : new ArrayList<>();
+    }
+    
+    // Helper method để lấy danh sách ảnh (ưu tiên imageUrls, fallback về imageUrl)
+    @Exclude
+    public List<String> getImageUrls() {
+        if (imageUrls != null && !imageUrls.isEmpty()) {
+            return imageUrls;
+        }
+        // Backward compatibility: nếu có imageUrl đơn thì thêm vào list
+        List<String> urls = new ArrayList<>();
+        if (imageUrl != null && !imageUrl.isEmpty()) {
+            urls.add(imageUrl);
+        }
+        return urls;
     }
 
     // ====== Các field chỉ dùng trong client, không lưu Firestore ======

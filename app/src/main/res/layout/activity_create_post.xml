@@ -98,22 +98,21 @@
                 android:minHeight="120dp"
                 android:padding="8dp" />
 
-            <!-- Ảnh xem trước -->
-            <ImageView
-                android:id="@+id/ivPreview"
+            <!-- RecyclerView hiển thị nhiều ảnh -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvSelectedImages"
                 android:layout_width="match_parent"
-                android:layout_height="220dp"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:scaleType="centerCrop"
-                android:visibility="gone"
-                android:background="@android:color/darker_gray" />
+                android:orientation="horizontal"
+                android:visibility="gone" />
 
             <!-- Nút chọn ảnh -->
             <Button
                 android:id="@+id/btnPickImage"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Thêm ảnh"
+                android:text="Thêm ảnh (tối đa 10)"
                 android:layout_marginTop="12dp" />
 
             <!-- Thanh tiến trình -->

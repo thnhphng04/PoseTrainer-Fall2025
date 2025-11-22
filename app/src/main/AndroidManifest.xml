@@ -54,9 +54,7 @@
         <activity
             android:name=".Activity.ForgotPasswordActivity"
             android:exported="false"/>
-        <activity
-            android:name=".Activity.OnboardingQuestionnaireActivity"
-            android:exported="false"/>
+
         <activity
             android:name=".Activity.EditGoalsActivity"
             android:exported="false"/>
@@ -71,6 +69,13 @@
             android:exported="false"/>
         <activity
             android:name=".Activity.PostDetailActivity"
+            android:exported="false"/>
+        <activity
+            android:name=".Activity.ImageGalleryActivity"
+            android:exported="false"
+            android:theme="@style/Theme.ImageGallery" />
+        <activity
+            android:name=".Activity.UserProfileActivity"
             android:exported="false"/>
         <activity
             android:name=".Activity.PlanPreviewActivity"
