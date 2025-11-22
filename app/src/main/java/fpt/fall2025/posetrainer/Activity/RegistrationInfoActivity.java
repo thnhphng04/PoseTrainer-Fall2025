@@ -45,6 +45,7 @@ public class RegistrationInfoActivity extends AppCompatActivity implements
 
     // Data storage
     private String birthday, gender, height, weight, dailyMinutes, weeklyGoal;
+    private String trainingStartTime, trainingEndTime;
     private String selectedExperienceLevel;
     private String currentBodyType;
     private String targetBodyType, targetWeight;
@@ -284,6 +285,8 @@ public class RegistrationInfoActivity extends AppCompatActivity implements
         profile.setDailyTrainingMinutes(Integer.parseInt(dailyMinutes));
         profile.setWeeklyGoal(Integer.parseInt(weeklyGoal));
         profile.setExperienceLevel(selectedExperienceLevel);
+        profile.setTrainingStartTime(trainingStartTime);
+        profile.setTrainingEndTime(trainingEndTime);
         profile.setGoals(goals);
         profile.setLastUpdatedAt(System.currentTimeMillis());
 
@@ -370,13 +373,15 @@ public class RegistrationInfoActivity extends AppCompatActivity implements
     // BasicInfoListener
     @Override
     public void onBasicInfoChanged(String birthday, String gender, String height, String weight,
-                                    String dailyMinutes, String weeklyGoal) {
+                                    String dailyMinutes, String weeklyGoal, String trainingStartTime, String trainingEndTime) {
         this.birthday = birthday;
         this.gender = gender;
         this.height = height;
         this.weight = weight;
         this.dailyMinutes = dailyMinutes;
         this.weeklyGoal = weeklyGoal;
+        this.trainingStartTime = trainingStartTime;
+        this.trainingEndTime = trainingEndTime;
 
         // Update body images in other fragments
         if (currentBodyFragment != null) {

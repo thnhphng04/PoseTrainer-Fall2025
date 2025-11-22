@@ -18,6 +18,8 @@ import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.datepicker.MaterialDatePicker;
 import com.google.android.material.datepicker.CalendarConstraints;
 import com.google.android.material.datepicker.DateValidatorPointBackward;
+import com.google.android.material.timepicker.MaterialTimePicker;
+import com.google.android.material.timepicker.TimeFormat;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
@@ -37,8 +39,9 @@ public class EditGoalsActivity extends AppCompatActivity {
 
     // ===== Views =====
     private TextInputLayout tilBirthday, tilGender, tilHeight, tilWeight,
-            tilDailyMinutes, tilWeeklyGoal, tilTargetWeight;
-    private TextInputEditText etBirthday, etHeight, etWeight, etDailyMinutes, etWeeklyGoal, etTargetWeight;
+            tilDailyMinutes, tilWeeklyGoal, tilTargetWeight, tilTrainingStartTime, tilTrainingEndTime;
+    private TextInputEditText etBirthday, etHeight, etWeight, etDailyMinutes, etWeeklyGoal, etTargetWeight,
+            etTrainingStartTime, etTrainingEndTime;
     private MaterialAutoCompleteTextView ddGender;
     private ProgressBar progress;
 
@@ -106,6 +109,7 @@ public class EditGoalsActivity extends AppCompatActivity {
         bindViews();
         setupDropdowns();
         setupBirthdayPicker();
+        setupTimePickers();
         setupCurrentGrid();
         setupTargetGrid();
         setupExperienceGrid();
@@ -126,6 +130,8 @@ public class EditGoalsActivity extends AppCompatActivity {
         tilDailyMinutes = findViewById(R.id.til_daily_minutes);
         tilWeeklyGoal   = findViewById(R.id.til_weekly_goal);
         tilTargetWeight = findViewById(R.id.til_target_weight);
+        tilTrainingStartTime = findViewById(R.id.til_training_start_time);
+        tilTrainingEndTime = findViewById(R.id.til_training_end_time);
 
         // Inputs
         etBirthday     = findViewById(R.id.et_birthday);
@@ -134,6 +140,8 @@ public class EditGoalsActivity extends AppCompatActivity {
         etDailyMinutes = findViewById(R.id.et_daily_minutes);
         etWeeklyGoal   = findViewById(R.id.et_weekly_goal);
         etTargetWeight = findViewById(R.id.et_target_weight);
+        etTrainingStartTime = findViewById(R.id.et_training_start_time);
+        etTrainingEndTime = findViewById(R.id.et_training_end_time);
 
         ddGender = findViewById(R.id.dd_gender);
 
@@ -286,6 +294,84 @@ public class EditGoalsActivity extends AppCompatActivity {
         });
     }
 
+    private void setupTimePickers() {
+        // Time picker cho thời gian bắt đầu
+        etTrainingStartTime.setOnClickListener(v -> {
+            Calendar calendar = Calendar.getInstance();
+            int hour = calendar.get(Calendar.HOUR_OF_DAY);
+            int minute = calendar.get(Calendar.MINUTE);
+
+            // Parse existing time if available
+            String existingTime = etTrainingStartTime.getText() != null ?
+                    etTrainingStartTime.getText().toString().trim() : null;
+            if (existingTime != null && !existingTime.isEmpty()) {
+                try {
+                    String[] parts = existingTime.split(":");
+                    if (parts.length == 2) {
+                        hour = Integer.parseInt(parts[0]);
+                        minute = Integer.parseInt(parts[1]);
+                    }
+                } catch (NumberFormatException e) {
+                    // Use current time
+                }
+            }
+
+            MaterialTimePicker timePicker = new MaterialTimePicker.Builder()
+                    .setTimeFormat(TimeFormat.CLOCK_24H)
+                    .setHour(hour)
+                    .setMinute(minute)
+                    .setTitleText("Chọn thời gian bắt đầu tập")
+                    .build();
+
+            timePicker.addOnPositiveButtonClickListener(view -> {
+                int selectedHour = timePicker.getHour();
+                int selectedMinute = timePicker.getMinute();
+                String time = String.format("%02d:%02d", selectedHour, selectedMinute);
+                etTrainingStartTime.setText(time);
+            });
+
+            timePicker.show(getSupportFragmentManager(), "TIME_PICKER_START");
+        });
+
+        // Time picker cho thời gian kết thúc
+        etTrainingEndTime.setOnClickListener(v -> {
+            Calendar calendar = Calendar.getInstance();
+            int hour = calendar.get(Calendar.HOUR_OF_DAY);
+            int minute = calendar.get(Calendar.MINUTE);
+
+            // Parse existing time if available
+            String existingTime = etTrainingEndTime.getText() != null ?
+                    etTrainingEndTime.getText().toString().trim() : null;
+            if (existingTime != null && !existingTime.isEmpty()) {
+                try {
+                    String[] parts = existingTime.split(":");
+                    if (parts.length == 2) {
+                        hour = Integer.parseInt(parts[0]);
+                        minute = Integer.parseInt(parts[1]);
+                    }
+                } catch (NumberFormatException e) {
+                    // Use current time
+                }
+            }
+
+            MaterialTimePicker timePicker = new MaterialTimePicker.Builder()
+                    .setTimeFormat(TimeFormat.CLOCK_24H)
+                    .setHour(hour)
+                    .setMinute(minute)
+                    .setTitleText("Chọn thời gian kết thúc tập")
+                    .build();
+
+            timePicker.addOnPositiveButtonClickListener(view -> {
+                int selectedHour = timePicker.getHour();
+                int selectedMinute = timePicker.getMinute();
+                String time = String.format("%02d:%02d", selectedHour, selectedMinute);
+                etTrainingEndTime.setText(time);
+            });
+
+            timePicker.show(getSupportFragmentManager(), "TIME_PICKER_END");
+        });
+    }
+
     private void setupCurrentGrid() {
         for (int i = 0; i < bodyCards.length; i++) {
             bodyCards[i].setTag(bodyTypes[i]);
@@ -404,6 +490,8 @@ public class EditGoalsActivity extends AppCompatActivity {
         setInt(etWeight, doc.getLong("weightKg"));
         setInt(etDailyMinutes, doc.getLong("dailyTrainingMinutes"));
         setInt(etWeeklyGoal, doc.getLong("weeklyGoal"));
+        etTrainingStartTime.setText(doc.getString("trainingStartTime"));
+        etTrainingEndTime.setText(doc.getString("trainingEndTime"));
         String exp = doc.getString("experienceLevel");
         if (exp != null) {
             for (int i = 0; i < experienceCards.length; i++) {
@@ -489,6 +577,10 @@ public class EditGoalsActivity extends AppCompatActivity {
         profile.setDailyTrainingMinutes(daily);
         profile.setWeeklyGoal(weekly);
         profile.setExperienceLevel(exp);
+        String trainingStartTime = txt(etTrainingStartTime);
+        String trainingEndTime = txt(etTrainingEndTime);
+        profile.setTrainingStartTime(trainingStartTime);
+        profile.setTrainingEndTime(trainingEndTime);
         profile.setGoals(goals);
         profile.setLastUpdatedAt(System.currentTimeMillis());
 
@@ -525,5 +617,7 @@ public class EditGoalsActivity extends AppCompatActivity {
         tilDailyMinutes.setError(null);
         tilWeeklyGoal.setError(null);
         tilTargetWeight.setError(null);
+        tilTrainingStartTime.setError(null);
+        tilTrainingEndTime.setError(null);
     }
 }

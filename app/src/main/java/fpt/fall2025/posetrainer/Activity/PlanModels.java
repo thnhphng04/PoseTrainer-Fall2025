@@ -98,6 +98,9 @@ public class PlanModels {
         public int sets;
         public int reps;
         public int restSec;
+        public String startTime;  // Thời gian bắt đầu bài tập (format: "HH:mm")
+        public String endTime;    // Thời gian kết thúc bài tập (format: "HH:mm")
+        public String reason;     // Lý do tại sao nên tập bài tập này (ngắn gọn, tiếng Việt)
         
         public static Item from(Map map) {
             if (map == null) {
@@ -131,6 +134,12 @@ public class PlanModels {
                 Object rest = map.get("restSec");
                 if (rest instanceof Number) {
                     it.restSec = ((Number) rest).intValue();
+                }
+                
+                Object reasonObj = map.get("reason");
+                if (reasonObj != null) {
+                    String reasonStr = String.valueOf(reasonObj);
+                    it.reason = "null".equals(reasonStr) ? null : reasonStr;
                 }
             } catch (Exception e) {
                 android.util.Log.e("PlanModels", "Error parsing Item", e);

@@ -11,6 +11,9 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestore;
 import fpt.fall2025.posetrainer.Activity.UserWorkoutDetailActivity;
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
 import fpt.fall2025.posetrainer.R;
@@ -23,6 +26,10 @@ public class UserWorkoutCardAdapter extends RecyclerView.Adapter<UserWorkoutCard
     private final ArrayList<UserWorkout> list;
     private Context context;
     private OnUserWorkoutDeletedListener onUserWorkoutDeletedListener;
+    private FirebaseFirestore db;
+    private String cachedTrainingStartTime;
+    private String cachedTrainingEndTime;
+    private boolean isProfileLoaded = false;
 
     public interface OnUserWorkoutDeletedListener {
         void onUserWorkoutDeleted();
@@ -30,6 +37,33 @@ public class UserWorkoutCardAdapter extends RecyclerView.Adapter<UserWorkoutCard
 
     public UserWorkoutCardAdapter(ArrayList<UserWorkout> list) {
         this.list = list;
+        this.db = FirebaseFirestore.getInstance();
+        // ✅ Load profile ngay khi adapter được tạo để cache sẵn
+        loadProfileForCache();
+    }
+
+    /**
+     * Load profile một lần để cache thời gian tập luyện
+     */
+    private void loadProfileForCache() {
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null || isProfileLoaded) {
+            return;
+        }
+
+        String uid = currentUser.getUid();
+        db.collection("profiles").document(uid)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        cachedTrainingStartTime = documentSnapshot.getString("trainingStartTime");
+                        cachedTrainingEndTime = documentSnapshot.getString("trainingEndTime");
+                        isProfileLoaded = true;
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    // Lỗi khi load profile, bỏ qua
+                });
     }
 
     public void setOnUserWorkoutDeletedListener(OnUserWorkoutDeletedListener listener) {
@@ -77,6 +111,17 @@ public class UserWorkoutCardAdapter extends RecyclerView.Adapter<UserWorkoutCard
         
         // Set creation date
         holder.binding.durationTxt.setText("Tạo " + formatRelativeDateVietnamese(userWorkout.getCreatedAt()));
+
+        // ✅ Hiển thị thời gian tập luyện cho AI workouts
+        if ("ai".equals(source)) {
+            // Load profile để lấy thời gian tập luyện (chỉ load một lần và cache)
+            loadProfileAndShowTrainingTime(holder, userWorkout);
+        } else {
+            // Ẩn training time layout cho non-AI workouts
+            if (holder.binding.trainingTimeLayout != null) {
+                holder.binding.trainingTimeLayout.setVisibility(android.view.View.GONE);
+            }
+        }
 
         // Set click listener on the root view to start workout
         holder.binding.getRoot().setOnClickListener(v -> {
@@ -208,6 +253,73 @@ public class UserWorkoutCardAdapter extends RecyclerView.Adapter<UserWorkoutCard
             case "custom":
             default:
                 return "Tùy chỉnh";
+        }
+    }
+
+    /**
+     * Load profile và hiển thị thời gian tập luyện cho AI workout
+     */
+    private void loadProfileAndShowTrainingTime(Viewholder holder, UserWorkout workout) {
+        // Nếu đã load profile rồi, sử dụng cache
+        if (isProfileLoaded && cachedTrainingStartTime != null && cachedTrainingEndTime != null) {
+            showTrainingTime(holder, cachedTrainingStartTime, cachedTrainingEndTime);
+            return;
+        }
+
+        // Load profile từ Firestore
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            if (holder.binding.trainingTimeLayout != null) {
+                holder.binding.trainingTimeLayout.setVisibility(android.view.View.GONE);
+            }
+            return;
+        }
+
+        String uid = currentUser.getUid();
+        db.collection("profiles").document(uid)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        String trainingStartTime = documentSnapshot.getString("trainingStartTime");
+                        String trainingEndTime = documentSnapshot.getString("trainingEndTime");
+                        
+                        // Cache lại
+                        cachedTrainingStartTime = trainingStartTime;
+                        cachedTrainingEndTime = trainingEndTime;
+                        isProfileLoaded = true;
+                        
+                        // Hiển thị thời gian
+                        showTrainingTime(holder, trainingStartTime, trainingEndTime);
+                    } else {
+                        // Không có profile, ẩn training time
+                        if (holder.binding.trainingTimeLayout != null) {
+                            holder.binding.trainingTimeLayout.setVisibility(android.view.View.GONE);
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    // Lỗi khi load profile, ẩn training time
+                    if (holder.binding.trainingTimeLayout != null) {
+                        holder.binding.trainingTimeLayout.setVisibility(android.view.View.GONE);
+                    }
+                });
+    }
+
+    /**
+     * Hiển thị thời gian tập luyện trong holder
+     */
+    private void showTrainingTime(Viewholder holder, String trainingStartTime, String trainingEndTime) {
+        if (holder.binding.trainingTimeLayout == null || holder.binding.trainingTimeTxt == null) {
+            return;
+        }
+
+        if (trainingStartTime != null && !trainingStartTime.isEmpty() && 
+            trainingEndTime != null && !trainingEndTime.isEmpty()) {
+            String timeText = trainingStartTime + " - " + trainingEndTime;
+            holder.binding.trainingTimeTxt.setText(timeText);
+            holder.binding.trainingTimeLayout.setVisibility(android.view.View.VISIBLE);
+        } else {
+            holder.binding.trainingTimeLayout.setVisibility(android.view.View.GONE);
         }
     }
 

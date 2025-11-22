@@ -21,12 +21,13 @@ public class PlanExerciseAdapter extends RecyclerView.Adapter<PlanExerciseAdapte
     }
 
     static class VH extends RecyclerView.ViewHolder {
-        TextView tvName, tvMeta;
+        TextView tvName, tvMeta, tvReason;
 
         VH(View v) {
             super(v);
             tvName = v.findViewById(R.id.tvName);
             tvMeta = v.findViewById(R.id.tvMeta);
+            tvReason = v.findViewById(R.id.tvReason);
         }
     }
 
@@ -61,7 +62,24 @@ public class PlanExerciseAdapter extends RecyclerView.Adapter<PlanExerciseAdapte
         // Set exercise metadata
         if (holder.tvMeta != null) {
             String meta = String.format("%d reps × %d sets • %ds nghỉ", item.reps, item.sets, item.restSec);
+            
+            // Thêm thời gian tập nếu có
+            if (item.startTime != null && !item.startTime.isEmpty() && 
+                item.endTime != null && !item.endTime.isEmpty()) {
+                meta += String.format(" • %s - %s", item.startTime, item.endTime);
+            }
+            
             holder.tvMeta.setText(meta);
+        }
+
+        // ✅ Hiển thị lý do tập bài tập này
+        if (holder.tvReason != null) {
+            if (item.reason != null && !item.reason.isEmpty() && !"null".equals(item.reason)) {
+                holder.tvReason.setText(item.reason);
+                holder.tvReason.setVisibility(android.view.View.VISIBLE);
+            } else {
+                holder.tvReason.setVisibility(android.view.View.GONE);
+            }
         }
     }
 

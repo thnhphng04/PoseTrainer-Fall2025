@@ -14,6 +14,8 @@ import androidx.fragment.app.Fragment;
 import com.google.android.material.datepicker.CalendarConstraints;
 import com.google.android.material.datepicker.DateValidatorPointBackward;
 import com.google.android.material.datepicker.MaterialDatePicker;
+import com.google.android.material.timepicker.MaterialTimePicker;
+import com.google.android.material.timepicker.TimeFormat;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
@@ -25,8 +27,9 @@ import fpt.fall2025.posetrainer.R;
 public class BasicInfoFragment extends Fragment {
 
     private TextInputLayout tilBirthday, tilGender, tilHeight, tilWeight,
-            tilDailyMinutes, tilWeeklyGoal;
-    private TextInputEditText etBirthday, etHeight, etWeight, etDailyMinutes, etWeeklyGoal;
+            tilDailyMinutes, tilWeeklyGoal, tilTrainingStartTime, tilTrainingEndTime;
+    private TextInputEditText etBirthday, etHeight, etWeight, etDailyMinutes, etWeeklyGoal,
+            etTrainingStartTime, etTrainingEndTime;
     private MaterialAutoCompleteTextView ddGender;
 
     private final String[] genderLabels = {"Nam", "Nữ"};
@@ -34,7 +37,7 @@ public class BasicInfoFragment extends Fragment {
 
     public interface BasicInfoListener {
         void onBasicInfoChanged(String birthday, String gender, String height, String weight,
-                                String dailyMinutes, String weeklyGoal);
+                                String dailyMinutes, String weeklyGoal, String trainingStartTime, String trainingEndTime);
         String getGender();
         void setGender(String gender);
     }
@@ -56,6 +59,7 @@ public class BasicInfoFragment extends Fragment {
         bindViews(view);
         setupDropdowns();
         setupBirthdayPicker();
+        setupTimePickers();
         setupTextWatchers();
     }
 
@@ -66,12 +70,16 @@ public class BasicInfoFragment extends Fragment {
         tilWeight = view.findViewById(R.id.til_weight);
         tilDailyMinutes = view.findViewById(R.id.til_daily_minutes);
         tilWeeklyGoal = view.findViewById(R.id.til_weekly_goal);
+        tilTrainingStartTime = view.findViewById(R.id.til_training_start_time);
+        tilTrainingEndTime = view.findViewById(R.id.til_training_end_time);
 
         etBirthday = view.findViewById(R.id.et_birthday);
         etHeight = view.findViewById(R.id.et_height);
         etWeight = view.findViewById(R.id.et_weight);
         etDailyMinutes = view.findViewById(R.id.et_daily_minutes);
         etWeeklyGoal = view.findViewById(R.id.et_weekly_goal);
+        etTrainingStartTime = view.findViewById(R.id.et_training_start_time);
+        etTrainingEndTime = view.findViewById(R.id.et_training_end_time);
         ddGender = view.findViewById(R.id.dd_gender);
     }
 
@@ -173,6 +181,86 @@ public class BasicInfoFragment extends Fragment {
         });
     }
 
+    private void setupTimePickers() {
+        // Time picker cho thời gian bắt đầu
+        etTrainingStartTime.setOnClickListener(v -> {
+            Calendar calendar = Calendar.getInstance();
+            int hour = calendar.get(Calendar.HOUR_OF_DAY);
+            int minute = calendar.get(Calendar.MINUTE);
+
+            // Parse existing time if available
+            String existingTime = etTrainingStartTime.getText() != null ?
+                    etTrainingStartTime.getText().toString().trim() : null;
+            if (existingTime != null && !existingTime.isEmpty()) {
+                try {
+                    String[] parts = existingTime.split(":");
+                    if (parts.length == 2) {
+                        hour = Integer.parseInt(parts[0]);
+                        minute = Integer.parseInt(parts[1]);
+                    }
+                } catch (NumberFormatException e) {
+                    // Use current time
+                }
+            }
+
+            MaterialTimePicker timePicker = new MaterialTimePicker.Builder()
+                    .setTimeFormat(TimeFormat.CLOCK_24H)
+                    .setHour(hour)
+                    .setMinute(minute)
+                    .setTitleText("Chọn thời gian bắt đầu tập")
+                    .build();
+
+            timePicker.addOnPositiveButtonClickListener(view -> {
+                int selectedHour = timePicker.getHour();
+                int selectedMinute = timePicker.getMinute();
+                String time = String.format("%02d:%02d", selectedHour, selectedMinute);
+                etTrainingStartTime.setText(time);
+                notifyChanges();
+            });
+
+            timePicker.show(getParentFragmentManager(), "TIME_PICKER_START");
+        });
+
+        // Time picker cho thời gian kết thúc
+        etTrainingEndTime.setOnClickListener(v -> {
+            Calendar calendar = Calendar.getInstance();
+            int hour = calendar.get(Calendar.HOUR_OF_DAY);
+            int minute = calendar.get(Calendar.MINUTE);
+
+            // Parse existing time if available
+            String existingTime = etTrainingEndTime.getText() != null ?
+                    etTrainingEndTime.getText().toString().trim() : null;
+            if (existingTime != null && !existingTime.isEmpty()) {
+                try {
+                    String[] parts = existingTime.split(":");
+                    if (parts.length == 2) {
+                        hour = Integer.parseInt(parts[0]);
+                        minute = Integer.parseInt(parts[1]);
+                    }
+                } catch (NumberFormatException e) {
+                    // Use current time
+                }
+            }
+
+            MaterialTimePicker timePicker = new MaterialTimePicker.Builder()
+                    .setTimeFormat(TimeFormat.CLOCK_24H)
+                    .setHour(hour)
+                    .setMinute(minute)
+                    .setTitleText("Chọn thời gian kết thúc tập")
+                    .build();
+
+            timePicker.addOnPositiveButtonClickListener(view -> {
+                int selectedHour = timePicker.getHour();
+                int selectedMinute = timePicker.getMinute();
+                String time = String.format("%02d:%02d", selectedHour, selectedMinute);
+                etTrainingEndTime.setText(time);
+                notifyChanges();
+            });
+
+            timePicker.show(getParentFragmentManager(), "TIME_PICKER_END");
+        });
+    }
+
     private void setupTextWatchers() {
         etHeight.setOnFocusChangeListener((v, hasFocus) -> {
             if (!hasFocus) notifyChanges();
@@ -197,8 +285,10 @@ public class BasicInfoFragment extends Fragment {
             String weight = etWeight.getText() != null ? etWeight.getText().toString().trim() : "";
             String dailyMinutes = etDailyMinutes.getText() != null ? etDailyMinutes.getText().toString().trim() : "";
             String weeklyGoal = etWeeklyGoal.getText() != null ? etWeeklyGoal.getText().toString().trim() : "";
+            String trainingStartTime = etTrainingStartTime.getText() != null ? etTrainingStartTime.getText().toString().trim() : "";
+            String trainingEndTime = etTrainingEndTime.getText() != null ? etTrainingEndTime.getText().toString().trim() : "";
 
-            listener.onBasicInfoChanged(birthday, gender, height, weight, dailyMinutes, weeklyGoal);
+            listener.onBasicInfoChanged(birthday, gender, height, weight, dailyMinutes, weeklyGoal, trainingStartTime, trainingEndTime);
         }
     }
 
@@ -283,6 +373,58 @@ public class BasicInfoFragment extends Fragment {
             }
         }
 
+        // Validate training time range (optional but if provided, both must be filled)
+        String startTimeStr = etTrainingStartTime.getText() != null ? etTrainingStartTime.getText().toString().trim() : "";
+        String endTimeStr = etTrainingEndTime.getText() != null ? etTrainingEndTime.getText().toString().trim() : "";
+        
+        if (!TextUtils.isEmpty(startTimeStr) || !TextUtils.isEmpty(endTimeStr)) {
+            if (TextUtils.isEmpty(startTimeStr)) {
+                tilTrainingStartTime.setError("Vui lòng chọn thời gian bắt đầu");
+                isValid = false;
+            }
+            if (TextUtils.isEmpty(endTimeStr)) {
+                tilTrainingEndTime.setError("Vui lòng chọn thời gian kết thúc");
+                isValid = false;
+            }
+            // Validate time format and that end time is after start time
+            if (!TextUtils.isEmpty(startTimeStr) && !TextUtils.isEmpty(endTimeStr)) {
+                try {
+                    String[] startParts = startTimeStr.split(":");
+                    String[] endParts = endTimeStr.split(":");
+                    if (startParts.length == 2 && endParts.length == 2) {
+                        int startHour = Integer.parseInt(startParts[0]);
+                        int startMinute = Integer.parseInt(startParts[1]);
+                        int endHour = Integer.parseInt(endParts[0]);
+                        int endMinute = Integer.parseInt(endParts[1]);
+                        
+                        if (startHour < 0 || startHour > 23 || startMinute < 0 || startMinute > 59) {
+                            tilTrainingStartTime.setError("Thời gian không hợp lệ");
+                            isValid = false;
+                        }
+                        if (endHour < 0 || endHour > 23 || endMinute < 0 || endMinute > 59) {
+                            tilTrainingEndTime.setError("Thời gian không hợp lệ");
+                            isValid = false;
+                        }
+                        // Check if end time is after start time
+                        int startTotalMinutes = startHour * 60 + startMinute;
+                        int endTotalMinutes = endHour * 60 + endMinute;
+                        if (endTotalMinutes <= startTotalMinutes) {
+                            tilTrainingEndTime.setError("Thời gian kết thúc phải sau thời gian bắt đầu");
+                            isValid = false;
+                        }
+                    } else {
+                        tilTrainingStartTime.setError("Định dạng thời gian không hợp lệ (HH:mm)");
+                        tilTrainingEndTime.setError("Định dạng thời gian không hợp lệ (HH:mm)");
+                        isValid = false;
+                    }
+                } catch (NumberFormatException e) {
+                    tilTrainingStartTime.setError("Thời gian không hợp lệ");
+                    tilTrainingEndTime.setError("Thời gian không hợp lệ");
+                    isValid = false;
+                }
+            }
+        }
+
         return isValid;
     }
 
@@ -293,6 +435,8 @@ public class BasicInfoFragment extends Fragment {
         tilWeight.setError(null);
         tilDailyMinutes.setError(null);
         tilWeeklyGoal.setError(null);
+        tilTrainingStartTime.setError(null);
+        tilTrainingEndTime.setError(null);
     }
 }
 

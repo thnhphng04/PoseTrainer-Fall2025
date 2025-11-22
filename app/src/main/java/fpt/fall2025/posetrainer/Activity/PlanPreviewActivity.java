@@ -196,6 +196,26 @@ public class PlanPreviewActivity extends AppCompatActivity {
                         Map planMap = (Map) planObj;
                         currentPlan = PlanModels.Plan.from(planMap);
                         
+                        // ✅ Log để debug reason
+                        if (currentPlan != null && currentPlan.days != null) {
+                            int totalItems = 0;
+                            int itemsWithReason = 0;
+                            for (PlanModels.Day day : currentPlan.days) {
+                                if (day.items != null) {
+                                    for (PlanModels.Item item : day.items) {
+                                        totalItems++;
+                                        if (item.reason != null && !item.reason.isEmpty()) {
+                                            itemsWithReason++;
+                                            Log.d(TAG, "Item có reason: " + item.name + " - " + item.reason);
+                                        } else {
+                                            Log.d(TAG, "Item KHÔNG có reason: " + item.name);
+                                        }
+                                    }
+                                }
+                            }
+                            Log.d(TAG, "Tổng số items: " + totalItems + ", items có reason: " + itemsWithReason);
+                        }
+                        
                         if (currentPlan == null || currentPlan.days == null || currentPlan.days.isEmpty()) {
                             setLoading(false);
                             String errorMsg = "Kế hoạch được tạo nhưng không có dữ liệu";
@@ -205,7 +225,8 @@ public class PlanPreviewActivity extends AppCompatActivity {
                             return;
                         }
 
-                        render(currentPlan);
+                        // Load profile để lấy thời gian tập luyện và tính toán thời gian cho từng bài tập
+                        loadProfileAndCalculateTimes(currentPlan);
                         setLoading(false);
                         
                         String successMsg = "cached".equals(status) ? 
@@ -230,6 +251,206 @@ public class PlanPreviewActivity extends AppCompatActivity {
                 });
     }
 
+
+    /**
+     * Load profile và tính toán thời gian cho từng bài tập
+     */
+    private void loadProfileAndCalculateTimes(PlanModels.Plan plan) {
+        if (plan == null || plan.days == null || plan.days.isEmpty()) {
+            render(plan);
+            return;
+        }
+
+        // Load profile để lấy trainingStartTime và trainingEndTime
+        db.collection("profiles").document(uid)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        String trainingStartTime = documentSnapshot.getString("trainingStartTime");
+                        String trainingEndTime = documentSnapshot.getString("trainingEndTime");
+                        
+                        // Tính toán thời gian cho từng bài tập
+                        calculateExerciseTimes(plan, trainingStartTime, trainingEndTime);
+                    }
+                    // Render ngay cả khi không có thời gian
+                    render(plan);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error loading profile for time calculation", e);
+                    // Render ngay cả khi có lỗi
+                    render(plan);
+                });
+    }
+
+    /**
+     * Tính toán thời gian bắt đầu và kết thúc cho từng bài tập trong mỗi ngày
+     */
+    private void calculateExerciseTimes(PlanModels.Plan plan, String trainingStartTime, String trainingEndTime) {
+        if (trainingStartTime == null || trainingStartTime.isEmpty() || 
+            trainingEndTime == null || trainingEndTime.isEmpty()) {
+            Log.d(TAG, "No training time range provided, skipping time calculation");
+            return;
+        }
+
+        try {
+            // Parse thời gian bắt đầu và kết thúc
+            String[] startParts = trainingStartTime.split(":");
+            String[] endParts = trainingEndTime.split(":");
+            
+            if (startParts.length != 2 || endParts.length != 2) {
+                Log.w(TAG, "Invalid time format: " + trainingStartTime + " - " + trainingEndTime);
+                return;
+            }
+
+            int startHour = Integer.parseInt(startParts[0]);
+            int startMinute = Integer.parseInt(startParts[1]);
+            int endHour = Integer.parseInt(endParts[0]);
+            int endMinute = Integer.parseInt(endParts[1]);
+
+            int startTotalMinutes = startHour * 60 + startMinute;
+            int endTotalMinutes = endHour * 60 + endMinute;
+            int totalAvailableMinutes = endTotalMinutes - startTotalMinutes;
+
+            if (totalAvailableMinutes <= 0) {
+                Log.w(TAG, "Invalid time range: end time must be after start time");
+                return;
+            }
+
+            // Tính toán thời gian cho từng ngày
+            for (PlanModels.Day day : plan.days) {
+                if (day.items == null || day.items.isEmpty()) {
+                    continue;
+                }
+
+                // Tính tổng thời gian ước tính cho tất cả bài tập trong ngày (tính bằng giây)
+                int totalEstimatedSeconds = 0;
+                java.util.List<Integer> itemSecondsList = new java.util.ArrayList<>();
+                
+                for (PlanModels.Item item : day.items) {
+                    // Ước tính: mỗi rep mất ~2 giây, cộng thêm rest time
+                    int exerciseTimePerSet = item.reps * 2; // 2 giây mỗi rep
+                    int totalExerciseTime = exerciseTimePerSet * item.sets;
+                    int totalRestTime = item.restSec * Math.max(0, item.sets - 1); // Rest giữa các sets
+                    int itemTotalSeconds = totalExerciseTime + totalRestTime;
+                    itemSecondsList.add(itemTotalSeconds);
+                    totalEstimatedSeconds += itemTotalSeconds;
+                }
+
+                // ✅ ƯU TIÊN: Sử dụng toàn bộ khoảng thời gian người dùng đã chọn
+                // Không bị giới hạn bởi day.estMinutes, mà sử dụng hết totalAvailableMinutes
+                int availableMinutes = totalAvailableMinutes;
+                int availableSeconds = availableMinutes * 60;
+
+                // ✅ Tính scale factor:
+                // - Nếu thời gian ước tính LỚN HƠN thời gian có sẵn: scale DOWN để vừa với khoảng thời gian
+                // - Nếu thời gian ước tính NHỎ HƠN: giữ nguyên, thời gian còn lại sẽ được phân bổ đều
+                float scaleFactor = 1.0f;
+                if (totalEstimatedSeconds > availableSeconds) {
+                    // Scale DOWN: thời gian ước tính dài hơn, cần rút ngắn để vừa
+                    scaleFactor = (float) availableSeconds / totalEstimatedSeconds;
+                    Log.d(TAG, String.format("Day %d: Estimated time (%d sec) > Available time (%d sec), scaling DOWN by factor %.2f", 
+                        day.dayIndex, totalEstimatedSeconds, availableSeconds, scaleFactor));
+                } else {
+                    // Thời gian ước tính ngắn hơn hoặc bằng, sẽ phân bổ đều thời gian còn lại
+                    Log.d(TAG, String.format("Day %d: Estimated time (%d sec) <= Available time (%d sec), will distribute remaining time", 
+                        day.dayIndex, totalEstimatedSeconds, availableSeconds));
+                }
+                
+                // Tính thời gian còn lại sau khi trừ đi thời gian ước tính (đã scale nếu cần)
+                int scaledEstimatedSeconds = (int) (totalEstimatedSeconds * scaleFactor);
+                int remainingSeconds = availableSeconds - scaledEstimatedSeconds;
+
+                // Phân bổ thời gian cho từng bài tập
+                int currentTimeMinutes = startTotalMinutes;
+                int totalAllocatedSeconds = 0;
+                
+                // Phân bổ thời gian còn lại đều cho các bài tập (thêm vào thời gian nghỉ giữa các bài)
+                int extraSecondsPerItem = remainingSeconds > 0 && day.items.size() > 0 
+                    ? remainingSeconds / day.items.size() : 0;
+                
+                for (int i = 0; i < day.items.size(); i++) {
+                    PlanModels.Item item = day.items.get(i);
+                    
+                    // Tính thời gian cho bài tập này (đã scale)
+                    int itemSeconds = (int) (itemSecondsList.get(i) * scaleFactor);
+                    
+                    // Thêm thời gian nghỉ bổ sung nếu có (để lấp đầy khoảng thời gian)
+                    if (i < day.items.size() - 1) {
+                        // Thêm thời gian nghỉ giữa các bài tập
+                        itemSeconds += extraSecondsPerItem;
+                    } else {
+                        // Bài tập cuối cùng: thêm tất cả thời gian còn lại để đảm bảo kết thúc đúng giờ
+                        int remainingForLastItem = availableSeconds - totalAllocatedSeconds - itemSeconds;
+                        if (remainingForLastItem > 0) {
+                            itemSeconds += remainingForLastItem;
+                        }
+                    }
+                    
+                    // Đảm bảo ít nhất 30 giây
+                    if (itemSeconds < 30) {
+                        itemSeconds = 30;
+                    }
+                    
+                    int itemMinutes = (itemSeconds / 60) + (itemSeconds % 60 > 0 ? 1 : 0); // Làm tròn lên
+                    
+                    // Đảm bảo ít nhất 1 phút
+                    if (itemMinutes < 1) {
+                        itemMinutes = 1;
+                    }
+
+                    // Tính thời gian bắt đầu và kết thúc
+                    int itemStartMinutes = currentTimeMinutes;
+                    int itemEndMinutes = currentTimeMinutes + itemMinutes;
+
+                    // Đảm bảo không vượt quá thời gian kết thúc
+                    if (itemEndMinutes > endTotalMinutes) {
+                        itemEndMinutes = endTotalMinutes;
+                        itemMinutes = itemEndMinutes - itemStartMinutes;
+                        if (itemMinutes < 1) {
+                            itemMinutes = 1;
+                        }
+                    }
+
+                    // Convert về format HH:mm
+                    int startH = itemStartMinutes / 60;
+                    int startM = itemStartMinutes % 60;
+                    int endH = itemEndMinutes / 60;
+                    int endM = itemEndMinutes % 60;
+
+                    // Đảm bảo giờ trong khoảng 0-23
+                    startH = startH % 24;
+                    endH = endH % 24;
+
+                    item.startTime = String.format("%02d:%02d", startH, startM);
+                    item.endTime = String.format("%02d:%02d", endH, endM);
+
+                    // Cập nhật thời gian cho bài tập tiếp theo
+                    currentTimeMinutes = itemEndMinutes;
+                    totalAllocatedSeconds += itemSeconds;
+
+                    // Nếu đã hết thời gian, dừng lại
+                    if (currentTimeMinutes >= endTotalMinutes) {
+                        // Gán thời gian null cho các bài tập còn lại
+                        for (int j = i + 1; j < day.items.size(); j++) {
+                            day.items.get(j).startTime = null;
+                            day.items.get(j).endTime = null;
+                        }
+                        break;
+                    }
+                }
+                
+                // Log để debug
+                int finalMinutes = currentTimeMinutes - startTotalMinutes;
+                Log.d(TAG, String.format("Day %d: Allocated %d minutes out of %d available minutes (%.1f%%)", 
+                    day.dayIndex, finalMinutes, availableMinutes, 
+                    availableMinutes > 0 ? ((float)finalMinutes / availableMinutes * 100) : 0));
+            }
+
+            Log.d(TAG, "Successfully calculated exercise times for all days");
+        } catch (Exception e) {
+            Log.e(TAG, "Error calculating exercise times", e);
+        }
+    }
 
     private void render(PlanModels.Plan plan) {
         if (plan == null || plan.days == null || plan.days.isEmpty()) {
@@ -369,6 +590,39 @@ public class PlanPreviewActivity extends AppCompatActivity {
      */
     private void convertPlanToWorkoutsAndSchedule() {
         tvSub.setText("Đang tạo kế hoạch mới...");
+        
+        // ✅ Load profile để lấy trainingStartTime trước khi tạo Schedule
+        db.collection("profiles").document(uid)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    String trainingStartTime = "08:00"; // Default fallback
+                    
+                    if (documentSnapshot.exists()) {
+                        String profileStartTime = documentSnapshot.getString("trainingStartTime");
+                        if (profileStartTime != null && !profileStartTime.isEmpty()) {
+                            trainingStartTime = profileStartTime;
+                            Log.d(TAG, "Sử dụng trainingStartTime từ profile: " + trainingStartTime);
+                        } else {
+                            Log.d(TAG, "Profile không có trainingStartTime, sử dụng mặc định: 08:00");
+                        }
+                    } else {
+                        Log.d(TAG, "Profile không tồn tại, sử dụng mặc định: 08:00");
+                    }
+                    
+                    // Tạo workouts và schedule với thời gian từ profile
+                    createWorkoutsAndScheduleWithTime(trainingStartTime);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Lỗi khi load profile để lấy trainingStartTime", e);
+                    // Fallback: sử dụng mặc định 08:00
+                    createWorkoutsAndScheduleWithTime("08:00");
+                });
+    }
+
+    /**
+     * Tạo workouts và schedule với thời gian cụ thể
+     */
+    private void createWorkoutsAndScheduleWithTime(String trainingStartTime) {
         List<UserWorkout> workouts = new ArrayList<>();
         List<Schedule.ScheduleItem> scheduleItems = new ArrayList<>();
         long currentTime = System.currentTimeMillis() / 1000;
@@ -376,11 +630,30 @@ public class PlanPreviewActivity extends AppCompatActivity {
         // Tính toán ngày bắt đầu (thứ 2 của tuần hiện tại hoặc tuần tiếp theo)
         Calendar calendar = Calendar.getInstance();
         int currentDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK);
-        int daysUntilMonday = (Calendar.MONDAY - currentDayOfWeek + 7) % 7;
-        if (daysUntilMonday == 0 && calendar.get(Calendar.HOUR_OF_DAY) >= 8) {
-            // Nếu đã qua 8h sáng thứ 2, bắt đầu từ tuần sau
-            daysUntilMonday = 7;
+        
+        // ✅ Sử dụng trainingStartTime để xác định xem đã qua thời gian tập chưa
+        int trainingHour = 8; // Default
+        int trainingMinute = 0;
+        try {
+            String[] timeParts = trainingStartTime.split(":");
+            if (timeParts.length == 2) {
+                trainingHour = Integer.parseInt(timeParts[0]);
+                trainingMinute = Integer.parseInt(timeParts[1]);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Lỗi parse trainingStartTime, sử dụng mặc định 8:00", e);
         }
+        
+        int daysUntilMonday = (Calendar.MONDAY - currentDayOfWeek + 7) % 7;
+        if (daysUntilMonday == 0) {
+            // Nếu đã qua thời gian tập luyện trong ngày, bắt đầu từ tuần sau
+            int currentHour = calendar.get(Calendar.HOUR_OF_DAY);
+            int currentMinute = calendar.get(Calendar.MINUTE);
+            if (currentHour > trainingHour || (currentHour == trainingHour && currentMinute >= trainingMinute)) {
+                daysUntilMonday = 7;
+            }
+        }
+        
         calendar.add(Calendar.DAY_OF_MONTH, daysUntilMonday);
         calendar.set(Calendar.HOUR_OF_DAY, 0);
         calendar.set(Calendar.MINUTE, 0);
@@ -411,9 +684,10 @@ public class PlanPreviewActivity extends AppCompatActivity {
             java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault());
             String exactDate = sdf.format(exactDateCalendar.getTime());
 
+            // ✅ Sử dụng trainingStartTime từ profile thay vì hardcode "08:00"
             Schedule.ScheduleItem scheduleItem = new Schedule.ScheduleItem(
                 daysOfWeek,
-                "08:00", // Mặc định 8:00 sáng, user có thể chỉnh sau
+                trainingStartTime, // Sử dụng thời gian từ profile
                 workout.getId(), // Link đến workout ID
                 exactDate
             );
