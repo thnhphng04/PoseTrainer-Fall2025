@@ -234,4 +234,13 @@
         <item name="android:gravity">center</item>
         <item name="android:background">?android:attr/selectableItemBackgroundBorderless</item>
     </style>
+
+    <!-- Dialog Styles -->
+    <style name="FullScreenDialogStyle" parent="Theme.MaterialComponents.DayNight.Dialog">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowContentOverlay">@null</item>
+    </style>
 </resources>

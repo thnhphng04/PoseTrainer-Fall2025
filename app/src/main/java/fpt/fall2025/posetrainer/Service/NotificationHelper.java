@@ -16,6 +16,7 @@ import androidx.core.content.ContextCompat;
 import fpt.fall2025.posetrainer.Activity.MainActivity;
 import fpt.fall2025.posetrainer.Activity.WorkoutActivity;
 import fpt.fall2025.posetrainer.Activity.PostDetailActivity;
+import fpt.fall2025.posetrainer.Manager.AchievementManager;
 import fpt.fall2025.posetrainer.R;
 
 /**
@@ -27,8 +28,11 @@ public class NotificationHelper {
     private static final String CHANNEL_NAME = "Workout Reminders";
     private static final String CHANNEL_ID_SOCIAL = "social_notifications_channel";
     private static final String CHANNEL_NAME_SOCIAL = "Thông báo xã hội";
+    private static final String CHANNEL_ID_ACHIEVEMENTS = "achievements_channel";
+    private static final String CHANNEL_NAME_ACHIEVEMENTS = "Thành tích";
     private static final int NOTIFICATION_ID_BASE = 1000;
     private static final int NOTIFICATION_ID_SOCIAL_BASE = 2000;
+    private static final int NOTIFICATION_ID_ACHIEVEMENTS_BASE = 3000;
 
     /**
      * Create notification channel (required for Android 8.0+)
@@ -346,6 +350,64 @@ public class NotificationHelper {
         int typeHash = notificationType != null ? notificationType.hashCode() : 0;
         // Sử dụng modulo để giữ ID trong phạm vi hợp lý, thêm base offset
         return NOTIFICATION_ID_SOCIAL_BASE + (Math.abs(hash + typeHash) % 10000);
+    }
+
+    /**
+     * Show achievement unlocked notification
+     * @param context context
+     * @param badgeKey badge key (e.g., "streak_3", "workout_10")
+     * @param achievementName achievement name
+     * @param description achievement description
+     */
+    public static void showAchievementNotification(Context context, String badgeKey, String achievementName, String description) {
+        Log.d(TAG, "Showing achievement notification: " + badgeKey);
+        
+        // Check notification permission
+        if (!hasNotificationPermission(context)) {
+            Log.w(TAG, "Notification permission not granted, cannot show notification");
+            return;
+        }
+        
+        // Ensure channel is created
+        createNotificationChannel(context);
+
+        // Get achievement info for emoji/icon
+        AchievementManager.AchievementInfo info = AchievementManager.getInstance().getAchievementInfo(badgeKey);
+        String displayName = achievementName != null ? achievementName : (info != null ? info.name : "Thành tích mới!");
+        String displayDescription = description != null ? description : (info != null ? info.description : "Bạn đã mở khóa một thành tích mới!");
+
+        // Create intent to open ProfileFragment in MainActivity
+        Intent profileIntent = new Intent(context, MainActivity.class);
+        profileIntent.putExtra("openProfile", true);
+        profileIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+            context,
+            NOTIFICATION_ID_ACHIEVEMENTS_BASE + badgeKey.hashCode(),
+            profileIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        // Build notification
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID_ACHIEVEMENTS)
+            .setSmallIcon(R.drawable.ic_notifications) // You can create a trophy icon later
+            .setContentTitle("🏆 Thành tích mới!")
+            .setContentText(displayName)
+            .setStyle(new NotificationCompat.BigTextStyle()
+                .bigText(displayDescription))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent);
+
+        // Show notification
+        NotificationManager notificationManager = 
+            ContextCompat.getSystemService(context, NotificationManager.class);
+        if (notificationManager != null) {
+            int notificationId = NOTIFICATION_ID_ACHIEVEMENTS_BASE + badgeKey.hashCode();
+            notificationManager.notify(notificationId, builder.build());
+            Log.d(TAG, "Achievement notification shown: " + displayName);
+        }
     }
 }
 

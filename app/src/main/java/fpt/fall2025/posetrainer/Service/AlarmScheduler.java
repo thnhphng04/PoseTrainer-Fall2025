@@ -66,8 +66,16 @@ public class AlarmScheduler {
         int remindBeforeMin = schedule.getNotification().getRemindBeforeMin();
 
         for (Schedule.ScheduleItem item : schedule.getScheduleItems()) {
-            if (item.getDayOfWeek() != null && item.getTimeLocal() != null) {
-                scheduleAlarmForScheduleItem(item, remindBeforeMin, canScheduleExact);
+            // Ưu tiên sử dụng exactDate, nếu không có thì fallback về dayOfWeek (backward compatibility)
+            if (item.getTimeLocal() != null) {
+                if (item.getExactDate() != null && !item.getExactDate().isEmpty()) {
+                    // Có exactDate - schedule alarm cho ngày chính xác
+                    scheduleAlarmForScheduleItem(item, remindBeforeMin, canScheduleExact);
+                } else if (item.getDayOfWeek() != null && !item.getDayOfWeek().isEmpty()) {
+                    // Không có exactDate nhưng có dayOfWeek - fallback (backward compatibility)
+                    // Note: Logic này có thể cần được xử lý khác nếu muốn hỗ trợ recurring schedules
+                    Log.w(TAG, "Schedule item có dayOfWeek nhưng không có exactDate - bỏ qua (cần exactDate để schedule)");
+                }
             }
         }
 
