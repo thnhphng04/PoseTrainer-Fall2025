@@ -28,6 +28,9 @@ import fpt.fall2025.posetrainer.Domain.Session;
 import fpt.fall2025.posetrainer.Domain.Schedule;
 import fpt.fall2025.posetrainer.Domain.Notification;
 import fpt.fall2025.posetrainer.Domain.Favorite;
+import fpt.fall2025.posetrainer.Domain.Streak;
+import fpt.fall2025.posetrainer.Domain.Achievement;
+import fpt.fall2025.posetrainer.Domain.UserProgress;
 
 /**
  * FirebaseService - Service để quản lý tất cả Firebase operations
@@ -1620,5 +1623,338 @@ public class FirebaseService {
 
     public interface OnUnreadCountLoadedListener {
         void onUnreadCountLoaded(int count);
+    }
+
+    // ===================== STREAK METHODS =====================
+
+    /**
+     * Update user streak based on new session
+     */
+    public void updateStreak(String uid, Session session, OnStreakUpdatedListener listener) {
+        if (session == null || session.getStartedAt() == 0) {
+            Log.w(TAG, "Cannot update streak: session is null or invalid");
+            if (listener != null) {
+                listener.onStreakUpdated(null);
+            }
+            return;
+        }
+
+        // Convert startedAt (seconds) to Calendar and then to "yyyy-MM-dd"
+        Calendar sessionDate = Calendar.getInstance();
+        sessionDate.setTimeInMillis(session.getStartedAt() * 1000L);
+        sessionDate.set(Calendar.HOUR_OF_DAY, 0);
+        sessionDate.set(Calendar.MINUTE, 0);
+        sessionDate.set(Calendar.SECOND, 0);
+        sessionDate.set(Calendar.MILLISECOND, 0);
+
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+        String workoutDate = dateFormat.format(sessionDate.getTime());
+
+        Log.d(TAG, "Updating streak for user: " + uid + ", workout date: " + workoutDate);
+
+        // Load current streak
+        db.collection("streaks")
+                .document(uid)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    Streak streak;
+                    if (documentSnapshot.exists()) {
+                        streak = documentSnapshot.toObject(Streak.class);
+                        if (streak == null) {
+                            streak = new Streak(uid, 0, 0, null);
+                        }
+                    } else {
+                        streak = new Streak(uid, 0, 0, null);
+                    }
+
+                    String lastWorkoutDate = streak.getLastWorkoutDate();
+                    
+                    if (lastWorkoutDate == null || lastWorkoutDate.isEmpty()) {
+                        // First workout
+                        streak.setCurrentStreak(1);
+                        streak.setLongestStreak(1);
+                        streak.setLastWorkoutDate(workoutDate);
+                    } else if (lastWorkoutDate.equals(workoutDate)) {
+                        // Same day - don't increase streak
+                        Log.d(TAG, "Same day workout, streak unchanged: " + streak.getCurrentStreak());
+                    } else {
+                        // Different day
+                        try {
+                            Calendar lastDate = Calendar.getInstance();
+                            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+                            lastDate.setTime(sdf.parse(lastWorkoutDate));
+                            lastDate.set(Calendar.HOUR_OF_DAY, 0);
+                            lastDate.set(Calendar.MINUTE, 0);
+                            lastDate.set(Calendar.SECOND, 0);
+                            lastDate.set(Calendar.MILLISECOND, 0);
+
+                            long diffInMillis = sessionDate.getTimeInMillis() - lastDate.getTimeInMillis();
+                            long diffInDays = diffInMillis / (24 * 60 * 60 * 1000);
+
+                            if (diffInDays == 1) {
+                                // Consecutive day - increase streak
+                                streak.setCurrentStreak(streak.getCurrentStreak() + 1);
+                                Log.d(TAG, "Consecutive day, streak increased to: " + streak.getCurrentStreak());
+                            } else if (diffInDays >= 2) {
+                                // Gap of 2+ days - reset streak
+                                streak.setCurrentStreak(1);
+                                Log.d(TAG, "Gap of " + diffInDays + " days, streak reset to 1");
+                            }
+
+                            // Update longest streak if needed
+                            if (streak.getCurrentStreak() > streak.getLongestStreak()) {
+                                streak.setLongestStreak(streak.getCurrentStreak());
+                            }
+
+                            streak.setLastWorkoutDate(workoutDate);
+                        } catch (Exception e) {
+                            Log.e(TAG, "Error parsing last workout date", e);
+                            // Fallback: treat as new streak
+                            streak.setCurrentStreak(1);
+                            streak.setLastWorkoutDate(workoutDate);
+                        }
+                    }
+
+                    // Create final reference for lambda
+                    final Streak finalStreak = streak;
+
+                    // Save updated streak
+                    db.collection("streaks")
+                            .document(uid)
+                            .set(finalStreak)
+                            .addOnSuccessListener(aVoid -> {
+                                Log.d(TAG, "Streak updated successfully: current=" + finalStreak.getCurrentStreak() + 
+                                    ", longest=" + finalStreak.getLongestStreak());
+                                if (listener != null) {
+                                    listener.onStreakUpdated(finalStreak);
+                                }
+                            })
+                            .addOnFailureListener(e -> {
+                                Log.e(TAG, "Error saving streak", e);
+                                if (listener != null) {
+                                    listener.onStreakUpdated(null);
+                                }
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error loading streak", e);
+                    // Create new streak if load fails
+                    Streak newStreak = new Streak(uid, 1, 1, workoutDate);
+                    db.collection("streaks")
+                            .document(uid)
+                            .set(newStreak)
+                            .addOnSuccessListener(aVoid -> {
+                                if (listener != null) {
+                                    listener.onStreakUpdated(newStreak);
+                                }
+                            })
+                            .addOnFailureListener(e2 -> {
+                                if (listener != null) {
+                                    listener.onStreakUpdated(null);
+                                }
+                            });
+                });
+    }
+
+    /**
+     * Load user streak
+     */
+    public void loadUserStreak(String uid, OnStreakLoadedListener listener) {
+        Log.d(TAG, "Loading streak for user: " + uid);
+        
+        db.collection("streaks")
+                .document(uid)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        Streak streak = documentSnapshot.toObject(Streak.class);
+                        if (streak != null) {
+                            Log.d(TAG, "Streak loaded: current=" + streak.getCurrentStreak() + 
+                                ", longest=" + streak.getLongestStreak());
+                            if (listener != null) {
+                                listener.onStreakLoaded(streak);
+                            }
+                        } else {
+                            Log.w(TAG, "Streak object is null");
+                            if (listener != null) {
+                                listener.onStreakLoaded(null);
+                            }
+                        }
+                    } else {
+                        Log.d(TAG, "No streak found for user");
+                        if (listener != null) {
+                            listener.onStreakLoaded(null);
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error loading streak", e);
+                    if (listener != null) {
+                        listener.onStreakLoaded(null);
+                    }
+                });
+    }
+
+    public interface OnStreakUpdatedListener {
+        void onStreakUpdated(Streak streak);
+    }
+
+    public interface OnStreakLoadedListener {
+        void onStreakLoaded(Streak streak);
+    }
+
+    // ===================== USER PROGRESS METHODS =====================
+
+    /**
+     * Update user progress (calendar heatmap)
+     */
+    public void updateUserProgress(String uid, OnProgressUpdatedListener listener) {
+        Log.d(TAG, "Updating user progress for: " + uid);
+
+        // Query all sessions of user
+        db.collection("sessions")
+                .whereEqualTo("uid", uid)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    Map<String, Boolean> calendar = new HashMap<>();
+                    int totalSessions = queryDocumentSnapshots.size();
+
+                    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+
+                    // Group sessions by date
+                    for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
+                        Session session = document.toObject(Session.class);
+                        if (session != null && session.getStartedAt() > 0) {
+                            // Convert startedAt (seconds) to Calendar and then to "yyyy-MM-dd"
+                            Calendar sessionDate = Calendar.getInstance();
+                            sessionDate.setTimeInMillis(session.getStartedAt() * 1000L);
+                            sessionDate.set(Calendar.HOUR_OF_DAY, 0);
+                            sessionDate.set(Calendar.MINUTE, 0);
+                            sessionDate.set(Calendar.SECOND, 0);
+                            sessionDate.set(Calendar.MILLISECOND, 0);
+
+                            String dateKey = dateFormat.format(sessionDate.getTime());
+                            calendar.put(dateKey, true);
+                        }
+                    }
+
+                    int totalWorkoutDays = calendar.size();
+
+                    // Create or update UserProgress
+                    UserProgress progress = new UserProgress(uid, totalWorkoutDays, totalSessions, calendar);
+
+                    // Save to Firestore
+                    db.collection("user_progress")
+                            .document(uid)
+                            .set(progress)
+                            .addOnSuccessListener(aVoid -> {
+                                Log.d(TAG, "User progress updated successfully: " + totalWorkoutDays + " days, " + totalSessions + " sessions");
+                                if (listener != null) {
+                                    listener.onProgressUpdated(progress);
+                                }
+                            })
+                            .addOnFailureListener(e -> {
+                                Log.e(TAG, "Error saving user progress", e);
+                                if (listener != null) {
+                                    listener.onProgressUpdated(null);
+                                }
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error loading sessions for user progress", e);
+                    if (listener != null) {
+                        listener.onProgressUpdated(null);
+                    }
+                });
+    }
+
+    /**
+     * Load user progress
+     */
+    public void loadUserProgress(String uid, OnProgressLoadedListener listener) {
+        Log.d(TAG, "Loading user progress for: " + uid);
+
+        db.collection("user_progress")
+                .document(uid)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        UserProgress progress = documentSnapshot.toObject(UserProgress.class);
+                        if (progress != null) {
+                            Log.d(TAG, "User progress loaded: " + progress.getTotalWorkoutDays() + " days, " + progress.getTotalSessions() + " sessions");
+                            if (listener != null) {
+                                listener.onProgressLoaded(progress);
+                            }
+                        } else {
+                            Log.w(TAG, "UserProgress object is null");
+                            if (listener != null) {
+                                listener.onProgressLoaded(null);
+                            }
+                        }
+                    } else {
+                        Log.d(TAG, "No user progress found");
+                        if (listener != null) {
+                            listener.onProgressLoaded(null);
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error loading user progress", e);
+                    if (listener != null) {
+                        listener.onProgressLoaded(null);
+                    }
+                });
+    }
+
+    public interface OnProgressUpdatedListener {
+        void onProgressUpdated(UserProgress progress);
+    }
+
+    public interface OnProgressLoadedListener {
+        void onProgressLoaded(UserProgress progress);
+    }
+
+    // ===================== ACHIEVEMENT METHODS =====================
+
+    /**
+     * Load user achievements
+     */
+    public void loadUserAchievements(String uid, OnAchievementsLoadedListener listener) {
+        Log.d(TAG, "Loading achievements for: " + uid);
+
+        db.collection("achievements")
+                .document(uid)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        Achievement achievement = documentSnapshot.toObject(Achievement.class);
+                        if (achievement != null) {
+                            Log.d(TAG, "Achievements loaded: " + (achievement.getBadges() != null ? achievement.getBadges().size() : 0) + " badges");
+                            if (listener != null) {
+                                listener.onAchievementsLoaded(achievement);
+                            }
+                        } else {
+                            Log.w(TAG, "Achievement object is null");
+                            if (listener != null) {
+                                listener.onAchievementsLoaded(null);
+                            }
+                        }
+                    } else {
+                        Log.d(TAG, "No achievements found");
+                        if (listener != null) {
+                            listener.onAchievementsLoaded(null);
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error loading achievements", e);
+                    if (listener != null) {
+                        listener.onAchievementsLoaded(null);
+                    }
+                });
+    }
+
+    public interface OnAchievementsLoadedListener {
+        void onAchievementsLoaded(Achievement achievement);
     }
 }

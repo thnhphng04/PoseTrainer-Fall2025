@@ -26,6 +26,8 @@ import fpt.fall2025.posetrainer.Dialog.ExerciseSelectionDialog;
 import fpt.fall2025.posetrainer.Domain.Exercise;
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
 import fpt.fall2025.posetrainer.Domain.Session;
+import fpt.fall2025.posetrainer.Dialog.AchievementUnlockedDialog;
+import fpt.fall2025.posetrainer.Manager.AchievementManager;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.databinding.ActivityUserWorkoutDetailBinding;
@@ -739,6 +741,40 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
                     if (success) {
                         Log.d(TAG, "Workout session completed and saved successfully");
                         Toast.makeText(UserWorkoutDetailActivity.this, "Session saved successfully!", Toast.LENGTH_SHORT).show();
+                        
+                        // Update streak, achievements, and user progress
+                        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+                        if (currentUser != null) {
+                            String uid = currentUser.getUid();
+                            
+                            // Update streak
+                            FirebaseService.getInstance().updateStreak(uid, currentSession, streak -> {
+                                if (streak != null) {
+                                    Log.d(TAG, "Streak updated: " + streak.getCurrentStreak());
+                                    
+                                    // Check achievements after streak update
+                                    AchievementManager.getInstance().checkAchievements(uid, currentSession, newlyUnlocked -> {
+                                        if (newlyUnlocked != null && !newlyUnlocked.isEmpty()) {
+                                            Log.d(TAG, "New achievements unlocked: " + newlyUnlocked.size());
+                                            
+                                            // Show dialog for first achievement
+                                            if (!newlyUnlocked.isEmpty()) {
+                                                String firstBadge = newlyUnlocked.get(0);
+                                                AchievementUnlockedDialog dialog = AchievementUnlockedDialog.newInstance(firstBadge);
+                                                dialog.show(getSupportFragmentManager(), "AchievementUnlockedDialog");
+                                            }
+                                        }
+                                    });
+                                }
+                            });
+                            
+                            // Update user progress (calendar heatmap)
+                            FirebaseService.getInstance().updateUserProgress(uid, progress -> {
+                                if (progress != null) {
+                                    Log.d(TAG, "User progress updated: " + progress.getTotalWorkoutDays() + " days");
+                                }
+                            });
+                        }
                     } else {
                         Log.e(TAG, "Failed to save completed session");
                         Toast.makeText(UserWorkoutDetailActivity.this, "Failed to save session", Toast.LENGTH_SHORT).show();
