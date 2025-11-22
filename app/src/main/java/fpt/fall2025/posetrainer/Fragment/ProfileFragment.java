@@ -16,12 +16,14 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+import fpt.fall2025.posetrainer.Activity.AchievementsActivity;
 import fpt.fall2025.posetrainer.Activity.EditGoalsActivity;
 import fpt.fall2025.posetrainer.Activity.EditProfileActivity;
 import fpt.fall2025.posetrainer.Activity.LoginActivity;
 import fpt.fall2025.posetrainer.Activity.WorkoutHistoryActivity;
 import fpt.fall2025.posetrainer.Domain.User;
 import fpt.fall2025.posetrainer.R;
+import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.databinding.FragmentProfileBinding;
 
 public class ProfileFragment extends Fragment {
@@ -59,6 +61,7 @@ public class ProfileFragment extends Fragment {
         setupClicks();
         loadUserFromFirestore();
         loadUserStats();
+        loadUserStreak();
         isDataLoaded = true;
     }
 
@@ -69,6 +72,9 @@ public class ProfileFragment extends Fragment {
 
         binding.menuSettings.setOnClickListener(v ->
                 startActivity(new Intent(requireContext(), EditProfileActivity.class))
+        );
+        binding.menuAchievements.setOnClickListener(v ->
+                startActivity(new Intent(requireContext(), AchievementsActivity.class))
         );
         binding.btnGoal.setOnClickListener(v ->
                 startActivity(new Intent(requireContext(), EditGoalsActivity.class))
@@ -286,6 +292,41 @@ public class ProfileFragment extends Fragment {
             binding.tvDuration.setText("0");
         }
     }
+
+    /**
+     * Load user streak and display
+     */
+    private void loadUserStreak() {
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser == null) {
+            return;
+        }
+
+        FirebaseService.getInstance().loadUserStreak(currentUser.getUid(), streak -> {
+            if (getActivity() == null || binding == null || !isAdded()) {
+                return;
+            }
+
+            getActivity().runOnUiThread(() -> {
+                if (streak != null) {
+                    if (binding.tvStreakCurrent != null) {
+                        binding.tvStreakCurrent.setText(String.valueOf(streak.getCurrentStreak()));
+                    }
+                    if (binding.tvStreakLongest != null) {
+                        binding.tvStreakLongest.setText("Tối đa: " + streak.getLongestStreak());
+                    }
+                } else {
+                    if (binding.tvStreakCurrent != null) {
+                        binding.tvStreakCurrent.setText("0");
+                    }
+                    if (binding.tvStreakLongest != null) {
+                        binding.tvStreakLongest.setText("Tối đa: 0");
+                    }
+                }
+            });
+        });
+    }
+
 
     private void setLoading(boolean isLoading) {
         // Check if binding is null (fragment view might be destroyed)

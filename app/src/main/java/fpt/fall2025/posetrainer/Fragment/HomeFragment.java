@@ -86,6 +86,7 @@ public class HomeFragment extends Fragment {
         loadCurrentUserInfo();
         loadWorkoutTemplates();
         loadUnreadNotificationCount();
+        loadUserStreak();
         isDataLoaded = true;
         
         // Initialize chip states
@@ -147,6 +148,37 @@ public class HomeFragment extends Fragment {
         });
     }
     
+    /**
+     * Load user streak and display
+     */
+    private void loadUserStreak() {
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser == null) {
+            return;
+        }
+
+        FirebaseService.getInstance().loadUserStreak(currentUser.getUid(), streak -> {
+            if (getActivity() == null || binding == null) {
+                return;
+            }
+
+            getActivity().runOnUiThread(() -> {
+                if (streak != null && streak.getCurrentStreak() > 0) {
+                    if (binding.tvStreakCount != null) {
+                        binding.tvStreakCount.setText(streak.getCurrentStreak() + " ngày");
+                    }
+                    if (binding.llStreakSection != null) {
+                        binding.llStreakSection.setVisibility(View.VISIBLE);
+                    }
+                } else {
+                    if (binding.llStreakSection != null) {
+                        binding.llStreakSection.setVisibility(View.GONE);
+                    }
+                }
+            });
+        });
+    }
+
     /**
      * Cập nhật badge hiển thị số thông báo chưa đọc
      * @param count Số lượng thông báo chưa đọc

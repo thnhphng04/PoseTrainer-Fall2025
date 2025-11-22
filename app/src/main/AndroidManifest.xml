@@ -86,6 +86,9 @@
         <activity
             android:name=".Activity.SessionResultActivity"
             android:exported="false" />
+        <activity
+            android:name=".Activity.AchievementsActivity"
+            android:exported="false" />
 
         <!--        <activity-->
 <!--            android:name=".Activity.MainActivity"-->

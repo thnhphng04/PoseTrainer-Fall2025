@@ -1,5 +1,6 @@
 package fpt.fall2025.posetrainer.Adapter;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -82,26 +83,14 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.Schedu
         outFilteredItems.clear();
         outFilteredNames.clear();
         
-        // Get current date
-        Calendar today = Calendar.getInstance();
-        today.set(Calendar.HOUR_OF_DAY, 0);
-        today.set(Calendar.MINUTE, 0);
-        today.set(Calendar.SECOND, 0);
-        today.set(Calendar.MILLISECOND, 0);
-        
-        // Get start of current week (Monday)
-        Calendar startOfWeek = Calendar.getInstance();
-        startOfWeek.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
-        startOfWeek.set(Calendar.HOUR_OF_DAY, 0);
-        startOfWeek.set(Calendar.MINUTE, 0);
-        startOfWeek.set(Calendar.SECOND, 0);
-        startOfWeek.set(Calendar.MILLISECOND, 0);
+        // Get current date and time
+        Calendar now = Calendar.getInstance();
         
         for (int i = 0; i < allItems.size(); i++) {
             Schedule.ScheduleItem item = allItems.get(i);
             String workoutName = (i < allNames.size()) ? allNames.get(i) : "";
             
-            boolean isPast = isScheduleItemPast(item, today, startOfWeek);
+            boolean isPast = isScheduleItemPast(item, now);
             
             if (mode == FilterMode.PAST && isPast) {
                 outFilteredItems.add(item);
@@ -115,25 +104,75 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.Schedu
     
     /**
      * Check if a schedule item is in the past
+     * Ưu tiên sử dụng exactDate, nếu không có thì fallback về dayOfWeek
      */
-    private boolean isScheduleItemPast(Schedule.ScheduleItem item, Calendar today, Calendar startOfWeek) {
-        if (item.getDayOfWeek() == null || item.getDayOfWeek().isEmpty()) {
-            return false;
+    private boolean isScheduleItemPast(Schedule.ScheduleItem item, Calendar now) {
+        // Ưu tiên sử dụng exactDate nếu có
+        if (item.getExactDate() != null && !item.getExactDate().isEmpty()) {
+            try {
+                // Parse exactDate (format: "yyyy-MM-dd")
+                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+                Calendar scheduleDate = Calendar.getInstance();
+                scheduleDate.setTime(dateFormat.parse(item.getExactDate()));
+                
+                // Set time from timeLocal if available
+                if (item.getTimeLocal() != null && !item.getTimeLocal().isEmpty()) {
+                    String[] timeParts = item.getTimeLocal().split(":");
+                    if (timeParts.length == 2) {
+                        int hour = Integer.parseInt(timeParts[0]);
+                        int minute = Integer.parseInt(timeParts[1]);
+                        scheduleDate.set(Calendar.HOUR_OF_DAY, hour);
+                        scheduleDate.set(Calendar.MINUTE, minute);
+                        scheduleDate.set(Calendar.SECOND, 0);
+                        scheduleDate.set(Calendar.MILLISECOND, 0);
+                    }
+                } else {
+                    // Nếu không có timeLocal, set về cuối ngày (23:59:59)
+                    scheduleDate.set(Calendar.HOUR_OF_DAY, 23);
+                    scheduleDate.set(Calendar.MINUTE, 59);
+                    scheduleDate.set(Calendar.SECOND, 59);
+                    scheduleDate.set(Calendar.MILLISECOND, 999);
+                }
+                
+                // So sánh với thời gian hiện tại
+                return scheduleDate.before(now) || scheduleDate.equals(now);
+            } catch (Exception e) {
+                Log.e("ScheduleAdapter", "Error parsing exactDate: " + item.getExactDate(), e);
+                // Fallback về dayOfWeek nếu parse lỗi
+            }
         }
         
-        // Check if any day in the schedule item is in the past
-        for (Integer dayOfWeek : item.getDayOfWeek()) {
-            // Calculate the actual date for this day in the current week
-            Calendar dayDate = (Calendar) startOfWeek.clone();
-            int daysToAdd = (dayOfWeek - 1); // Schedule: Monday=1, ..., Sunday=7
-            dayDate.add(Calendar.DAY_OF_MONTH, daysToAdd);
+        // Fallback: sử dụng dayOfWeek nếu không có exactDate
+        if (item.getDayOfWeek() != null && !item.getDayOfWeek().isEmpty()) {
+            // Get current date (without time)
+            Calendar today = Calendar.getInstance();
+            today.set(Calendar.HOUR_OF_DAY, 0);
+            today.set(Calendar.MINUTE, 0);
+            today.set(Calendar.SECOND, 0);
+            today.set(Calendar.MILLISECOND, 0);
             
-            // Compare with today
-            int dateComparison = dayDate.compareTo(today);
+            // Get start of current week (Monday)
+            Calendar startOfWeek = Calendar.getInstance();
+            startOfWeek.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+            startOfWeek.set(Calendar.HOUR_OF_DAY, 0);
+            startOfWeek.set(Calendar.MINUTE, 0);
+            startOfWeek.set(Calendar.SECOND, 0);
+            startOfWeek.set(Calendar.MILLISECOND, 0);
             
-            // If any day is in the past or today, consider it past
-            if (dateComparison <= 0) {
-                return true;
+            // Check if any day in the schedule item is in the past
+            for (Integer dayOfWeek : item.getDayOfWeek()) {
+                // Calculate the actual date for this day in the current week
+                Calendar dayDate = (Calendar) startOfWeek.clone();
+                int daysToAdd = (dayOfWeek - 1); // Schedule: Monday=1, ..., Sunday=7
+                dayDate.add(Calendar.DAY_OF_MONTH, daysToAdd);
+                
+                // Compare with today
+                int dateComparison = dayDate.compareTo(today);
+                
+                // If any day is in the past or today, consider it past
+                if (dateComparison <= 0) {
+                    return true;
+                }
             }
         }
         
@@ -172,7 +211,28 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.Schedu
             tvWorkoutName.setText(workoutName);
 
             // Set days with actual dates
-            if (item.getDayOfWeek() != null && !item.getDayOfWeek().isEmpty()) {
+            // Ưu tiên sử dụng exactDate nếu có
+            if (item.getExactDate() != null && !item.getExactDate().isEmpty()) {
+                try {
+                    // Parse exactDate (format: "yyyy-MM-dd")
+                    SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+                    SimpleDateFormat outputFormat = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
+                    java.util.Date date = inputFormat.parse(item.getExactDate());
+                    
+                    // Get day name
+                    Calendar calendar = Calendar.getInstance();
+                    calendar.setTime(date);
+                    int dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK);
+                    String[] dayNames = {"", "Chủ nhật", "Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu", "Thứ bảy"};
+                    String dayName = (dayOfWeek >= 1 && dayOfWeek <= 7) ? dayNames[dayOfWeek] : "";
+                    
+                    tvDays.setText("Ngày: " + dayName + " " + outputFormat.format(date));
+                } catch (Exception e) {
+                    Log.e("ScheduleAdapter", "Error parsing exactDate: " + item.getExactDate(), e);
+                    tvDays.setText("Ngày: " + item.getExactDate());
+                }
+            } else if (item.getDayOfWeek() != null && !item.getDayOfWeek().isEmpty()) {
+                // Fallback: sử dụng dayOfWeek nếu không có exactDate
                 StringBuilder daysText = new StringBuilder("Ngày: ");
                 
                 // Get start of current week (Monday)
