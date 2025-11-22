@@ -101,32 +101,55 @@ public class TargetBodyFragment extends Fragment {
     }
 
     private void setupTargetGrid() {
+        if (targetCards == null) {
+            return;
+        }
         for (int i = 0; i < targetCards.length; i++) {
-            targetCards[i].setTag(bodyTypes[i]);
-            final int idx = i;
-            targetCards[i].setOnClickListener(v -> selectTargetCard(idx));
+            if (targetCards[i] != null && i < bodyTypes.length) {
+                targetCards[i].setTag(bodyTypes[i]);
+                final int idx = i;
+                targetCards[i].setOnClickListener(v -> selectTargetCard(idx));
+            }
         }
     }
 
     public void updateBodyImages() {
+        // Check if views are initialized
+        if (targetImages == null || targetTexts == null || targetCards == null) {
+            return;
+        }
+        
         String gender = listener != null ? listener.getGender() : "female";
         if (TextUtils.isEmpty(gender)) gender = "female";
 
         int[] drawables = "male".equalsIgnoreCase(gender) ? maleBodies : femaleBodies;
 
         for (int i = 0; i < 5; i++) {
-            targetImages[i].setImageResource(drawables[i]);
-            targetTexts[i].setText(bodyLabels[i]);
-            setCardStroke(targetCards[i], false);
+            if (targetImages[i] != null) {
+                targetImages[i].setImageResource(drawables[i]);
+            }
+            if (targetTexts[i] != null) {
+                targetTexts[i].setText(bodyLabels[i]);
+            }
+            if (targetCards[i] != null) {
+                setCardStroke(targetCards[i], false);
+            }
         }
         targetBodyType = null;
     }
 
     private void selectTargetCard(int index) {
-        for (int i = 0; i < targetCards.length; i++) {
-            setCardStroke(targetCards[i], i == index);
+        if (targetCards == null || index < 0 || index >= targetCards.length) {
+            return;
         }
-        targetBodyType = String.valueOf(targetCards[index].getTag());
+        for (int i = 0; i < targetCards.length; i++) {
+            if (targetCards[i] != null) {
+                setCardStroke(targetCards[i], i == index);
+            }
+        }
+        if (targetCards[index] != null) {
+            targetBodyType = String.valueOf(targetCards[index].getTag());
+        }
 
         if (listener != null) {
             listener.onTargetBodySelected(targetBodyType);
@@ -134,6 +157,9 @@ public class TargetBodyFragment extends Fragment {
     }
 
     private void setupTextWatcher() {
+        if (etTargetWeight == null) {
+            return;
+        }
         etTargetWeight.setOnFocusChangeListener((v, hasFocus) -> {
             if (!hasFocus && listener != null) {
                 String weight = etTargetWeight.getText() != null ? etTargetWeight.getText().toString().trim() : "";
@@ -161,6 +187,11 @@ public class TargetBodyFragment extends Fragment {
     }
 
     public boolean validate() {
+        // Check if views are initialized
+        if (etTargetWeight == null || tilTargetWeight == null) {
+            return false;
+        }
+        
         clearErrors();
 
         if (targetBodyType == null) {
@@ -188,7 +219,9 @@ public class TargetBodyFragment extends Fragment {
     }
 
     private void clearErrors() {
-        tilTargetWeight.setError(null);
+        if (tilTargetWeight != null) {
+            tilTargetWeight.setError(null);
+        }
     }
 
     public String getTargetBodyType() {
@@ -196,6 +229,9 @@ public class TargetBodyFragment extends Fragment {
     }
 
     public String getTargetWeight() {
+        if (etTargetWeight == null) {
+            return "";
+        }
         return etTargetWeight.getText() != null ? etTargetWeight.getText().toString().trim() : "";
     }
 }

@@ -1,5 +1,6 @@
 package fpt.fall2025.posetrainer.Activity;
 
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -8,6 +9,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 import androidx.viewpager2.widget.ViewPager2;
@@ -141,14 +143,20 @@ public class RegistrationInfoActivity extends AppCompatActivity implements
                 if (currentFragment instanceof CurrentBodyFragment && currentBodyFragment == null) {
                     currentBodyFragment = (CurrentBodyFragment) currentFragment;
                     currentBodyFragment.setListener(this);
-                    currentBodyFragment.updateBodyImages();
+                    // Only update if view is ready
+                    if (currentFragment.getView() != null) {
+                        currentBodyFragment.updateBodyImages();
+                    }
                 }
                 break;
             case 3:
                 if (currentFragment instanceof TargetBodyFragment && targetBodyFragment == null) {
                     targetBodyFragment = (TargetBodyFragment) currentFragment;
                     targetBodyFragment.setListener(this);
-                    targetBodyFragment.updateBodyImages();
+                    // Only update if view is ready
+                    if (currentFragment.getView() != null) {
+                        targetBodyFragment.updateBodyImages();
+                    }
                 }
                 break;
         }
@@ -175,18 +183,169 @@ public class RegistrationInfoActivity extends AppCompatActivity implements
                     if (fragment instanceof CurrentBodyFragment && currentBodyFragment == null) {
                         currentBodyFragment = (CurrentBodyFragment) fragment;
                         currentBodyFragment.setListener(this);
-                        currentBodyFragment.updateBodyImages();
+                        // Only update if view is ready
+                        if (fragment.getView() != null) {
+                            currentBodyFragment.updateBodyImages();
+                        }
                     }
                     break;
                 case 3:
                     if (fragment instanceof TargetBodyFragment && targetBodyFragment == null) {
                         targetBodyFragment = (TargetBodyFragment) fragment;
                         targetBodyFragment.setListener(this);
-                        targetBodyFragment.updateBodyImages();
+                        // Only update if view is ready
+                        if (fragment.getView() != null) {
+                            targetBodyFragment.updateBodyImages();
+                        }
                     }
                     break;
             }
         }
+        
+        // Setup skip button and update body images for current fragment (after view is created)
+        if (currentFragment != null) {
+            View fragmentView = currentFragment.getView();
+            if (fragmentView != null) {
+                setupSkipButton(currentFragment);
+                // Update body images if needed
+                if (currentFragment instanceof CurrentBodyFragment && currentBodyFragment != null) {
+                    currentBodyFragment.updateBodyImages();
+                } else if (currentFragment instanceof TargetBodyFragment && targetBodyFragment != null) {
+                    targetBodyFragment.updateBodyImages();
+                }
+            } else {
+                // If view is not ready, wait a bit and try again
+                viewPager.post(() -> {
+                    if (currentFragment.getView() != null) {
+                        setupSkipButton(currentFragment);
+                        // Update body images if needed
+                        if (currentFragment instanceof CurrentBodyFragment && currentBodyFragment != null) {
+                            currentBodyFragment.updateBodyImages();
+                        } else if (currentFragment instanceof TargetBodyFragment && targetBodyFragment != null) {
+                            targetBodyFragment.updateBodyImages();
+                        }
+                    }
+                });
+            }
+        }
+    }
+    
+    private void setupSkipButton(Fragment fragment) {
+        if (fragment == null || fragment.getView() == null) return;
+        
+        MaterialButton btnSkip = fragment.getView().findViewById(R.id.btn_skip);
+        if (btnSkip != null) {
+            btnSkip.setOnClickListener(v -> handleSkip());
+        }
+    }
+    
+    private void handleSkip() {
+        // Collect all data that has been entered
+        collectAllData();
+        
+        // Save partial profile (only fields that have been filled)
+        savePartialProfile();
+        
+        // Show dialog
+        showSkipDialog();
+    }
+    
+    private void savePartialProfile() {
+        setLoading(true);
+        
+        // Create Profile object with only available data
+        Profile profile = new Profile();
+        profile.setUid(uid);
+        profile.setLastUpdatedAt(System.currentTimeMillis());
+        
+        // Add data only if it's not null/empty
+        if (birthday != null && !birthday.isEmpty()) {
+            profile.setBirthday(birthday);
+        }
+        if (gender != null && !gender.isEmpty()) {
+            profile.setGender(gender);
+        }
+        if (height != null && !height.isEmpty()) {
+            try {
+                profile.setHeightCm(Integer.parseInt(height));
+            } catch (NumberFormatException e) {
+                // Ignore invalid height
+            }
+        }
+        if (weight != null && !weight.isEmpty()) {
+            try {
+                profile.setWeightKg(Integer.parseInt(weight));
+            } catch (NumberFormatException e) {
+                // Ignore invalid weight
+            }
+        }
+        if (currentBodyType != null && !currentBodyType.isEmpty()) {
+            profile.setCurrentBodyType(currentBodyType);
+        }
+        if (dailyMinutes != null && !dailyMinutes.isEmpty()) {
+            try {
+                profile.setDailyTrainingMinutes(Integer.parseInt(dailyMinutes));
+            } catch (NumberFormatException e) {
+                // Ignore invalid minutes
+            }
+        }
+        if (weeklyGoal != null && !weeklyGoal.isEmpty()) {
+            try {
+                profile.setWeeklyGoal(Integer.parseInt(weeklyGoal));
+            } catch (NumberFormatException e) {
+                // Ignore invalid goal
+            }
+        }
+        if (selectedExperienceLevel != null && !selectedExperienceLevel.isEmpty()) {
+            profile.setExperienceLevel(selectedExperienceLevel);
+        }
+        if (trainingStartTime != null && !trainingStartTime.isEmpty()) {
+            profile.setTrainingStartTime(trainingStartTime);
+        }
+        if (trainingEndTime != null && !trainingEndTime.isEmpty()) {
+            profile.setTrainingEndTime(trainingEndTime);
+        }
+        
+        // Add goals if available
+        if (targetBodyType != null && !targetBodyType.isEmpty() || 
+            (targetWeight != null && !targetWeight.isEmpty())) {
+            Profile.Goals goals = new Profile.Goals();
+            if (targetBodyType != null && !targetBodyType.isEmpty()) {
+                goals.setTargetBodyType(targetBodyType);
+            }
+            if (targetWeight != null && !targetWeight.isEmpty()) {
+                try {
+                    goals.setTargetWeightKg(Integer.parseInt(targetWeight));
+                } catch (NumberFormatException e) {
+                    // Ignore invalid weight
+                }
+            }
+            profile.setGoals(goals);
+        }
+        
+        // Save to Firestore
+        db.collection("profiles").document(uid)
+                .set(profile, SetOptions.merge())
+                .addOnSuccessListener(unused -> {
+                    setLoading(false);
+                })
+                .addOnFailureListener(e -> {
+                    setLoading(false);
+                    Log.e("RegistrationInfoActivity", "save partial profile failed", e);
+                });
+    }
+    
+    private void showSkipDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("Thông báo")
+                .setMessage("Hãy hoàn thành câu trả lời này ở mục Hồ Sơ để chúng tôi giúp bạn đưa ra các bài tập phù hợp nhé!")
+                .setPositiveButton("OK", (dialog, which) -> {
+                    // Navigate to MainActivity
+                    startActivity(new android.content.Intent(this, MainActivity.class));
+                    finish();
+                })
+                .setCancelable(false)
+                .show();
     }
 
     private void setupButtons() {

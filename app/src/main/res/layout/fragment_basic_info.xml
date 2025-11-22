@@ -3,98 +3,86 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/mainColor"
     android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="24dp">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Thông tin cơ bản"
-            android:textColor="@color/white"
-            android:textSize="20sp"
+            android:text="Hãy cho chúng tôi biết thêm về bạn"
+            android:textSize="24sp"
             android:textStyle="bold"
-            android:layout_marginBottom="16dp" />
+            android:textColor="@color/white"
+            android:gravity="center"
+            android:layout_marginBottom="8dp"/>
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Thông tin này giúp chúng tôi tạo kế hoạch tập luyện phù hợp nhất"
+            android:textSize="14sp"
+            android:textColor="#999999"
+            android:gravity="center"
+            android:layout_marginBottom="24dp"/>
+
+        <!-- Ngày sinh -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/til_birthday"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Ngày sinh (YYYY-MM-DD)"
-            app:boxBackgroundMode="outline"
-            app:boxStrokeColor="@color/white"
-            app:boxStrokeWidth="1dp"
+            android:textColorHint="#999999"
             app:hintTextColor="@color/white"
-            app:hintEnabled="true">
+            app:boxStrokeColor="@color/white"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_marginBottom="12dp">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_birthday"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="@color/white"
-                android:textColorHint="@android:color/darker_gray"
                 android:focusable="false"
                 android:clickable="true"
-                android:inputType="none" />
+                android:inputType="none"
+                android:textColor="@color/white"
+                android:hint="VD: 2000-05-21" />
 
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Giới tính -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/til_gender"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
             android:hint="Giới tính"
-            app:boxBackgroundMode="outline"
-            app:boxStrokeColor="@color/white"
-            app:boxStrokeWidth="1dp"
+            android:textColorHint="#999999"
             app:hintTextColor="@color/white"
-            app:hintEnabled="true">
+            app:boxStrokeColor="@color/white"
+            android:layout_marginBottom="12dp">
 
             <com.google.android.material.textfield.MaterialAutoCompleteTextView
                 android:id="@+id/dd_gender"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="@color/white" />
+                android:textColor="@color/white"
+                android:inputType="none"/>
 
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Cân nặng và Chiều cao (2 cột) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:weightSum="2"
-            android:layout_marginTop="12dp">
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/til_height"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="Chiều cao (cm)"
-                app:boxBackgroundMode="outline"
-                app:boxStrokeColor="@color/white"
-                app:boxStrokeWidth="1dp"
-                app:hintTextColor="@color/white"
-                app:hintEnabled="true">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/et_height"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/white"
-                    android:textColorHint="@android:color/darker_gray"
-                    android:inputType="number" />
-
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <Space
-                android:layout_width="12dp"
-                android:layout_height="match_parent" />
+            android:layout_marginBottom="12dp">
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/til_weight"
@@ -102,121 +90,135 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:hint="Cân nặng (kg)"
-                app:boxBackgroundMode="outline"
-                app:boxStrokeColor="@color/white"
-                app:boxStrokeWidth="1dp"
+                android:textColorHint="#999999"
                 app:hintTextColor="@color/white"
-                app:hintEnabled="true">
+                app:boxStrokeColor="@color/white"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/et_weight"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textColor="@color/white"
-                    android:textColorHint="@android:color/darker_gray"
-                    android:inputType="number" />
+                    android:inputType="numberDecimal"
+                    android:textColor="@color/white"/>
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <Space
+                android:layout_width="12dp"
+                android:layout_height="match_parent"/>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_height"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="Chiều cao (cm)"
+                android:textColorHint="#999999"
+                app:hintTextColor="@color/white"
+                app:boxStrokeColor="@color/white"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_height"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:textColor="@color/white"/>
 
             </com.google.android.material.textfield.TextInputLayout>
 
         </LinearLayout>
 
+        <!-- Thời gian tập mỗi ngày -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/til_daily_minutes"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
             android:hint="Thời gian tập mỗi ngày (phút)"
-            app:boxBackgroundMode="outline"
-            app:boxStrokeColor="@color/white"
-            app:boxStrokeWidth="1dp"
+            android:textColorHint="#999999"
             app:hintTextColor="@color/white"
-            app:hintEnabled="true">
+            app:boxStrokeColor="@color/white"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_marginBottom="12dp">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_daily_minutes"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="@color/white"
-                android:textColorHint="@android:color/darker_gray"
-                android:inputType="number" />
+                android:inputType="number"
+                android:textColor="@color/white"/>
 
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Số ngày có thể tập luyện trong 1 tuần -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/til_weekly_goal"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
             android:hint="Số ngày có thể tập luyện trong 1 tuần"
-            app:boxBackgroundMode="outline"
-            app:boxStrokeColor="@color/white"
-            app:boxStrokeWidth="1dp"
+            android:textColorHint="#999999"
             app:hintTextColor="@color/white"
-            app:hintEnabled="true">
+            app:boxStrokeColor="@color/white"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_marginBottom="12dp">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_weekly_goal"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="@color/white"
-                android:textColorHint="@android:color/darker_gray"
-                android:inputType="number" />
+                android:inputType="number"
+                android:textColor="@color/white"/>
 
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Thời gian bắt đầu và kết thúc tập -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:weightSum="2"
-            android:layout_marginTop="12dp">
+            android:weightSum="2">
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/til_training_start_time"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:layout_marginEnd="6dp"
                 android:hint="Thời gian bắt đầu tập"
-                app:boxBackgroundMode="outline"
-                app:boxStrokeColor="@color/white"
-                app:boxStrokeWidth="1dp"
+                android:textColorHint="#999999"
                 app:hintTextColor="@color/white"
-                app:hintEnabled="true">
+                app:boxStrokeColor="@color/white"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/et_training_start_time"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:textColor="@color/white"
-                    android:textColorHint="@android:color/darker_gray"
                     android:focusable="false"
                     android:clickable="true"
                     android:inputType="none" />
 
             </com.google.android.material.textfield.TextInputLayout>
 
-            <Space
-                android:layout_width="12dp"
-                android:layout_height="match_parent" />
-
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/til_training_end_time"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:layout_marginStart="6dp"
                 android:hint="Thời gian kết thúc tập"
-                app:boxBackgroundMode="outline"
-                app:boxStrokeColor="@color/white"
-                app:boxStrokeWidth="1dp"
+                android:textColorHint="#999999"
                 app:hintTextColor="@color/white"
-                app:hintEnabled="true">
+                app:boxStrokeColor="@color/white"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/et_training_end_time"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:textColor="@color/white"
-                    android:textColorHint="@android:color/darker_gray"
                     android:focusable="false"
                     android:clickable="true"
                     android:inputType="none" />
@@ -225,8 +227,18 @@
 
         </LinearLayout>
 
+        <!-- Nút Bỏ qua -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_skip"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="Bỏ qua"
+            android:textColor="@color/white"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            app:strokeColor="@color/white"
+            app:cornerRadius="12dp" />
+
     </LinearLayout>
 
 </ScrollView>
-
-

@@ -92,32 +92,55 @@ public class CurrentBodyFragment extends Fragment {
     }
 
     private void setupCurrentGrid() {
+        if (bodyCards == null) {
+            return;
+        }
         for (int i = 0; i < bodyCards.length; i++) {
-            bodyCards[i].setTag(bodyTypes[i]);
-            final int idx = i;
-            bodyCards[i].setOnClickListener(v -> selectCurrentCard(idx));
+            if (bodyCards[i] != null && i < bodyTypes.length) {
+                bodyCards[i].setTag(bodyTypes[i]);
+                final int idx = i;
+                bodyCards[i].setOnClickListener(v -> selectCurrentCard(idx));
+            }
         }
     }
 
     public void updateBodyImages() {
+        // Check if views are initialized
+        if (bodyImages == null || bodyTexts == null || bodyCards == null) {
+            return;
+        }
+        
         String gender = listener != null ? listener.getGender() : "female";
         if (TextUtils.isEmpty(gender)) gender = "female";
 
         int[] drawables = "male".equalsIgnoreCase(gender) ? maleBodies : femaleBodies;
 
         for (int i = 0; i < 5; i++) {
-            bodyImages[i].setImageResource(drawables[i]);
-            bodyTexts[i].setText(bodyLabels[i]);
-            setCardStroke(bodyCards[i], false);
+            if (bodyImages[i] != null) {
+                bodyImages[i].setImageResource(drawables[i]);
+            }
+            if (bodyTexts[i] != null) {
+                bodyTexts[i].setText(bodyLabels[i]);
+            }
+            if (bodyCards[i] != null) {
+                setCardStroke(bodyCards[i], false);
+            }
         }
         currentBodyType = null;
     }
 
     private void selectCurrentCard(int index) {
-        for (int i = 0; i < bodyCards.length; i++) {
-            setCardStroke(bodyCards[i], i == index);
+        if (bodyCards == null || index < 0 || index >= bodyCards.length) {
+            return;
         }
-        currentBodyType = String.valueOf(bodyCards[index].getTag());
+        for (int i = 0; i < bodyCards.length; i++) {
+            if (bodyCards[i] != null) {
+                setCardStroke(bodyCards[i], i == index);
+            }
+        }
+        if (bodyCards[index] != null) {
+            currentBodyType = String.valueOf(bodyCards[index].getTag());
+        }
 
         if (listener != null) {
             listener.onCurrentBodySelected(currentBodyType);

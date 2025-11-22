@@ -124,15 +124,6 @@
             app:boxStrokeColor="@color/white"
             app:boxStrokeWidth="1dp"
             app:hintTextColor="@color/white">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/et_photo_url"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="URL ảnh đại diện (tùy chọn)"
-                android:textColor="@color/white"
-                android:textColorHint="#80FFFFFF"
-                android:inputType="textUri" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Register Button -->
