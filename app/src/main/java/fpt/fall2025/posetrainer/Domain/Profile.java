@@ -17,7 +17,8 @@ import java.io.Serializable;
  * 6. Thời gian tập luyện mỗi ngày (dailyTrainingMinutes)
  * 7. Số ngày có thể tập luyện trong 1 tuần (weeklyGoal)
  * 8. Kinh nghiệm tập luyện của bản thân (experienceLevel)
- * 9. Mục tiêu trong tương lai (goals):
+ * 9. Khoảng thời gian tập luyện trong ngày (trainingStartTime, trainingEndTime) - format "HH:mm"
+ * 10. Mục tiêu trong tương lai (goals):
  *    - Cân nặng (targetWeightKg)
  *    - Body trong tương lai (targetBodyType)
  */
@@ -39,6 +40,8 @@ public class Profile implements Serializable {
     private int dailyTrainingMinutes;     // Thời gian tập luyện mỗi ngày
     private int weeklyGoal;               // Số ngày có thể tập luyện trong 1 tuần
     private String experienceLevel;       // "beginner"|"intermediate"|"advanced"
+    private String trainingStartTime;     // Thời gian bắt đầu tập luyện (format: "HH:mm")
+    private String trainingEndTime;       // Thời gian kết thúc tập luyện (format: "HH:mm")
 
     /* ===== Goals (future body/weight) ===== */
     private Goals goals;
@@ -57,6 +60,8 @@ public class Profile implements Serializable {
                    int dailyTrainingMinutes,
                    int weeklyGoal,
                    String experienceLevel,
+                   String trainingStartTime,
+                   String trainingEndTime,
                    Goals goals,
                    long lastUpdatedAt) {
         this.uid = uid;
@@ -68,6 +73,8 @@ public class Profile implements Serializable {
         this.dailyTrainingMinutes = dailyTrainingMinutes;
         this.weeklyGoal = weeklyGoal;
         this.experienceLevel = experienceLevel;
+        this.trainingStartTime = trainingStartTime;
+        this.trainingEndTime = trainingEndTime;
         this.goals = goals;
         this.lastUpdatedAt = lastUpdatedAt;
     }
@@ -99,6 +106,12 @@ public class Profile implements Serializable {
 
     public String getExperienceLevel() { return experienceLevel; }
     public void setExperienceLevel(String experienceLevel) { this.experienceLevel = experienceLevel; }
+
+    public String getTrainingStartTime() { return trainingStartTime; }
+    public void setTrainingStartTime(String trainingStartTime) { this.trainingStartTime = trainingStartTime; }
+
+    public String getTrainingEndTime() { return trainingEndTime; }
+    public void setTrainingEndTime(String trainingEndTime) { this.trainingEndTime = trainingEndTime; }
 
     public Goals getGoals() { return goals; }
     public void setGoals(Goals goals) { this.goals = goals; }
