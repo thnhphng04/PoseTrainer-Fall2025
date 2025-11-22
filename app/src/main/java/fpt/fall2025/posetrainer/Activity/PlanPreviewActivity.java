@@ -21,8 +21,10 @@ import com.google.firebase.functions.FirebaseFunctionsException;
 import com.google.firebase.functions.HttpsCallableResult;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import fpt.fall2025.posetrainer.Domain.Schedule;
@@ -371,6 +373,21 @@ public class PlanPreviewActivity extends AppCompatActivity {
         List<Schedule.ScheduleItem> scheduleItems = new ArrayList<>();
         long currentTime = System.currentTimeMillis() / 1000;
 
+        // Tính toán ngày bắt đầu (thứ 2 của tuần hiện tại hoặc tuần tiếp theo)
+        Calendar calendar = Calendar.getInstance();
+        int currentDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK);
+        int daysUntilMonday = (Calendar.MONDAY - currentDayOfWeek + 7) % 7;
+        if (daysUntilMonday == 0 && calendar.get(Calendar.HOUR_OF_DAY) >= 8) {
+            // Nếu đã qua 8h sáng thứ 2, bắt đầu từ tuần sau
+            daysUntilMonday = 7;
+        }
+        calendar.add(Calendar.DAY_OF_MONTH, daysUntilMonday);
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+        Calendar weekStart = (Calendar) calendar.clone();
+
         // Convert mỗi Day thành UserWorkout
         for (PlanModels.Day day : currentPlan.days) {
             // Tạo UserWorkout từ Day
@@ -388,10 +405,17 @@ public class PlanPreviewActivity extends AppCompatActivity {
             List<Integer> daysOfWeek = new ArrayList<>();
             daysOfWeek.add(dayOfWeek);
 
+            // Tính toán exactDate: thứ 2 + (dayIndex - 1) ngày
+            Calendar exactDateCalendar = (Calendar) weekStart.clone();
+            exactDateCalendar.add(Calendar.DAY_OF_MONTH, dayOfWeek - 1);
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault());
+            String exactDate = sdf.format(exactDateCalendar.getTime());
+
             Schedule.ScheduleItem scheduleItem = new Schedule.ScheduleItem(
                 daysOfWeek,
                 "08:00", // Mặc định 8:00 sáng, user có thể chỉnh sau
-                workout.getId() // Link đến workout ID
+                workout.getId(), // Link đến workout ID
+                exactDate
             );
             scheduleItems.add(scheduleItem);
         }

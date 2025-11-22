@@ -3,10 +3,10 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="12dp"
-    android:layout_marginStart="4dp"
-    android:layout_marginEnd="4dp"
-    app:cardCornerRadius="16dp"
+    android:layout_marginBottom="8dp"
+    android:layout_marginStart="2dp"
+    android:layout_marginEnd="2dp"
+    app:cardCornerRadius="12dp"
     app:cardElevation="0dp"
     app:cardBackgroundColor="#ff1a1f2e">
 
@@ -14,7 +14,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="18dp">
+        android:padding="12dp">
 
         <!-- Workout Name with icon -->
         <LinearLayout
@@ -22,14 +22,14 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginBottom="12dp">
+            android:layout_marginBottom="8dp">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="💪"
-                android:textSize="20sp"
-                android:layout_marginEnd="8dp" />
+                android:textSize="16sp"
+                android:layout_marginEnd="6dp" />
 
             <TextView
                 android:id="@+id/tv_workout_name"
@@ -38,7 +38,7 @@
                 android:layout_weight="1"
                 android:text="Tên bài tập"
                 android:textColor="#ffffff"
-                android:textSize="17sp"
+                android:textSize="14sp"
                 android:textStyle="bold"
                 android:maxLines="2"
                 android:ellipsize="end" />
@@ -51,7 +51,7 @@
             android:layout_height="1dp"
             android:background="#ffffff"
             android:alpha="0.15"
-            android:layout_marginBottom="12dp" />
+            android:layout_marginBottom="8dp" />
 
         <!-- Days -->
         <LinearLayout
@@ -59,14 +59,14 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginBottom="8dp">
+            android:layout_marginBottom="6dp">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="📅"
-                android:textSize="16sp"
-                android:layout_marginEnd="10dp" />
+                android:textSize="14sp"
+                android:layout_marginEnd="6dp" />
 
             <TextView
                 android:id="@+id/tv_days"
@@ -75,7 +75,9 @@
                 android:layout_weight="1"
                 android:text="Thứ: "
                 android:textColor="#99ffffff"
-                android:textSize="15sp" />
+                android:textSize="12sp"
+                android:maxLines="2"
+                android:ellipsize="end" />
 
         </LinearLayout>
 
@@ -90,8 +92,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="⏰"
-                android:textSize="16sp"
-                android:layout_marginEnd="10dp" />
+                android:textSize="14sp"
+                android:layout_marginEnd="6dp" />
 
             <TextView
                 android:id="@+id/tv_time"
@@ -100,7 +102,9 @@
                 android:layout_weight="1"
                 android:text="Giờ: "
                 android:textColor="#99ffffff"
-                android:textSize="15sp" />
+                android:textSize="12sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
 
         </LinearLayout>
 

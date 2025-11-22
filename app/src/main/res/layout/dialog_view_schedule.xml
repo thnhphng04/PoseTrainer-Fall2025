@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    app:cardCornerRadius="24dp"
+    app:cardCornerRadius="16dp"
     app:cardElevation="0dp"
     app:cardBackgroundColor="#ff2a3142">
 
@@ -20,7 +20,7 @@
             android:background="@drawable/button_primary"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:padding="16dp">
+            android:padding="12dp">
 
             <!-- Title with icon -->
             <TextView
@@ -31,19 +31,56 @@
                 android:gravity="center_vertical|start"
                 android:text="📅 Lịch tập của tôi"
                 android:textColor="#ffffff"
-                android:textSize="20sp"
-                android:textStyle="bold" />
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end" />
 
             <!-- Close Button -->
             <ImageButton
                 android:id="@+id/btn_close"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
                 android:src="@drawable/ic_close"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:tint="#ffffff"
                 android:contentDescription="Đóng"
-                android:padding="8dp" />
+                android:padding="6dp" />
+
+        </LinearLayout>
+
+        <!-- Search Bar -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="6dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔍"
+                android:textSize="14sp"
+                android:layout_marginEnd="8dp" />
+
+            <EditText
+                android:id="@+id/et_search"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:hint="Tìm kiếm lịch tập..."
+                android:textColor="#ffffff"
+                android:textColorHint="#99ffffff"
+                android:textSize="12sp"
+                android:background="#ff1a1f2e"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:maxLines="1"
+                android:imeOptions="actionSearch" />
 
         </LinearLayout>
 
@@ -53,19 +90,19 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
-            android:paddingTop="16dp"
-            android:paddingBottom="8dp">
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="🔍 Lọc:"
                 android:textColor="#ffffff"
-                android:textSize="14sp"
+                android:textSize="12sp"
                 android:textStyle="bold"
-                android:layout_marginEnd="12dp" />
+                android:layout_marginEnd="8dp" />
 
             <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/btn_filter"
@@ -73,17 +110,18 @@
                 android:layout_height="wrap_content"
                 android:text="Tất cả"
                 android:textColor="#4d9df2"
-                android:textSize="14sp"
+                android:textSize="12sp"
                 android:textStyle="bold"
                 android:background="@drawable/button_secondary"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
-                android:paddingTop="8dp"
-                android:paddingBottom="8dp"
-                android:minWidth="120dp"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp"
+                android:minWidth="100dp"
                 android:gravity="center"
                 android:drawableEnd="@drawable/ic_arrow_drop_down"
-                android:drawableTint="#4d9df2" />
+                android:drawableTint="#4d9df2"
+                android:maxLines="1" />
 
         </LinearLayout>
 
@@ -92,27 +130,130 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
-            android:paddingBottom="20dp">
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="12dp">
 
-            <!-- ScrollView wrapper for RecyclerView -->
-            <androidx.core.widget.NestedScrollView
+            <!-- Statistics -->
+            <LinearLayout
+                android:id="@+id/layout_statistics"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:maxHeight="450dp"
-                android:fillViewport="false">
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:padding="10dp"
+                android:background="#ff1a1f2e"
+                android:layout_marginBottom="10dp"
+                android:visibility="gone">
 
-                <!-- RecyclerView for Schedule Items -->
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/recycler_view_schedules"
+                <TextView
+                    android:id="@+id/tv_total_count"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Tổng: 0"
+                    android:textColor="#ffffff"
+                    android:textSize="11sp"
+                    android:gravity="center" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="20dp"
+                    android:background="#33ffffff" />
+
+                <TextView
+                    android:id="@+id/tv_past_count"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Đã qua: 0"
+                    android:textColor="#ff6b6b"
+                    android:textSize="11sp"
+                    android:gravity="center" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="20dp"
+                    android:background="#33ffffff" />
+
+                <TextView
+                    android:id="@+id/tv_future_count"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Sắp tới: 0"
+                    android:textColor="#4d9df2"
+                    android:textSize="11sp"
+                    android:gravity="center" />
+
+            </LinearLayout>
+
+            <!-- Sort Button -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp"
+                android:layout_marginBottom="6dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="📊 Sắp xếp:"
+                    android:textColor="#ffffff"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:layout_marginEnd="8dp" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btn_sort"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Thời gian ↑"
+                    android:textColor="#4d9df2"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:background="@drawable/button_secondary"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:paddingTop="5dp"
+                    android:paddingBottom="5dp"
+                    android:minWidth="90dp"
+                    android:gravity="center"
+                    android:drawableEnd="@drawable/ic_arrow_drop_down"
+                    android:drawableTint="#4d9df2"
+                    android:maxLines="1" />
+
+            </LinearLayout>
+
+            <!-- ScrollView wrapper for RecyclerView with SwipeRefreshLayout -->
+            <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+                android:id="@+id/swipe_refresh"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <androidx.core.widget.NestedScrollView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:nestedScrollingEnabled="false"
-                    android:paddingTop="8dp"
-                    android:paddingBottom="8dp" />
+                    android:maxHeight="300dp"
+                    android:fillViewport="false">
 
-            </androidx.core.widget.NestedScrollView>
+                    <!-- RecyclerView for Schedule Items -->
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/recycler_view_schedules"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:nestedScrollingEnabled="false"
+                        android:paddingTop="6dp"
+                        android:paddingBottom="6dp" />
+
+                </androidx.core.widget.NestedScrollView>
+
+            </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
             <!-- Empty State -->
             <LinearLayout
@@ -121,15 +262,15 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:padding="40dp"
+                android:padding="24dp"
                 android:visibility="gone">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="📝"
-                    android:textSize="48sp"
-                    android:layout_marginBottom="16dp" />
+                    android:textSize="36sp"
+                    android:layout_marginBottom="12dp" />
 
                 <TextView
                     android:id="@+id/tv_empty_schedule"
@@ -137,21 +278,39 @@
                     android:layout_height="wrap_content"
                     android:text="Bạn chưa có lịch tập nào"
                     android:textColor="#99ffffff"
-                    android:textSize="16sp"
-                    android:gravity="center" />
+                    android:textSize="14sp"
+                    android:gravity="center"
+                    android:maxLines="2"
+                    android:ellipsize="end" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Hãy thêm lịch tập để bắt đầu!"
                     android:textColor="#66ffffff"
-                    android:textSize="14sp"
-                    android:layout_marginTop="8dp"
-                    android:gravity="center" />
+                    android:textSize="12sp"
+                    android:layout_marginTop="6dp"
+                    android:gravity="center"
+                    android:maxLines="2"
+                    android:ellipsize="end" />
+
+                </LinearLayout>
+
+            <!-- Add New Button -->
+            <Button
+                android:id="@+id/btn_add_new"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:text="➕ Thêm lịch tập mới"
+                android:textColor="#4d9df2"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:background="@drawable/button_secondary"
+                android:layout_marginTop="10dp"
+                android:maxLines="1"
+                android:ellipsize="end" />
 
             </LinearLayout>
-
-        </LinearLayout>
 
     </LinearLayout>
 

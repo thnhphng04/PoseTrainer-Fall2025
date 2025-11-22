@@ -324,6 +324,23 @@ public class MainActivity extends AppCompatActivity {
     }
     
     /**
+     * Method public để navigate đến DailyFragment và chọn ngày cụ thể
+     * Ví dụ: từ ViewScheduleDialog có thể click vào schedule item để xem ngày đó
+     */
+    public void navigateToDailyFragmentWithDay(int dayOfWeek) {
+        showFragment(dailyFragment);
+        // Notify DailyFragment to select the day
+        if (dailyFragment != null && dailyFragment.isAdded()) {
+            // Use post to ensure fragment is ready
+            binding.getRoot().post(() -> {
+                if (dailyFragment instanceof fpt.fall2025.posetrainer.Fragment.DailyFragment) {
+                    ((fpt.fall2025.posetrainer.Fragment.DailyFragment) dailyFragment).selectDay(dayOfWeek);
+                }
+            });
+        }
+    }
+    
+    /**
      * Setup FCM token và notification settings cho user
      * Được gọi khi app khởi động để đảm bảo user có token và settings đúng
      */

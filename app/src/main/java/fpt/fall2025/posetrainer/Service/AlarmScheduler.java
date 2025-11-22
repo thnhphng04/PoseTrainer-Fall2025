@@ -7,8 +7,10 @@ import android.content.Intent;
 import android.os.Build;
 import android.util.Log;
 
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Locale;
 
 import fpt.fall2025.posetrainer.BroadcastReceiver.WorkoutReminderReceiver;
 import fpt.fall2025.posetrainer.Domain.Schedule;
@@ -75,12 +77,9 @@ public class AlarmScheduler {
 
     /**
      * Schedule alarm cho một ScheduleItem
+     * Ưu tiên sử dụng exactDate nếu có để tránh lặp lại tuần sau
      */
     private void scheduleAlarmForScheduleItem(Schedule.ScheduleItem item, int remindBeforeMin, boolean useExact) {
-        if (item.getDayOfWeek() == null || item.getDayOfWeek().isEmpty()) {
-            return;
-        }
-
         String[] timeParts = item.getTimeLocal().split(":");
         if (timeParts.length != 2) {
             Log.e(TAG, "Invalid time format: " + item.getTimeLocal());
@@ -91,120 +90,76 @@ public class AlarmScheduler {
             int hour = Integer.parseInt(timeParts[0]);
             int minute = Integer.parseInt(timeParts[1]);
 
-            // Schedule alarm for each day of week
-            for (Integer dayOfWeek : item.getDayOfWeek()) {
-                scheduleAlarmForDay(dayOfWeek, hour, minute, remindBeforeMin, item.getWorkoutId(), useExact);
+            // Chỉ schedule nếu có exactDate
+            if (item.getExactDate() == null || item.getExactDate().isEmpty()) {
+                Log.w(TAG, "Không thể schedule alarm: schedule item thiếu exactDate");
+                return;
             }
+            
+            scheduleAlarmForExactDate(item.getExactDate(), hour, minute, remindBeforeMin, item.getWorkoutId(), useExact);
         } catch (NumberFormatException e) {
             Log.e(TAG, "Error parsing time: " + item.getTimeLocal(), e);
         }
     }
 
     /**
-     * Schedule alarm cho một ngày cụ thể trong tuần
-     * dayOfWeek: 1=Monday, 2=Tuesday, ..., 7=Sunday
+     * Schedule alarm cho một ngày chính xác
+     * exactDate format: "yyyy-MM-dd"
      * Schedules 4 alarms: 15 min before, 10 min before, 5 min before, and at workout time
      */
-    private void scheduleAlarmForDay(int dayOfWeek, int hour, int minute, int remindBeforeMin, String workoutId, boolean useExact) {
-        // Define reminder times: 15, 10, 5 minutes before, and 0 (at workout time)
-        int[] reminderMinutes = {15, 10, 5, 0};
-        
-        Calendar workoutTime = getNextAlarmTime(dayOfWeek, hour, minute);
-        
-        // Schedule alarms for each reminder time
-        for (int minutesBefore : reminderMinutes) {
-            Calendar alarmTime = (Calendar) workoutTime.clone();
-            alarmTime.add(Calendar.MINUTE, -minutesBefore);
+    private void scheduleAlarmForExactDate(String exactDate, int hour, int minute, int remindBeforeMin, String workoutId, boolean useExact) {
+        try {
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+            java.util.Date date = dateFormat.parse(exactDate);
             
-            // Only schedule if alarm time is in the future
-            if (alarmTime.getTimeInMillis() > System.currentTimeMillis()) {
-                scheduleAlarm(alarmTime.getTimeInMillis(), workoutId, dayOfWeek, minutesBefore, useExact);
-                Log.d(TAG, "Scheduled " + (useExact ? "exact" : "inexact") + " alarm for day " + dayOfWeek + 
-                    " at " + String.format("%02d:%02d", hour, minute) + 
-                    " (remind " + minutesBefore + " min before)");
-            }
-        }
-    }
-
-    /**
-     * Get next alarm time for a specific day of week
-     */
-    private Calendar getNextAlarmTime(int dayOfWeek, int hour, int minute) {
-        Calendar calendar = Calendar.getInstance();
-        Calendar today = Calendar.getInstance();
-        
-        // Convert Schedule day (Monday=1, ..., Sunday=7) to Calendar day
-        int calendarDayOfWeek = convertScheduleDayToCalendarDay(dayOfWeek);
-        
-        // Set to next occurrence of this day
-        int currentDayOfWeek = today.get(Calendar.DAY_OF_WEEK);
-        int daysUntilNext = (calendarDayOfWeek - currentDayOfWeek + 7) % 7;
-        
-        if (daysUntilNext == 0) {
-            // Today is the target day, check if time has passed
-            Calendar todayTime = Calendar.getInstance();
-            todayTime.set(Calendar.HOUR_OF_DAY, hour);
-            todayTime.set(Calendar.MINUTE, minute);
-            todayTime.set(Calendar.SECOND, 0);
-            todayTime.set(Calendar.MILLISECOND, 0);
+            Calendar workoutTime = Calendar.getInstance();
+            workoutTime.setTime(date);
+            workoutTime.set(Calendar.HOUR_OF_DAY, hour);
+            workoutTime.set(Calendar.MINUTE, minute);
+            workoutTime.set(Calendar.SECOND, 0);
+            workoutTime.set(Calendar.MILLISECOND, 0);
             
-            if (todayTime.getTimeInMillis() <= System.currentTimeMillis()) {
-                // Time has passed today, schedule for next week
-                daysUntilNext = 7;
+            // Chỉ schedule nếu thời gian trong tương lai
+            if (workoutTime.getTimeInMillis() <= System.currentTimeMillis()) {
+                Log.d(TAG, "Bỏ qua alarm cho ngày " + exactDate + " vì đã qua");
+                return;
             }
-        }
-        
-        calendar.add(Calendar.DAY_OF_MONTH, daysUntilNext);
-        calendar.set(Calendar.HOUR_OF_DAY, hour);
-        calendar.set(Calendar.MINUTE, minute);
-        calendar.set(Calendar.SECOND, 0);
-        calendar.set(Calendar.MILLISECOND, 0);
-        
-        return calendar;
-    }
-
-    /**
-     * Convert Schedule day to Calendar day
-     * Schedule: Monday=1, Tuesday=2, ..., Sunday=7
-     * Calendar: Sunday=1, Monday=2, ..., Saturday=7
-     */
-    private int convertScheduleDayToCalendarDay(int scheduleDay) {
-        switch (scheduleDay) {
-            case 1: // Monday
-                return Calendar.MONDAY;
-            case 2: // Tuesday
-                return Calendar.TUESDAY;
-            case 3: // Wednesday
-                return Calendar.WEDNESDAY;
-            case 4: // Thursday
-                return Calendar.THURSDAY;
-            case 5: // Friday
-                return Calendar.FRIDAY;
-            case 6: // Saturday
-                return Calendar.SATURDAY;
-            case 7: // Sunday
-                return Calendar.SUNDAY;
-            default:
-                return Calendar.MONDAY;
+            
+            // Define reminder times: 15, 10, 5 minutes before, and 0 (at workout time)
+            int[] reminderMinutes = {15, 10, 5, 0};
+            
+            // Schedule alarms for each reminder time
+            for (int minutesBefore : reminderMinutes) {
+                Calendar alarmTime = (Calendar) workoutTime.clone();
+                alarmTime.add(Calendar.MINUTE, -minutesBefore);
+                
+                // Only schedule if alarm time is in the future
+                if (alarmTime.getTimeInMillis() > System.currentTimeMillis()) {
+                    // Use exactDate + minutesBefore as unique identifier
+                    String uniqueId = exactDate + "_" + minutesBefore + "_" + (workoutId != null ? workoutId : "");
+                    scheduleAlarmForExactDateSingle(alarmTime.getTimeInMillis(), workoutId, exactDate, minutesBefore, useExact, uniqueId);
+                    Log.d(TAG, "Scheduled " + (useExact ? "exact" : "inexact") + " alarm for date " + exactDate + 
+                        " at " + String.format("%02d:%02d", hour, minute) + 
+                        " (remind " + minutesBefore + " min before)");
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error parsing exactDate: " + exactDate, e);
         }
     }
 
+
     /**
-     * Schedule a single alarm
-     * @param triggerAtMillis time when alarm should trigger
-     * @param workoutId workout ID
-     * @param dayOfWeek day of week (1=Monday, ..., 7=Sunday)
-     * @param minutesBefore minutes before workout time (15, 10, 5, or 0)
-     * @param useExact true for exact alarm, false for inexact (may have small delay)
+     * Schedule a single alarm for exact date
      */
-    private void scheduleAlarm(long triggerAtMillis, String workoutId, int dayOfWeek, int minutesBefore, boolean useExact) {
+    private void scheduleAlarmForExactDateSingle(long triggerAtMillis, String workoutId, String exactDate, int minutesBefore, boolean useExact, String uniqueId) {
         Intent intent = new Intent(context, WorkoutReminderReceiver.class);
         intent.putExtra("workoutId", workoutId);
-        intent.putExtra("dayOfWeek", dayOfWeek);
+        intent.putExtra("exactDate", exactDate);
         intent.putExtra("minutesBefore", minutesBefore);
         
-        // Use unique request code based on dayOfWeek, workoutId, and minutesBefore
-        int requestCode = (dayOfWeek * 10000) + (minutesBefore * 1000) + (workoutId != null ? Math.abs(workoutId.hashCode() % 1000) : 0);
+        // Use unique request code based on uniqueId hash
+        int requestCode = uniqueId.hashCode();
         
         PendingIntent pendingIntent = PendingIntent.getBroadcast(
             context,
@@ -213,6 +168,14 @@ public class AlarmScheduler {
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
+        scheduleAlarmInternal(triggerAtMillis, pendingIntent, useExact);
+    }
+
+
+    /**
+     * Internal method to schedule alarm
+     */
+    private void scheduleAlarmInternal(long triggerAtMillis, PendingIntent pendingIntent, boolean useExact) {
         try {
             if (useExact) {
                 // Try to use exact alarm methods
