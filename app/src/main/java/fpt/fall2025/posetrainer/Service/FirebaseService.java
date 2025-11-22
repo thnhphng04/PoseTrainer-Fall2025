@@ -919,28 +919,60 @@ public class FirebaseService {
 
     /**
      * Load user schedule from Firestore
+     * Nếu có nhiều schedule documents, sẽ xóa các document cũ và chỉ giữ lại document mới nhất
      */
     public void loadUserSchedule(String uid, OnScheduleLoadedListener listener) {
         Log.d(TAG, "Loading schedule for userId: " + uid);
         
         db.collection("schedules")
                 .whereEqualTo("uid", uid)
-                .limit(1)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     if (!queryDocumentSnapshots.isEmpty()) {
-                        DocumentSnapshot document = queryDocumentSnapshots.getDocuments().get(0);
-                        Schedule schedule = document.toObject(Schedule.class);
-                        if (schedule != null) {
-                            schedule.setId(document.getId());
-                            Log.d(TAG, "Loaded schedule: " + schedule.getTitle());
-                            if (listener != null) {
-                                listener.onScheduleLoaded(schedule);
+                        // Nếu có nhiều documents, xóa các document cũ và chỉ giữ lại document đầu tiên
+                        if (queryDocumentSnapshots.size() > 1) {
+                            Log.w(TAG, "Found " + queryDocumentSnapshots.size() + " schedule documents for user, cleaning up duplicates...");
+                            
+                            // Lấy document đầu tiên làm document chính
+                            DocumentSnapshot mainDocument = queryDocumentSnapshots.getDocuments().get(0);
+                            Schedule schedule = mainDocument.toObject(Schedule.class);
+                            if (schedule != null) {
+                                schedule.setId(mainDocument.getId());
+                                
+                                // Xóa các document còn lại
+                                for (int i = 1; i < queryDocumentSnapshots.size(); i++) {
+                                    DocumentSnapshot docToDelete = queryDocumentSnapshots.getDocuments().get(i);
+                                    Log.d(TAG, "Deleting duplicate schedule document: " + docToDelete.getId());
+                                    docToDelete.getReference().delete()
+                                        .addOnSuccessListener(aVoid -> Log.d(TAG, "Deleted duplicate schedule: " + docToDelete.getId()))
+                                        .addOnFailureListener(e -> Log.e(TAG, "Failed to delete duplicate schedule: " + docToDelete.getId(), e));
+                                }
+                                
+                                Log.d(TAG, "Loaded schedule: " + schedule.getTitle() + " (ID: " + schedule.getId() + ")");
+                                if (listener != null) {
+                                    listener.onScheduleLoaded(schedule);
+                                }
+                            } else {
+                                Log.w(TAG, "Schedule object is null");
+                                if (listener != null) {
+                                    listener.onScheduleLoaded(null);
+                                }
                             }
                         } else {
-                            Log.w(TAG, "Schedule object is null");
-                            if (listener != null) {
-                                listener.onScheduleLoaded(null);
+                            // Chỉ có 1 document
+                            DocumentSnapshot document = queryDocumentSnapshots.getDocuments().get(0);
+                            Schedule schedule = document.toObject(Schedule.class);
+                            if (schedule != null) {
+                                schedule.setId(document.getId());
+                                Log.d(TAG, "Loaded schedule: " + schedule.getTitle() + " (ID: " + schedule.getId() + ")");
+                                if (listener != null) {
+                                    listener.onScheduleLoaded(schedule);
+                                }
+                            } else {
+                                Log.w(TAG, "Schedule object is null");
+                                if (listener != null) {
+                                    listener.onScheduleLoaded(null);
+                                }
                             }
                         }
                     } else {

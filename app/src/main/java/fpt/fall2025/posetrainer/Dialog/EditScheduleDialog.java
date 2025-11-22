@@ -25,33 +25,46 @@ import java.util.List;
 import java.util.Locale;
 
 import fpt.fall2025.posetrainer.Domain.Schedule;
-import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
+import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
 
-public class CreateScheduleDialog extends DialogFragment {
-    private static final String TAG = "CreateScheduleDialog";
+public class EditScheduleDialog extends DialogFragment {
+    private static final String TAG = "EditScheduleDialog";
+    private static final String ARG_SCHEDULE_ITEM = "schedule_item";
+    private static final String ARG_ITEM_INDEX = "item_index";
     
-    private TextView tvSelectedDate;
     private TextView tvSelectedTime;
+    private TextView tvSelectedDate;
     private Spinner spinnerWorkout;
-    private Button btnCancel;
-    private Button btnSave;
+    private Button btnCancel, btnDelete, btnSave;
     
-    private Calendar selectedDate;
     private Calendar selectedTime;
+    private Calendar selectedDate;
     private ArrayList<WorkoutTemplate> workoutTemplates;
     private ArrayList<UserWorkout> userWorkouts;
-    private ArrayList<Object> allWorkouts; // Combined list for spinner
+    private ArrayList<Object> allWorkouts;
     private ArrayAdapter<String> workoutAdapter;
-    private OnScheduleCreatedListener listener;
+    private Schedule.ScheduleItem originalItem;
+    private int itemIndex;
+    private OnScheduleUpdatedListener listener;
     
-    public interface OnScheduleCreatedListener {
-        void onScheduleCreated(Schedule.ScheduleItem scheduleItem);
+    public interface OnScheduleUpdatedListener {
+        void onScheduleUpdated(Schedule.ScheduleItem updatedItem, int index);
+        void onScheduleDeleted(int index);
     }
     
-    public void setOnScheduleCreatedListener(OnScheduleCreatedListener listener) {
+    public static EditScheduleDialog newInstance(Schedule.ScheduleItem item, int index) {
+        EditScheduleDialog dialog = new EditScheduleDialog();
+        Bundle args = new Bundle();
+        args.putSerializable(ARG_SCHEDULE_ITEM, item);
+        args.putInt(ARG_ITEM_INDEX, index);
+        dialog.setArguments(args);
+        return dialog;
+    }
+    
+    public void setOnScheduleUpdatedListener(OnScheduleUpdatedListener listener) {
         this.listener = listener;
     }
     
@@ -60,44 +73,122 @@ public class CreateScheduleDialog extends DialogFragment {
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         LayoutInflater inflater = requireActivity().getLayoutInflater();
-        View view = inflater.inflate(R.layout.dialog_create_schedule, null);
+        View view = inflater.inflate(R.layout.dialog_edit_schedule, null);
+        
+        // Get arguments
+        if (getArguments() != null) {
+            originalItem = (Schedule.ScheduleItem) getArguments().getSerializable(ARG_SCHEDULE_ITEM);
+            itemIndex = getArguments().getInt(ARG_ITEM_INDEX, -1);
+        }
+        
+        if (originalItem == null) {
+            dismiss();
+            return builder.create();
+        }
         
         initViews(view);
         setupListeners();
         loadWorkouts();
-        
-        // Initialize with current date/time
-        selectedDate = Calendar.getInstance();
-        selectedTime = Calendar.getInstance();
-        updateDateDisplay();
-        updateTimeDisplay();
+        populateFields();
         
         builder.setView(view);
         return builder.create();
     }
     
     private void initViews(View view) {
-        tvSelectedDate = view.findViewById(R.id.tv_selected_date);
         tvSelectedTime = view.findViewById(R.id.tv_selected_time);
+        tvSelectedDate = view.findViewById(R.id.tv_selected_date);
         spinnerWorkout = view.findViewById(R.id.spinner_workout);
         btnCancel = view.findViewById(R.id.btn_cancel);
+        btnDelete = view.findViewById(R.id.btn_delete);
         btnSave = view.findViewById(R.id.btn_save);
         
-        LinearLayout llDatePicker = view.findViewById(R.id.ll_date_picker);
         LinearLayout llTimePicker = view.findViewById(R.id.ll_time_picker);
-        
-        llDatePicker.setOnClickListener(v -> showDatePicker());
         llTimePicker.setOnClickListener(v -> showTimePicker());
+        
+        LinearLayout llDatePicker = view.findViewById(R.id.ll_date_picker);
+        llDatePicker.setOnClickListener(v -> showDatePicker());
     }
     
     private void setupListeners() {
         btnCancel.setOnClickListener(v -> dismiss());
+        
+        btnDelete.setOnClickListener(v -> {
+            new AlertDialog.Builder(requireContext())
+                .setTitle("Xác nhận xóa")
+                .setMessage("Bạn có chắc chắn muốn xóa lịch tập này?")
+                .setPositiveButton("Xóa", (dialog, which) -> {
+                    if (listener != null) {
+                        listener.onScheduleDeleted(itemIndex);
+                    }
+                    dismiss();
+                })
+                .setNegativeButton("Hủy", null)
+                .show();
+        });
         
         btnSave.setOnClickListener(v -> {
             if (validateInput()) {
                 saveSchedule();
             }
         });
+    }
+    
+    private void populateFields() {
+        // Set time
+        if (originalItem.getTimeLocal() != null && !originalItem.getTimeLocal().isEmpty()) {
+            try {
+                String[] timeParts = originalItem.getTimeLocal().split(":");
+                if (timeParts.length == 2) {
+                    selectedTime = Calendar.getInstance();
+                    selectedTime.set(Calendar.HOUR_OF_DAY, Integer.parseInt(timeParts[0]));
+                    selectedTime.set(Calendar.MINUTE, Integer.parseInt(timeParts[1]));
+                    updateTimeDisplay();
+                }
+            } catch (Exception e) {
+                selectedTime = Calendar.getInstance();
+                updateTimeDisplay();
+            }
+        } else {
+            selectedTime = Calendar.getInstance();
+            updateTimeDisplay();
+        }
+        
+        // Set date from exactDate
+        if (originalItem.getExactDate() != null && !originalItem.getExactDate().isEmpty()) {
+            try {
+                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+                java.util.Date date = dateFormat.parse(originalItem.getExactDate());
+                selectedDate = Calendar.getInstance();
+                selectedDate.setTime(date);
+                updateDateDisplay();
+            } catch (Exception e) {
+                // Nếu không parse được exactDate, dùng ngày hiện tại
+                selectedDate = Calendar.getInstance();
+                updateDateDisplay();
+            }
+        } else {
+            // Nếu không có exactDate, dùng ngày hiện tại
+            selectedDate = Calendar.getInstance();
+            updateDateDisplay();
+        }
+    }
+    
+    private void showTimePicker() {
+        Calendar calendar = selectedTime != null ? selectedTime : Calendar.getInstance();
+        TimePickerDialog timePickerDialog = new TimePickerDialog(
+            requireContext(),
+            (view, hourOfDay, minute) -> {
+                selectedTime = Calendar.getInstance();
+                selectedTime.set(Calendar.HOUR_OF_DAY, hourOfDay);
+                selectedTime.set(Calendar.MINUTE, minute);
+                updateTimeDisplay();
+            },
+            calendar.get(Calendar.HOUR_OF_DAY),
+            calendar.get(Calendar.MINUTE),
+            true
+        );
+        timePickerDialog.show();
     }
     
     private void showDatePicker() {
@@ -120,35 +211,17 @@ public class CreateScheduleDialog extends DialogFragment {
         datePickerDialog.show();
     }
     
-    private void showTimePicker() {
-        Calendar calendar = selectedTime != null ? selectedTime : Calendar.getInstance();
-        TimePickerDialog timePickerDialog = new TimePickerDialog(
-            requireContext(),
-            (view, hourOfDay, minute) -> {
-                selectedTime = Calendar.getInstance();
-                selectedTime.set(Calendar.HOUR_OF_DAY, hourOfDay);
-                selectedTime.set(Calendar.MINUTE, minute);
-                updateTimeDisplay();
-            },
-            calendar.get(Calendar.HOUR_OF_DAY),
-            calendar.get(Calendar.MINUTE),
-            true // 24-hour format
-        );
-        
-        timePickerDialog.show();
+    private void updateTimeDisplay() {
+        if (selectedTime != null) {
+            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+            tvSelectedTime.setText(sdf.format(selectedTime.getTime()));
+        }
     }
     
     private void updateDateDisplay() {
         if (selectedDate != null) {
             SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
             tvSelectedDate.setText(sdf.format(selectedDate.getTime()));
-        }
-    }
-    
-    private void updateTimeDisplay() {
-        if (selectedTime != null) {
-            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
-            tvSelectedTime.setText(sdf.format(selectedTime.getTime()));
         }
     }
     
@@ -163,7 +236,6 @@ public class CreateScheduleDialog extends DialogFragment {
                 workoutTemplates = templates != null ? templates : new ArrayList<>();
                 allWorkouts.addAll(workoutTemplates);
                 
-                // Load user workouts
                 com.google.firebase.auth.FirebaseUser currentUser = 
                     com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
                 if (currentUser != null) {
@@ -187,12 +259,23 @@ public class CreateScheduleDialog extends DialogFragment {
         List<String> workoutNames = new ArrayList<>();
         workoutNames.add("Chọn bài tập");
         
-        for (WorkoutTemplate template : workoutTemplates) {
+        int selectedIndex = 0;
+        String currentWorkoutId = originalItem.getWorkoutId();
+        
+        for (int i = 0; i < workoutTemplates.size(); i++) {
+            WorkoutTemplate template = workoutTemplates.get(i);
             workoutNames.add(template.getTitle() + " (Mẫu)");
+            if (template.getId().equals(currentWorkoutId)) {
+                selectedIndex = i + 1;
+            }
         }
         
-        for (UserWorkout userWorkout : userWorkouts) {
+        for (int i = 0; i < userWorkouts.size(); i++) {
+            UserWorkout userWorkout = userWorkouts.get(i);
             workoutNames.add(userWorkout.getTitle() + " (Của tôi)");
+            if (userWorkout.getId().equals(currentWorkoutId)) {
+                selectedIndex = workoutTemplates.size() + i + 1;
+            }
         }
         
         workoutAdapter = new ArrayAdapter<>(
@@ -202,16 +285,17 @@ public class CreateScheduleDialog extends DialogFragment {
         );
         workoutAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerWorkout.setAdapter(workoutAdapter);
+        spinnerWorkout.setSelection(selectedIndex);
     }
     
     private boolean validateInput() {
-        if (selectedDate == null) {
-            Toast.makeText(getContext(), "Vui lòng chọn ngày", Toast.LENGTH_SHORT).show();
+        if (selectedTime == null) {
+            Toast.makeText(getContext(), "Vui lòng chọn giờ", Toast.LENGTH_SHORT).show();
             return false;
         }
         
-        if (selectedTime == null) {
-            Toast.makeText(getContext(), "Vui lòng chọn giờ", Toast.LENGTH_SHORT).show();
+        if (selectedDate == null) {
+            Toast.makeText(getContext(), "Vui lòng chọn ngày", Toast.LENGTH_SHORT).show();
             return false;
         }
         
@@ -225,7 +309,7 @@ public class CreateScheduleDialog extends DialogFragment {
     }
     
     private void saveSchedule() {
-        if (selectedDate == null || selectedTime == null) {
+        if (selectedTime == null || selectedDate == null) {
             return;
         }
         
@@ -245,22 +329,20 @@ public class CreateScheduleDialog extends DialogFragment {
             return;
         }
         
-        // Convert Calendar day to Schedule format (Monday=1, ..., Sunday=7)
-        int calendarDayOfWeek = selectedDate.get(Calendar.DAY_OF_WEEK);
-        int scheduleDayOfWeek = convertCalendarDayToScheduleDay(calendarDayOfWeek);
-        
-        // Create ScheduleItem
-        List<Integer> daysOfWeek = new ArrayList<>();
-        daysOfWeek.add(scheduleDayOfWeek);
-        
         String timeLocal = new SimpleDateFormat("HH:mm", Locale.getDefault())
             .format(selectedTime.getTime());
         
-        // Format exact date as "yyyy-MM-dd"
+        // Format exactDate as "yyyy-MM-dd"
         String exactDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
             .format(selectedDate.getTime());
         
-        Schedule.ScheduleItem scheduleItem = new Schedule.ScheduleItem(
+        // Tính dayOfWeek từ selectedDate (để tương thích ngược)
+        int calendarDayOfWeek = selectedDate.get(Calendar.DAY_OF_WEEK);
+        int scheduleDayOfWeek = convertCalendarDayToScheduleDay(calendarDayOfWeek);
+        List<Integer> daysOfWeek = new ArrayList<>();
+        daysOfWeek.add(scheduleDayOfWeek);
+        
+        Schedule.ScheduleItem updatedItem = new Schedule.ScheduleItem(
             daysOfWeek,
             timeLocal,
             workoutId,
@@ -268,7 +350,7 @@ public class CreateScheduleDialog extends DialogFragment {
         );
         
         if (listener != null) {
-            listener.onScheduleCreated(scheduleItem);
+            listener.onScheduleUpdated(updatedItem, itemIndex);
         }
         
         dismiss();

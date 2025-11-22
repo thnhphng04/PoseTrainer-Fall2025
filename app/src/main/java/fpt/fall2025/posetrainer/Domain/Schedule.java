@@ -77,6 +77,7 @@ public class Schedule implements Serializable {
         private List<Integer> dayOfWeek; // 1-7 (Monday-Sunday)
         private String timeLocal; // "HH:mm" format
         private String workoutId;
+        private String exactDate; // "yyyy-MM-dd" format - ngày chính xác để tránh lặp lại tuần sau
 
         public ScheduleItem() {}
 
@@ -84,6 +85,13 @@ public class Schedule implements Serializable {
             this.dayOfWeek = dayOfWeek;
             this.timeLocal = timeLocal;
             this.workoutId = workoutId;
+        }
+
+        public ScheduleItem(List<Integer> dayOfWeek, String timeLocal, String workoutId, String exactDate) {
+            this.dayOfWeek = dayOfWeek;
+            this.timeLocal = timeLocal;
+            this.workoutId = workoutId;
+            this.exactDate = exactDate;
         }
 
         public List<Integer> getDayOfWeek() {
@@ -108,6 +116,14 @@ public class Schedule implements Serializable {
 
         public void setWorkoutId(String workoutId) {
             this.workoutId = workoutId;
+        }
+
+        public String getExactDate() {
+            return exactDate;
+        }
+
+        public void setExactDate(String exactDate) {
+            this.exactDate = exactDate;
         }
     }
 

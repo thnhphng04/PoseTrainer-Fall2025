@@ -3,7 +3,9 @@ package fpt.fall2025.posetrainer.Adapter;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.PopupMenu;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -27,10 +29,28 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.Schedu
     
     private List<Schedule.ScheduleItem> scheduleItems;
     private List<String> workoutNames;
+    private OnScheduleItemClickListener itemClickListener;
+    private OnScheduleItemLongClickListener itemLongClickListener;
+    
+    public interface OnScheduleItemClickListener {
+        void onItemClick(Schedule.ScheduleItem item, int position);
+    }
+    
+    public interface OnScheduleItemLongClickListener {
+        boolean onItemLongClick(Schedule.ScheduleItem item, int position, View view);
+    }
     
     public ScheduleAdapter(List<Schedule.ScheduleItem> scheduleItems, List<String> workoutNames) {
         this.scheduleItems = scheduleItems != null ? scheduleItems : new ArrayList<>();
         this.workoutNames = workoutNames != null ? workoutNames : new ArrayList<>();
+    }
+    
+    public void setOnScheduleItemClickListener(OnScheduleItemClickListener listener) {
+        this.itemClickListener = listener;
+    }
+    
+    public void setOnScheduleItemLongClickListener(OnScheduleItemLongClickListener listener) {
+        this.itemLongClickListener = listener;
     }
 
     @NonNull
@@ -39,12 +59,6 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.Schedu
         View view = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.item_schedule, parent, false);
         return new ScheduleViewHolder(view);
-    }
-
-    @Override
-    public void onBindViewHolder(@NonNull ScheduleViewHolder holder, int position) {
-        Schedule.ScheduleItem item = scheduleItems.get(position);
-        holder.bind(item, workoutNames, position);
     }
 
     @Override
@@ -130,15 +144,19 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.Schedu
         private TextView tvWorkoutName;
         private TextView tvDays;
         private TextView tvTime;
+        private View itemView;
 
         public ScheduleViewHolder(@NonNull View itemView) {
             super(itemView);
+            this.itemView = itemView;
             tvWorkoutName = itemView.findViewById(R.id.tv_workout_name);
             tvDays = itemView.findViewById(R.id.tv_days);
             tvTime = itemView.findViewById(R.id.tv_time);
         }
 
-        public void bind(Schedule.ScheduleItem item, List<String> workoutNames, int position) {
+        public void bind(Schedule.ScheduleItem item, List<String> workoutNames, int position,
+                        OnScheduleItemClickListener clickListener,
+                        OnScheduleItemLongClickListener longClickListener) {
             // Set workout name
             String workoutName = "Bài tập không xác định";
             if (position >= 0 && position < workoutNames.size()) {
@@ -193,6 +211,26 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.Schedu
             } else {
                 tvTime.setText("Giờ: Chưa có");
             }
+            
+            // Set click listeners
+            itemView.setOnClickListener(v -> {
+                if (clickListener != null) {
+                    clickListener.onItemClick(item, position);
+                }
+            });
+            
+            itemView.setOnLongClickListener(v -> {
+                if (longClickListener != null) {
+                    return longClickListener.onItemLongClick(item, position, itemView);
+                }
+                return false;
+            });
         }
+    }
+    
+    @Override
+    public void onBindViewHolder(@NonNull ScheduleViewHolder holder, int position) {
+        Schedule.ScheduleItem item = scheduleItems.get(position);
+        holder.bind(item, workoutNames, position, itemClickListener, itemLongClickListener);
     }
 }
