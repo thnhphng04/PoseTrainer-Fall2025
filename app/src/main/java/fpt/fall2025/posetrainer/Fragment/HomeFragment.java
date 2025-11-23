@@ -11,10 +11,13 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import fpt.fall2025.posetrainer.Activity.SearchActivity;
 import fpt.fall2025.posetrainer.Adapter.WorkoutTemplateAdapter;
+import fpt.fall2025.posetrainer.Adapter.SessionAdapter;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
+import fpt.fall2025.posetrainer.Domain.Session;
 import fpt.fall2025.posetrainer.Domain.User;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
@@ -24,19 +27,26 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.bumptech.glide.Glide;
-import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
+import java.util.Calendar;
 
 public class HomeFragment extends Fragment {
     private static final String TAG = "HomeFragment";
     private FragmentHomeBinding binding;
     private ArrayList<WorkoutTemplate> workoutTemplates;
     private ArrayList<WorkoutTemplate> filteredWorkoutTemplates;
+    private ArrayList<WorkoutTemplate> featuredWorkouts; // Featured/Recommended workouts
+    private ArrayList<WorkoutTemplate> personalizedWorkouts; // Personalized workouts
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
     private WorkoutTemplateAdapter adapter; // Reuse adapter thay vì tạo mới mỗi lần
+    private WorkoutTemplateAdapter featuredAdapter; // Adapter cho featured workouts
+    private WorkoutTemplateAdapter personalizedAdapter; // Adapter cho personalized workouts
+    private SessionAdapter recentActivityAdapter; // Adapter cho recent activity
+    private ArrayList<Session> recentSessions; // Recent sessions list
     
     // Filter states
     private String selectedCategory = "Latest Updates";
@@ -64,7 +74,11 @@ public class HomeFragment extends Fragment {
         initBodyPartsListeners();
         workoutTemplates = new ArrayList<>();
         filteredWorkoutTemplates = new ArrayList<>();
+        featuredWorkouts = new ArrayList<>();
+        personalizedWorkouts = new ArrayList<>();
+        recentSessions = new ArrayList<>();
 
+        // Setup RecyclerView cho filtered workouts (view1)
         binding.view1.setLayoutManager(
                 new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false)
         );
@@ -80,13 +94,59 @@ public class HomeFragment extends Fragment {
             }
         }
 
+        // Setup RecyclerView cho Featured Workouts (rv_featured_workouts)
+        binding.rvFeaturedWorkouts.setLayoutManager(
+                new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false)
+        );
+        if (featuredAdapter == null) {
+            featuredAdapter = new WorkoutTemplateAdapter(featuredWorkouts);
+            binding.rvFeaturedWorkouts.setAdapter(featuredAdapter);
+        } else {
+            featuredAdapter.updateList(featuredWorkouts);
+            if (binding.rvFeaturedWorkouts.getAdapter() == null) {
+                binding.rvFeaturedWorkouts.setAdapter(featuredAdapter);
+            }
+        }
+
+        // Setup RecyclerView cho Personalized Workouts (rv_workouts)
+        binding.rvWorkouts.setLayoutManager(
+                new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false)
+        );
+        if (personalizedAdapter == null) {
+            personalizedAdapter = new WorkoutTemplateAdapter(personalizedWorkouts);
+            binding.rvWorkouts.setAdapter(personalizedAdapter);
+        } else {
+            personalizedAdapter.updateList(personalizedWorkouts);
+            if (binding.rvWorkouts.getAdapter() == null) {
+                binding.rvWorkouts.setAdapter(personalizedAdapter);
+            }
+        }
+
+        // Setup RecyclerView cho Recent Activity
+        binding.rvRecentActivity.setLayoutManager(
+                new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false)
+        );
+        if (recentActivityAdapter == null) {
+            recentActivityAdapter = new SessionAdapter(recentSessions);
+            binding.rvRecentActivity.setAdapter(recentActivityAdapter);
+        } else {
+            recentActivityAdapter.updateSessions(recentSessions);
+            if (binding.rvRecentActivity.getAdapter() == null) {
+                binding.rvRecentActivity.setAdapter(recentActivityAdapter);
+            }
+        }
+
         setupSearchListeners();
         setupFilterListeners();
         setupNotificationButton();
+        setupSeeAllButton();
+        setupPullToRefresh();
+        setupQuickActionFAB();
         loadCurrentUserInfo();
         loadWorkoutTemplates();
         loadUnreadNotificationCount();
         loadUserStreak();
+        loadRecentActivity();
         isDataLoaded = true;
         
         // Initialize chip states
@@ -180,6 +240,117 @@ public class HomeFragment extends Fragment {
     }
 
     /**
+     * Load và hiển thị Recent Activity (sessions gần đây)
+     */
+    private void loadRecentActivity() {
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser == null) {
+            recentSessions.clear();
+            if (recentActivityAdapter != null) {
+                recentActivityAdapter.updateSessions(recentSessions);
+            }
+            return;
+        }
+
+        String uid = currentUser.getUid();
+
+        // Query 5 sessions gần đây nhất
+        db.collection("sessions")
+                .whereEqualTo("uid", uid)
+                .orderBy("startedAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .limit(5)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (!isAdded() || binding == null) {
+                        return;
+                    }
+
+                    recentSessions.clear();
+                    for (com.google.firebase.firestore.QueryDocumentSnapshot document : queryDocumentSnapshots) {
+                        Session session = document.toObject(Session.class);
+                        if (session != null) {
+                            session.setId(document.getId());
+                            recentSessions.add(session);
+                        }
+                    }
+
+                    Log.d(TAG, "Đã load " + recentSessions.size() + " recent sessions");
+
+                    // Update adapter
+                    if (recentActivityAdapter != null) {
+                        recentActivityAdapter.updateSessions(recentSessions);
+                    } else {
+                        recentActivityAdapter = new SessionAdapter(recentSessions);
+                        binding.rvRecentActivity.setAdapter(recentActivityAdapter);
+                    }
+
+                    // Show empty state nếu không có data
+                    if (recentSessions.isEmpty()) {
+                        showEmptyStateForRecentActivity();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    if (!isAdded() || binding == null) {
+                        return;
+                    }
+                    Log.e(TAG, "Error loading recent activity: " + e.getMessage());
+                    recentSessions.clear();
+                    if (recentActivityAdapter != null) {
+                        recentActivityAdapter.updateSessions(recentSessions);
+                    }
+                    showErrorState("Không thể tải hoạt động gần đây. Vui lòng thử lại.");
+                });
+    }
+
+    /**
+     * Setup Quick Action FAB
+     */
+    private void setupQuickActionFAB() {
+        if (binding.fabQuickAction != null) {
+            binding.fabQuickAction.setOnClickListener(v -> {
+                // Mở SearchActivity để chọn workout
+                Intent intent = new Intent(getActivity(), SearchActivity.class);
+                startActivity(intent);
+            });
+        }
+    }
+
+    /**
+     * Show empty state cho Featured Workouts
+     */
+    private void showEmptyStateForFeatured() {
+        // Có thể thêm empty state view nếu cần
+        // Hiện tại chỉ log
+        Log.d(TAG, "Featured workouts empty");
+    }
+
+    /**
+     * Show empty state cho Personalized Workouts
+     */
+    private void showEmptyStateForPersonalized() {
+        // Có thể thêm empty state view nếu cần
+        Log.d(TAG, "Personalized workouts empty");
+    }
+
+    /**
+     * Show empty state cho Recent Activity
+     */
+    private void showEmptyStateForRecentActivity() {
+        // Có thể thêm empty state view nếu cần
+        Log.d(TAG, "Recent activity empty");
+    }
+
+    /**
+     * Show error state với message
+     */
+    private void showErrorState(String message) {
+        if (getActivity() != null && isAdded()) {
+            Toast.makeText(getActivity(), message, Toast.LENGTH_SHORT).show();
+        }
+        Log.e(TAG, "Error state: " + message);
+    }
+
+    /**
      * Cập nhật badge hiển thị số thông báo chưa đọc
      * @param count Số lượng thông báo chưa đọc
      */
@@ -214,6 +385,8 @@ public class HomeFragment extends Fragment {
         if (isWorkoutTemplatesLoaded && workoutTemplates != null && !workoutTemplates.isEmpty()) {
             Log.d(TAG, "Workout templates đã được load, bỏ qua reload");
             applyFilters();
+            loadRecommendedWorkouts();
+            loadPersonalizedWorkouts();
             return;
         }
         
@@ -237,8 +410,177 @@ public class HomeFragment extends Fragment {
                         Log.w(TAG, "Không có workout templates nào được load");
                     }
                     applyFilters();
+                    // Load recommended và personalized workouts sau khi có data
+                    loadRecommendedWorkouts();
+                    loadPersonalizedWorkouts();
                 }
         );
+    }
+
+    /**
+     * Load và hiển thị Featured/Recommended Workouts
+     * Logic: Hiển thị các workouts mới nhất, phổ biến nhất, hoặc theo level của user
+     */
+    private void loadRecommendedWorkouts() {
+        if (workoutTemplates == null || workoutTemplates.isEmpty()) {
+            Log.w(TAG, "Không có workout templates để recommend");
+            featuredWorkouts.clear();
+            if (featuredAdapter != null) {
+                featuredAdapter.updateList(featuredWorkouts);
+            }
+            showEmptyStateForFeatured();
+            return;
+        }
+
+        featuredWorkouts.clear();
+        
+        // Strategy 1: Lấy 5 workouts mới nhất (dựa trên updatedAt)
+        ArrayList<WorkoutTemplate> sortedByDate = new ArrayList<>(workoutTemplates);
+        sortedByDate.sort((a, b) -> Long.compare(
+            b.getUpdatedAt() != 0 ? b.getUpdatedAt() : 0,
+            a.getUpdatedAt() != 0 ? a.getUpdatedAt() : 0
+        ));
+        
+        // Lấy 5 workouts đầu tiên
+        int count = Math.min(5, sortedByDate.size());
+        for (int i = 0; i < count; i++) {
+            featuredWorkouts.add(sortedByDate.get(i));
+        }
+        
+        Log.d(TAG, "Đã load " + featuredWorkouts.size() + " featured workouts");
+        
+        // Update adapter
+        if (featuredAdapter != null) {
+            featuredAdapter.updateList(featuredWorkouts);
+        } else {
+            featuredAdapter = new WorkoutTemplateAdapter(featuredWorkouts);
+            binding.rvFeaturedWorkouts.setAdapter(featuredAdapter);
+        }
+
+        // Hide empty state nếu có data
+        if (featuredWorkouts.isEmpty()) {
+            showEmptyStateForFeatured();
+        }
+    }
+
+    /**
+     * Load và hiển thị Personalized Workouts (Bài tập dành cho bạn)
+     * Logic: Dựa trên level của user, hoặc workouts phù hợp với user
+     */
+    private void loadPersonalizedWorkouts() {
+        if (workoutTemplates == null || workoutTemplates.isEmpty()) {
+            Log.w(TAG, "Không có workout templates để personalize");
+            personalizedWorkouts.clear();
+            if (personalizedAdapter != null) {
+                personalizedAdapter.updateList(personalizedWorkouts);
+            }
+            showEmptyStateForPersonalized();
+            return;
+        }
+
+        personalizedWorkouts.clear();
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        
+        // Strategy: Lấy workouts phù hợp với level của user
+        // Nếu chưa có user level, lấy beginner workouts
+        String userLevel = "Beginner"; // Default
+        
+        if (currentUser != null) {
+            // Có thể load user level từ Firestore nếu có
+            // Tạm thời dùng default
+        }
+        
+        // Filter workouts theo level
+        ArrayList<WorkoutTemplate> levelFiltered = new ArrayList<>();
+        for (WorkoutTemplate template : workoutTemplates) {
+            if (template.getLevel() != null && 
+                template.getLevel().equalsIgnoreCase(userLevel)) {
+                levelFiltered.add(template);
+            }
+        }
+        
+        // Nếu không có đủ workouts theo level, thêm các workouts khác
+        if (levelFiltered.size() < 5) {
+            for (WorkoutTemplate template : workoutTemplates) {
+                if (!levelFiltered.contains(template)) {
+                    levelFiltered.add(template);
+                    if (levelFiltered.size() >= 10) break; // Tối đa 10 workouts
+                }
+            }
+        }
+        
+        // Lấy 5-8 workouts đầu tiên
+        int count = Math.min(8, levelFiltered.size());
+        for (int i = 0; i < count; i++) {
+            personalizedWorkouts.add(levelFiltered.get(i));
+        }
+        
+        Log.d(TAG, "Đã load " + personalizedWorkouts.size() + " personalized workouts");
+        
+        // Update adapter
+        if (personalizedAdapter != null) {
+            personalizedAdapter.updateList(personalizedWorkouts);
+        } else {
+            personalizedAdapter = new WorkoutTemplateAdapter(personalizedWorkouts);
+            binding.rvWorkouts.setAdapter(personalizedAdapter);
+        }
+
+        // Hide empty state nếu có data
+        if (personalizedWorkouts.isEmpty()) {
+            showEmptyStateForPersonalized();
+        }
+    }
+
+    /**
+     * Setup click listener cho button "Xem tất cả"
+     */
+    private void setupSeeAllButton() {
+        binding.btnSeeAll.setOnClickListener(v -> {
+            // Navigate đến SearchActivity để xem tất cả workouts
+            Intent intent = new Intent(getActivity(), SearchActivity.class);
+            // Có thể pass thêm filter nếu cần (ví dụ: filter theo goal "Tăng cơ bắp")
+            startActivity(intent);
+        });
+    }
+
+    /**
+     * Setup Pull to Refresh
+     */
+    private void setupPullToRefresh() {
+        binding.swipeRefreshLayout.setColorSchemeColors(
+                getResources().getColor(android.R.color.holo_blue_bright, null),
+                getResources().getColor(android.R.color.holo_green_light, null),
+                getResources().getColor(android.R.color.holo_orange_light, null),
+                getResources().getColor(android.R.color.holo_red_light, null)
+        );
+
+        binding.swipeRefreshLayout.setOnRefreshListener(() -> {
+            Log.d(TAG, "Pull to refresh triggered");
+            refreshAllData();
+        });
+    }
+
+    /**
+     * Refresh tất cả data khi user pull to refresh
+     */
+    private void refreshAllData() {
+        // Reset cache flags để force reload
+        isWorkoutTemplatesLoaded = false;
+        lastNotificationCountUpdate = 0;
+
+        // Reload tất cả data
+        loadCurrentUserInfo();
+        loadWorkoutTemplates();
+        loadUnreadNotificationCount();
+        loadUserStreak();
+        loadRecentActivity();
+
+        // Stop refresh indicator sau khi load xong (với delay nhỏ)
+        binding.swipeRefreshLayout.postDelayed(() -> {
+            if (binding != null && binding.swipeRefreshLayout != null) {
+                binding.swipeRefreshLayout.setRefreshing(false);
+            }
+        }, 1000); // 1 giây delay
     }
 
     /**
@@ -542,5 +884,8 @@ public class HomeFragment extends Fragment {
         // Không reset isWorkoutTemplatesLoaded và cachedUserId để cache vẫn hoạt động khi fragment bị recreate
         binding = null;
         adapter = null; // Clear adapter reference
+        featuredAdapter = null;
+        personalizedAdapter = null;
+        recentActivityAdapter = null;
     }
 }

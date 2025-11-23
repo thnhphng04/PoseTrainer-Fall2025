@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.swiperefreshlayout.widget.SwipeRefreshLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/swipe_refresh_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+<androidx.core.widget.NestedScrollView
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#ff1a1f2e"
@@ -98,6 +103,44 @@
 
         </LinearLayout>
 
+        <!-- Search Bar -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/search_bar"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="16dp"
+            android:foreground="?android:attr/selectableItemBackground"
+            app:cardBackgroundColor="#ff2a3142"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="16dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Tìm kiếm bài tập..."
+                    android:textColor="#66ffffff"
+                    android:textSize="14sp" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_search"
+                    app:tint="#66ffffff" />
+
+            </LinearLayout>
+
+        </androidx.cardview.widget.CardView>
+
         <!-- Streak Display Section -->
         <LinearLayout
             android:id="@+id/ll_streak_section"
@@ -146,43 +189,6 @@
             </LinearLayout>
 
         </LinearLayout>
-
-        <!-- Search Bar -->
-        <androidx.cardview.widget.CardView
-            android:id="@+id/search_bar"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginHorizontal="16dp"
-            android:layout_marginBottom="16dp"
-            android:foreground="?android:attr/selectableItemBackground"
-            app:cardBackgroundColor="#ff2a3142"
-            app:cardCornerRadius="24dp"
-            app:cardElevation="0dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingHorizontal="16dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Tìm kiếm bài tập..."
-                    android:textColor="#66ffffff"
-                    android:textSize="14sp" />
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_search"
-                    app:tint="#66ffffff" />
-
-            </LinearLayout>
-
-        </androidx.cardview.widget.CardView>
 
         <!-- Body Parts Grid - 2 Rows, 4 Columns -->
         <GridLayout
@@ -599,6 +605,32 @@
             android:layout_marginHorizontal="16dp"
             android:layout_marginBottom="16dp"
             android:nestedScrollingEnabled="false" />
+        <!-- Recent Activity Section -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Hoạt động gần đây"
+                android:textColor="#ffffff"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_recent_activity"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:nestedScrollingEnabled="false" />
+
+        </LinearLayout>
+
         <!-- Recommended Section Title -->
         <TextView
             android:layout_width="wrap_content"
@@ -708,9 +740,24 @@
             android:id="@+id/rv_workouts"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="16dp"
-            android:nestedScrollingEnabled="false" />
+            android:layout_marginBottom="24dp"
+            android:clipToPadding="false"
+            android:nestedScrollingEnabled="false"
+            android:paddingHorizontal="16dp" />
 
     </LinearLayout>
 
 </androidx.core.widget.NestedScrollView>
+
+<!-- Quick Action FAB -->
+<com.google.android.material.floatingactionbutton.FloatingActionButton
+    android:id="@+id/fab_quick_action"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_gravity="bottom|end"
+    android:layout_margin="16dp"
+    android:src="@android:drawable/ic_input_add"
+    app:tint="#ffffff"
+    app:backgroundTint="#4d9df2" />
+
+</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
