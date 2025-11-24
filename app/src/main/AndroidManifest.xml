@@ -95,6 +95,9 @@
         <activity
             android:name=".Activity.SearchActivity"
             android:exported="false" />
+        <activity
+            android:name=".Activity.CollectionDetailActivity"
+            android:exported="false" />
 
         <!--        <activity-->
 <!--            android:name=".Activity.MainActivity"-->

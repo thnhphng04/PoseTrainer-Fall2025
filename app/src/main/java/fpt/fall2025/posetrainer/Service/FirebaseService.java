@@ -231,6 +231,10 @@ public class FirebaseService {
         void onExercisesLoaded(ArrayList<Exercise> exercises);
     }
 
+    public interface OnCollectionsLoadedListener {
+        void onCollectionsLoaded(ArrayList<fpt.fall2025.posetrainer.Domain.Collection> collections);
+    }
+
     public interface OnSessionSavedListener {
         void onSessionSaved(boolean success);
     }
@@ -245,19 +249,53 @@ public class FirebaseService {
      * Save session to Firebase Firestore
      */
     public void saveSession(Session session, OnSessionSavedListener listener) {
-        Log.d(TAG, "Saving session to Firestore: " + session.getId());
+        if (session == null) {
+            Log.e(TAG, "❌ Không thể lưu session: session là null");
+            if (listener != null) {
+                listener.onSessionSaved(false);
+            }
+            return;
+        }
+
+        // Kiểm tra uid trước khi lưu
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            Log.e(TAG, "❌ Không thể lưu session: người dùng chưa đăng nhập");
+            if (listener != null) {
+                listener.onSessionSaved(false);
+            }
+            return;
+        }
+
+        String currentUid = currentUser.getUid();
+        String sessionUid = session.getUid();
+        
+        // Đảm bảo uid được set đúng
+        if (sessionUid == null || sessionUid.isEmpty()) {
+            Log.w(TAG, "⚠️ Session UID trống, đang set thành UID của người dùng hiện tại: " + currentUid);
+            session.setUid(currentUid);
+        } else if (!sessionUid.equals(currentUid)) {
+            Log.w(TAG, "⚠️ Session UID (" + sessionUid + ") không khớp với UID hiện tại (" + currentUid + "), đang cập nhật...");
+            session.setUid(currentUid);
+        }
+
+        Log.d(TAG, "💾 Đang lưu session vào Firestore: " + session.getId() + ", UID: " + session.getUid());
 
         db.collection("sessions")
                 .document(session.getId())
                 .set(session)
                 .addOnSuccessListener(aVoid -> {
-                    Log.d(TAG, "Session saved successfully");
+                    Log.d(TAG, "✅ Lưu session thành công: " + session.getId());
                     if (listener != null) {
                         listener.onSessionSaved(true);
                     }
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error saving session", e);
+                    Log.e(TAG, "❌ Lỗi khi lưu session: " + session.getId(), e);
+                    Log.e(TAG, "📋 Mã lỗi: " + (e instanceof com.google.firebase.firestore.FirebaseFirestoreException 
+                        ? ((com.google.firebase.firestore.FirebaseFirestoreException) e).getCode() 
+                        : "Không xác định"));
+                    Log.e(TAG, "📋 Chi tiết lỗi: " + e.getMessage());
                     if (listener != null) {
                         listener.onSessionSaved(false);
                     }
@@ -1196,6 +1234,45 @@ public class FirebaseService {
     }
 
     /**
+     * Load tất cả collections từ Firebase
+     */
+    public void loadCollections(AppCompatActivity activity, OnCollectionsLoadedListener listener) {
+        Log.d(TAG, "Loading collections from Firebase...");
+        
+        db.collection("collections")
+                .whereEqualTo("isPublic", true)
+                .orderBy("order")
+                .get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        ArrayList<fpt.fall2025.posetrainer.Domain.Collection> collections = new ArrayList<>();
+                        for (QueryDocumentSnapshot document : task.getResult()) {
+                            try {
+                                fpt.fall2025.posetrainer.Domain.Collection collection = document.toObject(fpt.fall2025.posetrainer.Domain.Collection.class);
+                                if (collection != null) {
+                                    collection.setId(document.getId());
+                                    collections.add(collection);
+                                    Log.d(TAG, "Loaded collection: " + collection.getTitle() + " (ID: " + document.getId() + ")");
+                                }
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error parsing collection: " + e.getMessage());
+                            }
+                        }
+                        
+                        Log.d(TAG, "Total collections loaded: " + collections.size());
+                        activity.runOnUiThread(() -> {
+                            listener.onCollectionsLoaded(collections);
+                        });
+                    } else {
+                        Log.e(TAG, "Error getting collections: ", task.getException());
+                        activity.runOnUiThread(() -> {
+                            listener.onCollectionsLoaded(new ArrayList<>());
+                        });
+                    }
+                });
+    }
+
+    /**
      * Load tất cả favorite workout templates của user (load full WorkoutTemplate objects)
      */
     public void loadFavoriteWorkoutTemplates(String userId, AppCompatActivity activity, OnWorkoutTemplatesLoadedListener listener) {
@@ -1632,7 +1709,7 @@ public class FirebaseService {
      */
     public void updateStreak(String uid, Session session, OnStreakUpdatedListener listener) {
         if (session == null || session.getStartedAt() == 0) {
-            Log.w(TAG, "Cannot update streak: session is null or invalid");
+            Log.w(TAG, "⚠️ Không thể cập nhật streak: session là null hoặc không hợp lệ");
             if (listener != null) {
                 listener.onStreakUpdated(null);
             }
@@ -1650,7 +1727,7 @@ public class FirebaseService {
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
         String workoutDate = dateFormat.format(sessionDate.getTime());
 
-        Log.d(TAG, "Updating streak for user: " + uid + ", workout date: " + workoutDate);
+        Log.d(TAG, "🔥 Đang cập nhật streak cho user: " + uid + ", ngày tập: " + workoutDate);
 
         // Load current streak
         db.collection("streaks")
@@ -1676,7 +1753,7 @@ public class FirebaseService {
                         streak.setLastWorkoutDate(workoutDate);
                     } else if (lastWorkoutDate.equals(workoutDate)) {
                         // Same day - don't increase streak
-                        Log.d(TAG, "Same day workout, streak unchanged: " + streak.getCurrentStreak());
+                        Log.d(TAG, "📅 Cùng ngày tập, streak không thay đổi: " + streak.getCurrentStreak());
                     } else {
                         // Different day
                         try {
@@ -1694,11 +1771,11 @@ public class FirebaseService {
                             if (diffInDays == 1) {
                                 // Consecutive day - increase streak
                                 streak.setCurrentStreak(streak.getCurrentStreak() + 1);
-                                Log.d(TAG, "Consecutive day, streak increased to: " + streak.getCurrentStreak());
+                                Log.d(TAG, "🔥 Ngày liên tiếp, streak tăng lên: " + streak.getCurrentStreak());
                             } else if (diffInDays >= 2) {
                                 // Gap of 2+ days - reset streak
                                 streak.setCurrentStreak(1);
-                                Log.d(TAG, "Gap of " + diffInDays + " days, streak reset to 1");
+                                Log.d(TAG, "⚠️ Cách " + diffInDays + " ngày, streak reset về 1");
                             }
 
                             // Update longest streak if needed
@@ -1708,7 +1785,7 @@ public class FirebaseService {
 
                             streak.setLastWorkoutDate(workoutDate);
                         } catch (Exception e) {
-                            Log.e(TAG, "Error parsing last workout date", e);
+                            Log.e(TAG, "❌ Lỗi khi parse ngày tập cuối", e);
                             // Fallback: treat as new streak
                             streak.setCurrentStreak(1);
                             streak.setLastWorkoutDate(workoutDate);
@@ -1717,38 +1794,53 @@ public class FirebaseService {
 
                     // Create final reference for lambda
                     final Streak finalStreak = streak;
+                    
+                    // Đảm bảo uid được set đúng (quan trọng cho Firestore rules)
+                    if (finalStreak.getUid() == null || finalStreak.getUid().isEmpty()) {
+                        finalStreak.setUid(uid);
+                        Log.d(TAG, "🔧 Set streak UID thành: " + uid);
+                    } else if (!finalStreak.getUid().equals(uid)) {
+                        Log.w(TAG, "⚠️ Streak UID không khớp: " + finalStreak.getUid() + " != " + uid + ", đang cập nhật...");
+                        finalStreak.setUid(uid);
+                    }
 
                     // Save updated streak
                     db.collection("streaks")
                             .document(uid)
                             .set(finalStreak)
                             .addOnSuccessListener(aVoid -> {
-                                Log.d(TAG, "Streak updated successfully: current=" + finalStreak.getCurrentStreak() + 
-                                    ", longest=" + finalStreak.getLongestStreak());
+                                Log.d(TAG, "✅ Cập nhật streak thành công: hiện tại=" + finalStreak.getCurrentStreak() + 
+                                    " ngày, dài nhất=" + finalStreak.getLongestStreak() + " ngày, uid=" + finalStreak.getUid());
                                 if (listener != null) {
                                     listener.onStreakUpdated(finalStreak);
                                 }
                             })
                             .addOnFailureListener(e -> {
-                                Log.e(TAG, "Error saving streak", e);
+                                Log.e(TAG, "❌ Lỗi khi lưu streak", e);
+                                Log.e(TAG, "📋 Mã lỗi: " + (e instanceof com.google.firebase.firestore.FirebaseFirestoreException 
+                                    ? ((com.google.firebase.firestore.FirebaseFirestoreException) e).getCode() 
+                                    : "Không xác định"));
+                                Log.e(TAG, "📋 Chi tiết lỗi: " + e.getMessage());
                                 if (listener != null) {
                                     listener.onStreakUpdated(null);
                                 }
                             });
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error loading streak", e);
+                    Log.e(TAG, "❌ Lỗi khi tải streak", e);
                     // Create new streak if load fails
                     Streak newStreak = new Streak(uid, 1, 1, workoutDate);
                     db.collection("streaks")
                             .document(uid)
                             .set(newStreak)
                             .addOnSuccessListener(aVoid -> {
+                                Log.d(TAG, "✅ Tạo streak mới thành công sau khi load lỗi");
                                 if (listener != null) {
                                     listener.onStreakUpdated(newStreak);
                                 }
                             })
                             .addOnFailureListener(e2 -> {
+                                Log.e(TAG, "❌ Lỗi khi tạo streak mới", e2);
                                 if (listener != null) {
                                     listener.onStreakUpdated(null);
                                 }
@@ -1760,7 +1852,7 @@ public class FirebaseService {
      * Load user streak
      */
     public void loadUserStreak(String uid, OnStreakLoadedListener listener) {
-        Log.d(TAG, "Loading streak for user: " + uid);
+        Log.d(TAG, "📥 Đang tải streak cho user: " + uid);
         
         db.collection("streaks")
                 .document(uid)
@@ -1769,26 +1861,26 @@ public class FirebaseService {
                     if (documentSnapshot.exists()) {
                         Streak streak = documentSnapshot.toObject(Streak.class);
                         if (streak != null) {
-                            Log.d(TAG, "Streak loaded: current=" + streak.getCurrentStreak() + 
-                                ", longest=" + streak.getLongestStreak());
+                            Log.d(TAG, "✅ Đã tải streak: hiện tại=" + streak.getCurrentStreak() + 
+                                " ngày, dài nhất=" + streak.getLongestStreak() + " ngày");
                             if (listener != null) {
                                 listener.onStreakLoaded(streak);
                             }
                         } else {
-                            Log.w(TAG, "Streak object is null");
+                            Log.w(TAG, "⚠️ Streak object là null");
                             if (listener != null) {
                                 listener.onStreakLoaded(null);
                             }
                         }
                     } else {
-                        Log.d(TAG, "No streak found for user");
+                        Log.d(TAG, "ℹ️ Không tìm thấy streak cho user này");
                         if (listener != null) {
                             listener.onStreakLoaded(null);
                         }
                     }
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error loading streak", e);
+                    Log.e(TAG, "❌ Lỗi khi tải streak", e);
                     if (listener != null) {
                         listener.onStreakLoaded(null);
                     }
