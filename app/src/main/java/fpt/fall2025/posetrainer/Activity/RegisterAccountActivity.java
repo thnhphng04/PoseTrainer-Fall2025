@@ -69,7 +69,6 @@ public class RegisterAccountActivity extends AppCompatActivity {
         editTextPassword = findViewById(R.id.et_password);
         editTextConfirmPassword = findViewById(R.id.et_confirm_password);
         editTextDisplayName = findViewById(R.id.et_display_name);
-        editTextPhotoUrl = findViewById(R.id.et_photo_url);
 
         layoutEmail = findViewById(R.id.til_email);
         layoutPassword = findViewById(R.id.til_password);

@@ -87,6 +87,9 @@
             android:name=".Activity.SessionResultActivity"
             android:exported="false" />
         <activity
+            android:name=".Activity.CompletedExerciseActivity"
+            android:exported="false" />
+        <activity
             android:name=".Activity.AchievementsActivity"
             android:exported="false" />
         <activity

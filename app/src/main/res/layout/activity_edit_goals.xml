@@ -36,20 +36,20 @@
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/til_gender"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:hint="Giới tính"
-            app:boxBackgroundMode="outline"
-            app:boxStrokeColor="@color/white"
-            app:boxStrokeWidth="1dp"
+            android:textColorHint="#999999"
             app:hintTextColor="@color/white"
-            app:hintEnabled="true">
+            app:boxStrokeColor="@color/white">
             <com.google.android.material.textfield.MaterialAutoCompleteTextView
                 android:id="@+id/dd_gender"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="@color/white" />
+                android:textColor="@color/white"
+                android:inputType="none"/>
         </com.google.android.material.textfield.TextInputLayout>
 
         <LinearLayout
