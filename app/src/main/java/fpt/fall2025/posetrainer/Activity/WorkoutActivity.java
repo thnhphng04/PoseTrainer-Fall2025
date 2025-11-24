@@ -559,6 +559,22 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
         if (currentSession != null) {
             Log.d(TAG, "Completing workout session: " + currentSession.getId());
             
+            // QUAN TRỌNG: Đảm bảo TẤT CẢ PerExercise có state = "completed" để tính streak
+            if (currentSession.getPerExercise() != null) {
+                int totalExercises = currentSession.getPerExercise().size();
+                int completedCount = 0;
+                for (Session.PerExercise perExercise : currentSession.getPerExercise()) {
+                    String currentState = perExercise.getState();
+                    if (!"completed".equals(currentState)) {
+                        Log.d(TAG, "Đang set state = 'completed' cho Exercise #" + perExercise.getExerciseNo() + 
+                            " (state hiện tại: " + (currentState != null ? currentState : "null") + ")");
+                        perExercise.setState("completed");
+                    }
+                    completedCount++;
+                }
+                Log.d(TAG, "Đã đảm bảo tất cả " + completedCount + "/" + totalExercises + " exercises có state = 'completed'");
+            }
+            
             // Set end time
             currentSession.setEndedAt(System.currentTimeMillis() / 1000); // Convert to seconds
             
