@@ -121,69 +121,87 @@ public class AchievementManager {
                                     if (currentStreak >= 3 && !achievement.isBadgeUnlocked("streak_3")) {
                                         achievement.unlockBadge("streak_3");
                                         newlyUnlocked.add("streak_3");
-                                        Log.d(TAG, "Unlocked achievement: streak_3");
+                                        Log.d(TAG, "🎉 Mở khóa achievement: 3 Ngày Liên Tiếp (streak_3)");
                                     }
                                     if (currentStreak >= 7 && !achievement.isBadgeUnlocked("streak_7")) {
                                         achievement.unlockBadge("streak_7");
                                         newlyUnlocked.add("streak_7");
-                                        Log.d(TAG, "Unlocked achievement: streak_7");
+                                        Log.d(TAG, "🎉 Mở khóa achievement: 1 Tuần Kiên Trì (streak_7)");
                                     }
                                     if (currentStreak >= 14 && !achievement.isBadgeUnlocked("streak_14")) {
                                         achievement.unlockBadge("streak_14");
                                         newlyUnlocked.add("streak_14");
-                                        Log.d(TAG, "Unlocked achievement: streak_14");
+                                        Log.d(TAG, "🎉 Mở khóa achievement: 2 Tuần Xuất Sắc (streak_14)");
                                     }
 
                                     // Check workout count achievements
                                     if (totalWorkouts >= 1 && !achievement.isBadgeUnlocked("workout_1")) {
                                         achievement.unlockBadge("workout_1");
                                         newlyUnlocked.add("workout_1");
-                                        Log.d(TAG, "Unlocked achievement: workout_1");
+                                        Log.d(TAG, "🎉 Mở khóa achievement: Bắt Đầu Hành Trình (workout_1)");
                                     }
                                     if (totalWorkouts >= 10 && !achievement.isBadgeUnlocked("workout_10")) {
                                         achievement.unlockBadge("workout_10");
                                         newlyUnlocked.add("workout_10");
-                                        Log.d(TAG, "Unlocked achievement: workout_10");
+                                        Log.d(TAG, "🎉 Mở khóa achievement: 10 Buổi Tập (workout_10)");
                                     }
                                     if (totalWorkouts >= 30 && !achievement.isBadgeUnlocked("workout_30")) {
                                         achievement.unlockBadge("workout_30");
                                         newlyUnlocked.add("workout_30");
-                                        Log.d(TAG, "Unlocked achievement: workout_30");
+                                        Log.d(TAG, "🎉 Mở khóa achievement: 30 Buổi Tập (workout_30)");
                                     }
+
+                                    // Đảm bảo uid được set đúng (quan trọng cho Firestore rules)
+                                    if (achievement.getUid() == null || achievement.getUid().isEmpty()) {
+                                        achievement.setUid(uid);
+                                        Log.d(TAG, "🔧 Set achievement UID thành: " + uid);
+                                    } else if (!achievement.getUid().equals(uid)) {
+                                        Log.w(TAG, "⚠️ Achievement UID không khớp: " + achievement.getUid() + " != " + uid + ", đang cập nhật...");
+                                        achievement.setUid(uid);
+                                    }
+
+                                    // Tạo biến final để sử dụng trong lambda
+                                    final Achievement finalAchievement = achievement;
+                                    final List<String> finalNewlyUnlocked = newlyUnlocked;
 
                                     // Save updated achievements
                                     if (!newlyUnlocked.isEmpty() || !documentSnapshot.exists()) {
                                         db.collection("achievements")
                                                 .document(uid)
-                                                .set(achievement)
+                                                .set(finalAchievement)
                                                 .addOnSuccessListener(aVoid -> {
-                                                    Log.d(TAG, "Achievements saved successfully. Newly unlocked: " + newlyUnlocked.size());
+                                                    Log.d(TAG, "✅ Lưu achievements thành công. Mới mở khóa: " + finalNewlyUnlocked.size() + " achievement(s), uid=" + finalAchievement.getUid());
                                                     if (listener != null) {
-                                                        listener.onAchievementChecked(newlyUnlocked);
+                                                        listener.onAchievementChecked(finalNewlyUnlocked);
                                                     }
                                                 })
                                                 .addOnFailureListener(e -> {
-                                                    Log.e(TAG, "Error saving achievements", e);
+                                                    Log.e(TAG, "❌ Lỗi khi lưu achievements", e);
+                                                    Log.e(TAG, "📋 Mã lỗi: " + (e instanceof com.google.firebase.firestore.FirebaseFirestoreException 
+                                                        ? ((com.google.firebase.firestore.FirebaseFirestoreException) e).getCode() 
+                                                        : "Không xác định"));
+                                                    Log.e(TAG, "📋 Chi tiết lỗi: " + e.getMessage());
                                                     if (listener != null) {
-                                                        listener.onAchievementChecked(newlyUnlocked);
+                                                        listener.onAchievementChecked(finalNewlyUnlocked);
                                                     }
                                                 });
                                     } else {
                                         // No new achievements
+                                        Log.d(TAG, "ℹ️ Không có achievement mới nào được mở khóa");
                                         if (listener != null) {
                                             listener.onAchievementChecked(newlyUnlocked);
                                         }
                                     }
                                 })
                                 .addOnFailureListener(e -> {
-                                    Log.e(TAG, "Error loading achievements", e);
+                                    Log.e(TAG, "❌ Lỗi khi tải achievements", e);
                                     if (listener != null) {
                                         listener.onAchievementChecked(new ArrayList<>());
                                     }
                                 });
                     })
                     .addOnFailureListener(e -> {
-                        Log.e(TAG, "Error loading workout count", e);
+                        Log.e(TAG, "❌ Lỗi khi tải số lượng workout", e);
                         if (listener != null) {
                             listener.onAchievementChecked(new ArrayList<>());
                         }

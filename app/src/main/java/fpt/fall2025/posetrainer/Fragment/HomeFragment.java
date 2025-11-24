@@ -16,8 +16,10 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import fpt.fall2025.posetrainer.Activity.SearchActivity;
 import fpt.fall2025.posetrainer.Adapter.WorkoutTemplateAdapter;
 import fpt.fall2025.posetrainer.Adapter.SessionAdapter;
+import fpt.fall2025.posetrainer.Adapter.CollectionAdapter;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
 import fpt.fall2025.posetrainer.Domain.Session;
+import fpt.fall2025.posetrainer.Domain.Collection;
 import fpt.fall2025.posetrainer.Domain.User;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
@@ -46,7 +48,9 @@ public class HomeFragment extends Fragment {
     private WorkoutTemplateAdapter featuredAdapter; // Adapter cho featured workouts
     private WorkoutTemplateAdapter personalizedAdapter; // Adapter cho personalized workouts
     private SessionAdapter recentActivityAdapter; // Adapter cho recent activity
+    private CollectionAdapter collectionAdapter; // Adapter cho collections
     private ArrayList<Session> recentSessions; // Recent sessions list
+    private ArrayList<Collection> collections; // Collections list
     
     // Filter states
     private String selectedCategory = "Latest Updates";
@@ -77,6 +81,7 @@ public class HomeFragment extends Fragment {
         featuredWorkouts = new ArrayList<>();
         personalizedWorkouts = new ArrayList<>();
         recentSessions = new ArrayList<>();
+        collections = new ArrayList<>();
 
         // Setup RecyclerView cho filtered workouts (view1)
         binding.view1.setLayoutManager(
@@ -122,6 +127,20 @@ public class HomeFragment extends Fragment {
             }
         }
 
+        // Setup RecyclerView cho Collections
+        binding.rvCollections.setLayoutManager(
+                new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false)
+        );
+        if (collectionAdapter == null) {
+            collectionAdapter = new CollectionAdapter(collections);
+            binding.rvCollections.setAdapter(collectionAdapter);
+        } else {
+            collectionAdapter.updateList(collections);
+            if (binding.rvCollections.getAdapter() == null) {
+                binding.rvCollections.setAdapter(collectionAdapter);
+            }
+        }
+
         // Setup RecyclerView cho Recent Activity
         binding.rvRecentActivity.setLayoutManager(
                 new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false)
@@ -146,6 +165,7 @@ public class HomeFragment extends Fragment {
         loadWorkoutTemplates();
         loadUnreadNotificationCount();
         loadUserStreak();
+        loadCollections();
         loadRecentActivity();
         isDataLoaded = true;
         
@@ -240,6 +260,45 @@ public class HomeFragment extends Fragment {
     }
 
     /**
+     * Load và hiển thị Collections
+     */
+    private void loadCollections() {
+        if (getActivity() == null || !(getActivity() instanceof androidx.appcompat.app.AppCompatActivity)) {
+            Log.w(TAG, "Activity không tồn tại, không thể load collections");
+            return;
+        }
+
+        Log.d(TAG, "Đang load collections từ Firebase...");
+        FirebaseService.getInstance().loadCollections(
+                (androidx.appcompat.app.AppCompatActivity) getActivity(),
+                loadedCollections -> {
+                    if (!isAdded() || binding == null) {
+                        return;
+                    }
+
+                    if (loadedCollections != null) {
+                        collections = loadedCollections;
+                        Log.d(TAG, "Đã load " + collections.size() + " collections");
+
+                        // Update adapter
+                        if (collectionAdapter != null) {
+                            collectionAdapter.updateList(collections);
+                        } else {
+                            collectionAdapter = new CollectionAdapter(collections);
+                            binding.rvCollections.setAdapter(collectionAdapter);
+                        }
+                    } else {
+                        collections = new ArrayList<>();
+                        if (collectionAdapter != null) {
+                            collectionAdapter.updateList(collections);
+                        }
+                        Log.e(TAG, "Không thể load collections");
+                    }
+                }
+        );
+    }
+
+    /**
      * Load và hiển thị Recent Activity (sessions gần đây)
      */
     private void loadRecentActivity() {
@@ -254,11 +313,11 @@ public class HomeFragment extends Fragment {
 
         String uid = currentUser.getUid();
 
-        // Query 5 sessions gần đây nhất
+        // Query 4 sessions gần đây nhất
         db.collection("sessions")
                 .whereEqualTo("uid", uid)
                 .orderBy("startedAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
-                .limit(5)
+                .limit(4)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     if (!isAdded() || binding == null) {
@@ -573,6 +632,7 @@ public class HomeFragment extends Fragment {
         loadWorkoutTemplates();
         loadUnreadNotificationCount();
         loadUserStreak();
+        loadCollections();
         loadRecentActivity();
 
         // Stop refresh indicator sau khi load xong (với delay nhỏ)
