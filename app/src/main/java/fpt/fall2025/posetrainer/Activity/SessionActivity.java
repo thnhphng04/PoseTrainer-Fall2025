@@ -185,8 +185,7 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
 
         // Set finish workout button
         binding.finishWorkoutBtn.setOnClickListener(v -> {
-            endSession();
-            finish();
+            finishWorkoutAndNavigate();
         });
 
         // Set start/resume button
@@ -324,6 +323,10 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
             if (currentSession.getSummary() != null) {
                 long durationSec = (System.currentTimeMillis() - sessionStartTime) / 1000;
                 currentSession.getSummary().setDurationSec((int) durationSec);
+                
+                // Estimate calories (simple calculation based on duration)
+                int estimatedKcal = (int) (durationSec * 0.1); // Rough estimate: 0.1 kcal per second
+                currentSession.getSummary().setEstKcal(estimatedKcal);
             }
 
             // Save to Firebase
@@ -333,6 +336,69 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
                     Log.d(TAG, "Session ended and saved: " + success);
                 }
             });
+        }
+    }
+
+    /**
+     * Finish workout and navigate to CompletedExerciseActivity
+     */
+    private void finishWorkoutAndNavigate() {
+        if (sessionTimer != null) {
+            sessionTimer.cancel();
+        }
+
+        // Update session end time
+        if (currentSession != null) {
+            currentSession.setEndedAt(System.currentTimeMillis() / 1000);
+
+            // Calculate duration
+            long durationSec;
+            if (currentSession.getStartedAt() > 0) {
+                durationSec = currentSession.getEndedAt() - currentSession.getStartedAt();
+            } else {
+                // Fallback: use sessionStartTime if startedAt is not set
+                durationSec = (System.currentTimeMillis() - sessionStartTime) / 1000;
+            }
+
+            // Update summary
+            if (currentSession.getSummary() == null) {
+                currentSession.setSummary(new Session.SessionSummary());
+            }
+            currentSession.getSummary().setDurationSec((int) durationSec);
+            
+            // Estimate calories (simple calculation based on duration)
+            int estimatedKcal = (int) (durationSec * 0.1); // Rough estimate: 0.1 kcal per second
+            currentSession.getSummary().setEstKcal(estimatedKcal);
+
+            Log.d(TAG, "Finishing workout - Duration: " + durationSec + "s, Calories: " + estimatedKcal);
+
+            // Save to Firebase and then navigate
+            FirebaseService.getInstance().saveSession(currentSession, new FirebaseService.OnSessionSavedListener() {
+                @Override
+                public void onSessionSaved(boolean success) {
+                    if (success) {
+                        Log.d(TAG, "Session saved successfully, navigating to CompletedExerciseActivity");
+                        
+                        // Navigate to CompletedExerciseActivity
+                        Intent intent = new Intent(SessionActivity.this, CompletedExerciseActivity.class);
+                        intent.putExtra("sessionId", currentSession.getId());
+                        startActivity(intent);
+                        
+                        // Finish this activity
+                        finish();
+                    } else {
+                        Log.e(TAG, "Failed to save session");
+                        // Still navigate even if save failed
+                        Intent intent = new Intent(SessionActivity.this, CompletedExerciseActivity.class);
+                        intent.putExtra("sessionId", currentSession.getId());
+                        startActivity(intent);
+                        finish();
+                    }
+                }
+            });
+        } else {
+            Log.e(TAG, "Cannot finish workout: currentSession is null");
+            finish();
         }
     }
 
