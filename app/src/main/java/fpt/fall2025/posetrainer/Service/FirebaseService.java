@@ -1705,11 +1705,61 @@ public class FirebaseService {
     // ===================== STREAK METHODS =====================
 
     /**
+     * Kiểm tra session đã completed chưa
+     * QUAN TRỌNG: Chỉ tính streak khi TẤT CẢ PerExercise có state = "completed"
+     */
+    private boolean isSessionCompleted(Session session) {
+        if (session == null) {
+            Log.d(TAG, "ℹ️ Session là null");
+            return false;
+        }
+        
+        // Kiểm tra 1: Session phải có endedAt > 0 (đã kết thúc)
+        if (session.getEndedAt() == 0 || session.getEndedAt() <= session.getStartedAt()) {
+            Log.d(TAG, "ℹ️ Session chưa kết thúc (endedAt = " + session.getEndedAt() + ", startedAt = " + session.getStartedAt() + ")");
+            return false;
+        }
+        
+        // Kiểm tra 2: QUAN TRỌNG - Tất cả PerExercise phải có state = "completed"
+        if (session.getPerExercise() == null || session.getPerExercise().isEmpty()) {
+            Log.d(TAG, "ℹ️ Session không có PerExercise nào");
+            return false;
+        }
+        
+        int totalExercises = session.getPerExercise().size();
+        int completedExercises = 0;
+        
+        for (Session.PerExercise perExercise : session.getPerExercise()) {
+            String exerciseState = perExercise.getState();
+            if (exerciseState == null || !"completed".equals(exerciseState)) {
+                Log.d(TAG, "⚠️ Session chưa completed: Exercise #" + perExercise.getExerciseNo() + 
+                    " có state = '" + (exerciseState != null ? exerciseState : "null") + 
+                    "' (cần 'completed'). Đã completed: " + completedExercises + "/" + totalExercises);
+                return false;
+            }
+            completedExercises++;
+        }
+        
+        Log.d(TAG, "✅ Session đã completed: endedAt > 0 và TẤT CẢ " + totalExercises + " exercises đã completed (state = 'completed')");
+        return true;
+    }
+
+    /**
      * Update user streak based on new session
+     * CHỈ cập nhật streak khi session đã completed
      */
     public void updateStreak(String uid, Session session, OnStreakUpdatedListener listener) {
         if (session == null || session.getStartedAt() == 0) {
             Log.w(TAG, "⚠️ Không thể cập nhật streak: session là null hoặc không hợp lệ");
+            if (listener != null) {
+                listener.onStreakUpdated(null);
+            }
+            return;
+        }
+
+        // QUAN TRỌNG: Chỉ cập nhật streak khi TẤT CẢ PerExercise có state = "completed"
+        if (!isSessionCompleted(session)) {
+            Log.w(TAG, "⚠️ Không cập nhật streak: session chưa completed - không phải tất cả PerExercise có state = 'completed'");
             if (listener != null) {
                 listener.onStreakUpdated(null);
             }
@@ -1727,7 +1777,7 @@ public class FirebaseService {
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
         String workoutDate = dateFormat.format(sessionDate.getTime());
 
-        Log.d(TAG, "🔥 Đang cập nhật streak cho user: " + uid + ", ngày tập: " + workoutDate);
+        Log.d(TAG, "🔥 Đang cập nhật streak cho user: " + uid + ", ngày tập: " + workoutDate + " (session đã completed)");
 
         // Load current streak
         db.collection("streaks")
