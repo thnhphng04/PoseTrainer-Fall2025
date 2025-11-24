@@ -95,8 +95,8 @@ public class LegRaiseAnalyzer implements ExerciseAnalyzerInterface {
                 inactiveTimeFront = 0.0;
             }
             // Feedback cảnh báo camera
-            feedbackList.add("CAMERA NOT ALIGNED PROPERLY!!!");
-            feedbackList.add("OFFSET ANGLE: " + offsetAngle);
+            feedbackList.add("Camera lệch, vui lòng chỉnh lại!");
+            feedbackList.add("Góc lệch: " + offsetAngle);
             prevState = null;
             currState = null;
             startInactiveTime = now;
@@ -165,7 +165,7 @@ public class LegRaiseAnalyzer implements ExerciseAnalyzerInterface {
                 if (kneeAngle < thresholds.getKneeThresholds()[0]) {
                     displayText[0] = true;
                     incorrectPosture = true;
-                    feedbackList.add("Keep legs straight");
+                    feedbackList.add("Giữ chân thẳng");
                 }
             }
 

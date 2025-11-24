@@ -92,8 +92,8 @@ public class LungeAnalyzer implements ExerciseAnalyzerInterface {
                 inactiveTimeFront = 0.0;
             }
             // Feedback cảnh báo camera
-            feedbackList.add("CAMERA NOT ALIGNED PROPERLY!!!");
-            feedbackList.add("OFFSET ANGLE: " + offsetAngle);
+            feedbackList.add("Camera lệch, vui lòng chỉnh lại!");
+            feedbackList.add("Góc lệch: " + offsetAngle);
             prevState = null;
             currState = null;
             startInactiveTime = now;
@@ -172,24 +172,24 @@ public class LungeAnalyzer implements ExerciseAnalyzerInterface {
                 // Feedback động tác
                 if (nearHipAngleWithUpVertical > thresholds.getHipMax()) {
                     displayText[0] = true;
-                    feedbackList.add("BEND BACKWARDS");
+                    feedbackList.add("Ngả lưng ra sau");
                 }
                 if (nearHipAngleWithUpVertical < thresholds.getHipMin() && stateSequence.stream().filter(s -> s.equals("s2")).count() == 1) {
                     displayText[1] = true;
-                    feedbackList.add("BEND FORWARD");
+                    feedbackList.add("Cúi người về trước");
                 }
                 if ("s2n".equals(currState)){
                     if (nearAnkleAngleWithUpVertical > thresholds.getAnkleMax()) {
                         displayText[2] = true;
                         incorrectPosture = true;
-                        feedbackList.add("KNEE OVER TOE");
+                        feedbackList.add("Đầu gối vượt quá mũi chân");
                     }
                 }
                 if ("s2f".equals(currState)){
                     if (farAnkleAngleWithUpVertical > thresholds.getAnkleMax()) {
                         displayText[2] = true;
                         incorrectPosture = true;
-                        feedbackList.add("KNEE OVER TOE");
+                        feedbackList.add("Đầu gối vượt quá mũi chân");
                     }
                 }
             }

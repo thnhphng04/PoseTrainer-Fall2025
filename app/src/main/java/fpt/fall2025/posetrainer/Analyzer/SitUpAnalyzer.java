@@ -93,8 +93,8 @@ public class SitUpAnalyzer implements ExerciseAnalyzerInterface {
                 inactiveTimeFront = 0.0;
             }
             // Feedback cảnh báo camera
-            feedbackList.add("CAMERA NOT ALIGNED PROPERLY!!!");
-            feedbackList.add("OFFSET ANGLE: " + offsetAngle);
+            feedbackList.add("Camera lệch, vui lòng chỉnh lại!");
+            feedbackList.add("Góc lệch: " + offsetAngle);
             prevState = null;
             currState = null;
             startInactiveTime = now;
@@ -144,11 +144,11 @@ public class SitUpAnalyzer implements ExerciseAnalyzerInterface {
                 // Feedback động tác khi nằm
                 if (kneeAngle < thresholds.getKneeThresholds()[0]) {
                     displayText[0] = true;
-                    feedbackList.add("Keep knees at 90 degrees");
+                    feedbackList.add("Giữ gối ở góc 90°");
                 }
                 if (kneeAngle > thresholds.getKneeThresholds()[1]) {
                     displayText[1] = true;
-                    feedbackList.add("Bend knees more");
+                    feedbackList.add("Gập gối nhiều hơn");
                 }
             }
 
@@ -160,19 +160,19 @@ public class SitUpAnalyzer implements ExerciseAnalyzerInterface {
                     if (kneeAngle < thresholds.getKneeThresholds()[0]) {
                         displayText[0] = true;
                         incorrectPosture = true;
-                        feedbackList.add("Keep knees at 90 degrees");
+                        feedbackList.add("Giữ gối ở góc 90°");
                         incorrectCount++;
                         message = "INCORRECT";
                     } else if (kneeAngle > thresholds.getKneeThresholds()[1]) {
                         displayText[1] = true;
                         incorrectPosture = true;
-                        feedbackList.add("Bend knees more");
+                        feedbackList.add("Gập gối nhiều hơn");
                         incorrectCount++;
                         message = "INCORRECT";
                     } else if (hipAngle > thresholds.getHipThresholds()[1]) {
                         displayText[2] = true;
                         incorrectPosture = true;
-                        feedbackList.add("Come up higher");
+                        feedbackList.add("Nâng người lên cao hơn");
                         incorrectCount++;
                         message = "INCORRECT";
                     }

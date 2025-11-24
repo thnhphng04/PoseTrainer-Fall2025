@@ -97,8 +97,8 @@ public class ClapOverHeadAnalyzer implements ExerciseAnalyzerInterface {
                 inactiveTimeFront = 0.0;
             }
             // Feedback cảnh báo camera
-            feedbackList.add("CAMERA NOT ALIGNED PROPERLY!!!");
-            feedbackList.add("OFFSET ANGLE: " + offsetAngle);
+            feedbackList.add("Camera lệch, vui lòng chỉnh lại!");
+            feedbackList.add("Góc lệch: " + offsetAngle);
             prevState = null;
             currState = null;
             startInactiveTime = now;

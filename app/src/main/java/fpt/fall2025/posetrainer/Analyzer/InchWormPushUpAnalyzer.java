@@ -98,8 +98,8 @@ public class InchWormPushUpAnalyzer implements ExerciseAnalyzerInterface {
                 inactiveTimeFront = 0.0;
             }
             // Feedback cảnh báo camera
-            feedbackList.add("CAMERA NOT ALIGNED PROPERLY!!!");
-            feedbackList.add("OFFSET ANGLE: " + offsetAngle);
+            feedbackList.add("Camera lệch, vui lòng chỉnh lại!");
+            feedbackList.add("Góc lệch: " + offsetAngle);
             prevState = null;
             currState = null;
             startInactiveTime = now;
@@ -179,19 +179,19 @@ public class InchWormPushUpAnalyzer implements ExerciseAnalyzerInterface {
                 if (kneeAngle < thresholds.getKneeMin()) {
                     displayText[0] = true;
                     incorrectPosture = true;
-                    feedbackList.add("Bent Knee");
+                    feedbackList.add("Đầu gối bị gập");
                 }
             }
             else if("s3".equals(currState) || "s4".equals(currState) || "s5".equals(currState)){
                 if (kneeAngle < thresholds.getKneeMin()) {
                     displayText[0] = true;
                     incorrectPosture = true;
-                    feedbackList.add("Bent Knee");
+                    feedbackList.add("Đầu gối bị gập");
                 }
                 if (hipCheck > thresholds.getHipMax()) {
                     displayText[0] = true;
                     incorrectPosture = true;
-                    feedbackList.add("Lower back sag");
+                    feedbackList.add("Lưng dưới bị võng");
                 }
             }
 

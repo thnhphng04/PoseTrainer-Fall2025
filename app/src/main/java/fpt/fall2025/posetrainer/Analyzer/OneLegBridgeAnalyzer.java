@@ -93,8 +93,8 @@ public class OneLegBridgeAnalyzer implements ExerciseAnalyzerInterface {
                 inactiveTimeFront = 0.0;
             }
             // Feedback cảnh báo camera
-            feedbackList.add("CAMERA NOT ALIGNED PROPERLY!!!");
-            feedbackList.add("OFFSET ANGLE:" + offsetAngle + " " +positionCheck);
+            feedbackList.add("Camera lệch, vui lòng chỉnh lại!");
+            feedbackList.add("Góc lệch:" + offsetAngle + " " +positionCheck);
             prevState = null;
             currState = null;
             startInactiveTime = now;
@@ -159,7 +159,7 @@ public class OneLegBridgeAnalyzer implements ExerciseAnalyzerInterface {
                 // Feedback động tác khi nằm
                 if (kneeAngle > thresholds.getKneeThreshold()) {
                     displayText[0] = true;
-                    feedbackList.add("Extend Knee More");
+                    feedbackList.add("Duỗi đầu gối thêm");
                 }
             }
 
@@ -170,7 +170,7 @@ public class OneLegBridgeAnalyzer implements ExerciseAnalyzerInterface {
                     // Kiểm tra lỗi khi lên
                     if (kneeAngle > thresholds.getKneeThreshold()) {
                         displayText[0] = true;
-                        feedbackList.add("Extend The Stance Leg");
+                        feedbackList.add("Duỗi thẳng chân trụ");
                     }
 
                     if (!incorrectPosture) {

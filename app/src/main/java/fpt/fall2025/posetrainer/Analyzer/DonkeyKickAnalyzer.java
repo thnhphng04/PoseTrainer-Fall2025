@@ -104,8 +104,8 @@ public class DonkeyKickAnalyzer implements ExerciseAnalyzerInterface {
                 inactiveTimeFront = 0.0;
             }
             // Feedback cảnh báo camera
-            feedbackList.add("CAMERA NOT ALIGNED PROPERLY!!!");
-            feedbackList.add("OFFSET ANGLE: " + offsetAngle);
+            feedbackList.add("Camera lệch, vui lòng chỉnh lại!");
+            feedbackList.add("Góc lệch: " + offsetAngle);
             prevState = null;
             currState = null;
             startInactiveTime = now;
@@ -186,7 +186,7 @@ public class DonkeyKickAnalyzer implements ExerciseAnalyzerInterface {
                 if (nearComplete && nearKneeAngle > thresholds.getKneeWithUpVerticalMax()) {
                     displayText[0] = true;
                     nearIncorrectPosture = true;
-                    feedbackList.add("Keep your lower leg pointing upward");
+                    feedbackList.add("Giữ cẳng chân hướng lên");
                     incorrectCount++;
                     message = "INCORRECT";
                 }
@@ -205,7 +205,7 @@ public class DonkeyKickAnalyzer implements ExerciseAnalyzerInterface {
                 if (farComplete && nearKneeAngle > thresholds.getKneeWithUpVerticalMax()) {
                     displayText[0] = true;
                     farIncorrectPosture = true;
-                    feedbackList.add("Keep your lower leg pointing upward");
+                    feedbackList.add("Giữ cẳng chân hướng lên");
                     incorrectCount++;
                     message = "INCORRECT";
                 }
@@ -240,7 +240,7 @@ public class DonkeyKickAnalyzer implements ExerciseAnalyzerInterface {
                 if (backCheck > thresholds.getBackNormal()) {
                     displayText[0] = true;
                     nearIncorrectPosture = true;
-                    feedbackList.add("HIPS TOO HIGH");
+                    feedbackList.add("Hông nâng quá cao");
                 }
             }
             
@@ -264,7 +264,7 @@ public class DonkeyKickAnalyzer implements ExerciseAnalyzerInterface {
                 if (backCheck > thresholds.getBackNormal()) {
                     displayText[0] = true;
                     farIncorrectPosture = true;
-                    feedbackList.add("HIPS TOO HIGH");
+                    feedbackList.add("Hông nâng quá cao");
                 }
             }
              */

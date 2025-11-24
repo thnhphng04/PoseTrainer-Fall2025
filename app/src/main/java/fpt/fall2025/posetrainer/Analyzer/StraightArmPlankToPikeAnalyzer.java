@@ -98,8 +98,8 @@ public class StraightArmPlankToPikeAnalyzer implements ExerciseAnalyzerInterface
                 inactiveTimeFront = 0.0;
             }
             // Feedback cảnh báo camera
-            feedbackList.add("CAMERA NOT ALIGNED PROPERLY!!!");
-            feedbackList.add("OFFSET ANGLE: " + offsetAngle);
+            feedbackList.add("Camera lệch, vui lòng chỉnh lại!");
+            feedbackList.add("Góc lệch: " + offsetAngle);
             prevState = null;
             currState = null;
             startInactiveTime = now;
@@ -167,7 +167,7 @@ public class StraightArmPlankToPikeAnalyzer implements ExerciseAnalyzerInterface
                 if (kneeAngle < thresholds.getKneeMin()) {
                     displayText[0] = true;
                     incorrectPosture = true;
-                    feedbackList.add("Bent Knee");
+                    feedbackList.add("Đầu gối bị gập");
                 }
             }
             else if("s2".equals(currState)) {
@@ -178,7 +178,7 @@ public class StraightArmPlankToPikeAnalyzer implements ExerciseAnalyzerInterface
                     if (kneeAngle < thresholds.getKneeMin()) {
                         displayText[0] = true;
                         incorrectPosture = true;
-                        feedbackList.add("Bent Knee");
+                        feedbackList.add("Đầu gối bị gập");
                     }
 
                     // Nếu không có lỗi thì đếm là đúng

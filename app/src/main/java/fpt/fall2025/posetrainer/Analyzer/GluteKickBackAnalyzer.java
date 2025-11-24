@@ -104,8 +104,8 @@ public class GluteKickBackAnalyzer implements ExerciseAnalyzerInterface {
                 inactiveTimeFront = 0.0;
             }
             // Feedback cảnh báo camera
-            feedbackList.add("CAMERA NOT ALIGNED PROPERLY!!!");
-            feedbackList.add("OFFSET ANGLE: " + offsetAngle);
+            feedbackList.add("Camera lệch, vui lòng chỉnh lại!");
+            feedbackList.add("Góc lệch: " + offsetAngle);
             prevState = null;
             currState = null;
             startInactiveTime = now;
@@ -186,7 +186,7 @@ public class GluteKickBackAnalyzer implements ExerciseAnalyzerInterface {
                 if (nearComplete && nearKneeAngle < thresholds.getKneeThresholds()[1]) {
                     displayText[0] = true;
                     nearIncorrectPosture = true;
-                    feedbackList.add("Extend Knee More");
+                    feedbackList.add("Duỗi đầu gối thêm");
                     incorrectCount++;
                     message = "INCORRECT";
                 }
@@ -205,7 +205,7 @@ public class GluteKickBackAnalyzer implements ExerciseAnalyzerInterface {
                 if (farComplete && nearKneeAngle < thresholds.getKneeThresholds()[1]) {
                     displayText[0] = true;
                     farIncorrectPosture = true;
-                    feedbackList.add("Extend Knee More");
+                    feedbackList.add("Duỗi đầu gối thêm");
                     incorrectCount++;
                     message = "INCORRECT";
                 }
@@ -240,7 +240,7 @@ public class GluteKickBackAnalyzer implements ExerciseAnalyzerInterface {
                 if (backCheck > thresholds.getBackNormal()) {
                     displayText[0] = true;
                     nearIncorrectPosture = true;
-                    feedbackList.add("HIPS TOO HIGH");
+                    feedbackList.add("Hông nâng quá cao");
                 }
             }
             
@@ -264,7 +264,7 @@ public class GluteKickBackAnalyzer implements ExerciseAnalyzerInterface {
                 if (backCheck > thresholds.getBackNormal()) {
                     displayText[0] = true;
                     farIncorrectPosture = true;
-                    feedbackList.add("HIPS TOO HIGH");
+                    feedbackList.add("Hông nâng quá cao");
                 }
             }
              */

@@ -99,8 +99,8 @@ public class FloorTricepDipAnalyzer implements ExerciseAnalyzerInterface {
                 inactiveTimeFront = 0.0;
             }
             // Feedback cảnh báo camera
-            feedbackList.add("CAMERA NOT ALIGNED PROPERLY!!!");
-            feedbackList.add("OFFSET ANGLE: " + offsetAngle);
+            feedbackList.add("Camera lệch, vui lòng chỉnh lại!");
+            feedbackList.add("Góc lệch: " + offsetAngle);
             prevState = null;
             currState = null;
             startInactiveTime = now;
@@ -167,7 +167,7 @@ public class FloorTricepDipAnalyzer implements ExerciseAnalyzerInterface {
                 if (hipY > (ankleY - footLength*thresholds.getHeightRatio())){
                     displayText[0] = true;
                     incorrectPosture = true;
-                    feedbackList.add("Hip too low!");
+                    feedbackList.add("Hông hạ quá thấp!");
                 }
 
                 if (!incorrectPosture) {
@@ -183,18 +183,18 @@ public class FloorTricepDipAnalyzer implements ExerciseAnalyzerInterface {
             if ("s1".equals(currState)) {
                 if (hipY > (ankleY - footLength*thresholds.getHeightRatio())){
                     displayText[0] = true;
-                    feedbackList.add("Hip too low!");
+                    feedbackList.add("Hông hạ quá thấp!");
                 }
                 if (kneeAngle > thresholds.getKneeThreshold()) {
                     displayText[1] = true;
-                    feedbackList.add("Bent knee more");
+                    feedbackList.add("Gập gối nhiều hơn");
                 }
 
             } else if ("s2".equals(currState)) {
                 if (kneeAngle > thresholds.getKneeThreshold()) {
                     displayText[1] = true;
                     incorrectPosture = true;
-                    feedbackList.add("Bent knee more");
+                    feedbackList.add("Gập gối nhiều hơn");
                 }
             }
 

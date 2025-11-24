@@ -93,8 +93,8 @@ public class JumpingSquatAnalyzer implements ExerciseAnalyzerInterface {
                 inactiveTimeFront = 0.0;
             }
             // Feedback cảnh báo camera
-            feedbackList.add("CAMERA NOT ALIGNED PROPERLY!!!");
-            feedbackList.add("OFFSET ANGLE: " + offsetAngle);
+            feedbackList.add("Camera lệch, vui lòng chỉnh lại!");
+            feedbackList.add("Góc lệch: " + offsetAngle);
             prevState = null;
             currState = null;
             startInactiveTime = now;
@@ -176,26 +176,26 @@ public class JumpingSquatAnalyzer implements ExerciseAnalyzerInterface {
                 // Feedback động tác
                 if (hipAngle > thresholds.getHipMax()) {
                     displayText[0] = true;
-                    feedbackList.add("BEND BACKWARDS");
+                    feedbackList.add("Ngả lưng ra sau");
                 }
                 if (hipAngle < thresholds.getHipMin()) {
                     displayText[1] = true;
-                    feedbackList.add("BEND FORWARD");
+                    feedbackList.add("Cúi người về trước");
                 }
                 if (kneeAngle > thresholds.getKneeMax()) {
                     displayText[3] = true;
                     incorrectPosture = true;
-                    feedbackList.add("SQUAT TOO DEEP");
+                    feedbackList.add("Ngồi xuống quá sâu");
                 }
                 if (ankleAngle > thresholds.getAnkleMax()) {
                     displayText[2] = true;
                     incorrectPosture = true;
-                    feedbackList.add("KNEE OVER TOE");
+                    feedbackList.add("Đầu gối vượt quá mũi chân");
                 }
                 if (kneeAngle >= (thresholds.getKneeMin() + 1) && kneeAngle < thresholds.getKneeMax() && 
                     stateSequence.stream().filter(s -> s.equals("s2")).count() == 1) {
                     lowerHips = true;
-                    feedbackList.add("LOWER YOUR HIPS");
+                    feedbackList.add("Hạ hông xuống");
                 }
             }
 

@@ -98,8 +98,8 @@ public class KneePushUpAnalyzer implements ExerciseAnalyzerInterface {
                 inactiveTimeFront = 0.0;
             }
             // Feedback cảnh báo camera
-            feedbackList.add("CAMERA NOT ALIGNED PROPERLY!!!");
-            feedbackList.add("OFFSET ANGLE: " + offsetAngle);
+            feedbackList.add("Camera lệch, vui lòng chỉnh lại!");
+            feedbackList.add("Góc lệch: " + offsetAngle);
             prevState = null;
             currState = null;
             startInactiveTime = now;
@@ -179,12 +179,12 @@ public class KneePushUpAnalyzer implements ExerciseAnalyzerInterface {
                 if (shldrAngle < thresholds.getShldrMin()) {
                     displayText[0] = true;
                     incorrectPosture = true;
-                    feedbackList.add("BENT NECK");
+                    feedbackList.add("Cổ bị gập");
                 }
                 if (hipAngle > thresholds.getHipMax()) {
                     displayText[1] = true;
                     incorrectPosture = true;
-                    feedbackList.add("Lower back sag");
+                    feedbackList.add("Lưng dưới bị võng");
                 }
             }
 

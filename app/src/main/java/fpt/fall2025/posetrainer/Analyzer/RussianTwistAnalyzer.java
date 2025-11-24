@@ -99,8 +99,8 @@ public class RussianTwistAnalyzer implements ExerciseAnalyzerInterface {
                 inactiveTimeFront = 0.0;
             }
             // Feedback cảnh báo camera
-            feedbackList.add("CAMERA NOT ALIGNED PROPERLY!!!");
-            feedbackList.add("OFFSET ANGLE: " + offsetAngle);
+            feedbackList.add("Camera lệch, vui lòng chỉnh lại!");
+            feedbackList.add("Góc lệch: " + offsetAngle);
             prevState = null;
             currState = null;
             startInactiveTime = now;
@@ -181,15 +181,15 @@ public class RussianTwistAnalyzer implements ExerciseAnalyzerInterface {
                 // Feedback động tác
                 if (hipAngle > thresholds.getHipThresholds()[1]) {
                     displayText[1] = true;
-                    feedbackList.add("Over-Extended Hips");
+                    feedbackList.add("Hông duỗi quá mức");
                 }
                 if (kneeAngle < thresholds.getKneeThresholds()[0]) {
                     displayText[2] = true;
-                    feedbackList.add("Over-Bent Knees");
+                    feedbackList.add("Đầu gối gập quá mức");
                 }
                 if (kneeAngle > thresholds.getKneeThresholds()[1]) {
                     displayText[3] = true;
-                    feedbackList.add("Over-Extended Knees");
+                    feedbackList.add("Đầu gối duỗi quá mức");
                 }
 
             }
@@ -200,28 +200,28 @@ public class RussianTwistAnalyzer implements ExerciseAnalyzerInterface {
                     if (hipAngle < thresholds.getHipThresholds()[0]) {
                         displayText[0] = true;
                         incorrectPosture = true;
-                        feedbackList.add("Under-Extended Hips");
+                        feedbackList.add("Hông chưa duỗi đủ");
                         incorrectCount++;
                         message = "INCORRECT";
                     }
                     if (hipAngle > thresholds.getHipThresholds()[1]) {
                         displayText[1] = true;
                         incorrectPosture = true;
-                        feedbackList.add("Over-Extended Hips");
+                        feedbackList.add("Hông duỗi quá mức");
                         incorrectCount++;
                         message = "INCORRECT";
                     }
                     if (kneeAngle < thresholds.getKneeThresholds()[0]) {
                         displayText[2] = true;
                         incorrectPosture = true;
-                        feedbackList.add("Over-Bent Knees");
+                        feedbackList.add("Đầu gối gập quá mức");
                         incorrectCount++;
                         message = "INCORRECT";
                     }
                     if (kneeAngle > thresholds.getKneeThresholds()[1]) {
                         displayText[3] = true;
                         incorrectPosture = true;
-                        feedbackList.add("Over-Extended Knees");
+                        feedbackList.add("Đầu gối duỗi quá mức");
                         incorrectCount++;
                         message = "INCORRECT";
                     }
