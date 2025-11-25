@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -39,6 +40,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
     private ProgressBar progress;
     private Button btnGenerate, btnAccept;
     private TextView tvHeader, tvSub;
+    private EditText etDesiredDays;
     private PlanModels.Plan currentPlan;
     private String uid;
     private FirebaseFirestore db;
@@ -55,6 +57,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
         btnAccept = findViewById(R.id.btnAccept);
         tvHeader = findViewById(R.id.tvHeader);
         tvSub = findViewById(R.id.tvSub);
+        etDesiredDays = findViewById(R.id.etDesiredDays);
 
         // Check if user is logged in
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
@@ -142,10 +145,29 @@ public class PlanPreviewActivity extends AppCompatActivity {
         setLoading(true);
         tvSub.setText(force ? "Đang tạo lại kế hoạch tập luyện..." : "Đang tạo kế hoạch tập luyện...");
 
+        // Lấy số ngày mong muốn từ EditText
+        String desiredDaysStr = etDesiredDays.getText().toString().trim();
+        Integer desiredDays = null;
+        if (!desiredDaysStr.isEmpty()) {
+            try {
+                desiredDays = Integer.parseInt(desiredDaysStr);
+                if (desiredDays <= 0) {
+                    desiredDays = null; // Invalid, ignore
+                }
+            } catch (NumberFormatException e) {
+                // Invalid input, ignore
+                Log.w(TAG, "Invalid desiredDays input: " + desiredDaysStr);
+            }
+        }
+
         Map<String, Object> data = new HashMap<>();
         data.put("uid", uid);
         if (force) {
             data.put("force", true);
+        }
+        if (desiredDays != null) {
+            data.put("desiredDays", desiredDays);
+            Log.d(TAG, "Sending desiredDays: " + desiredDays);
         }
 
         Log.d(TAG, "Gọi generatePlan với uid: " + uid + ", force: " + force);
@@ -591,11 +613,12 @@ public class PlanPreviewActivity extends AppCompatActivity {
     private void convertPlanToWorkoutsAndSchedule() {
         tvSub.setText("Đang tạo kế hoạch mới...");
         
-        // ✅ Load profile để lấy trainingStartTime trước khi tạo Schedule
+        // ✅ Load profile để lấy trainingStartTime và weeklyGoal trước khi tạo Schedule
         db.collection("profiles").document(uid)
                 .get()
                 .addOnSuccessListener(documentSnapshot -> {
                     String trainingStartTime = "08:00"; // Default fallback
+                    int weeklyGoal = 4; // Default fallback
                     
                     if (documentSnapshot.exists()) {
                         String profileStartTime = documentSnapshot.getString("trainingStartTime");
@@ -605,29 +628,40 @@ public class PlanPreviewActivity extends AppCompatActivity {
                         } else {
                             Log.d(TAG, "Profile không có trainingStartTime, sử dụng mặc định: 08:00");
                         }
+                        
+                        // ✅ Lấy weeklyGoal từ profile
+                        Long weeklyGoalLong = documentSnapshot.getLong("weeklyGoal");
+                        if (weeklyGoalLong != null) {
+                            weeklyGoal = weeklyGoalLong.intValue();
+                            Log.d(TAG, "Sử dụng weeklyGoal từ profile: " + weeklyGoal + " ngày/tuần");
+                        } else {
+                            Log.d(TAG, "Profile không có weeklyGoal, sử dụng mặc định: 4 ngày/tuần");
+                        }
                     } else {
-                        Log.d(TAG, "Profile không tồn tại, sử dụng mặc định: 08:00");
+                        Log.d(TAG, "Profile không tồn tại, sử dụng mặc định: 08:00 và 4 ngày/tuần");
                     }
                     
-                    // Tạo workouts và schedule với thời gian từ profile
-                    createWorkoutsAndScheduleWithTime(trainingStartTime);
+                    // Tạo workouts và schedule với thời gian và weeklyGoal từ profile
+                    createWorkoutsAndScheduleWithTime(trainingStartTime, weeklyGoal);
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Lỗi khi load profile để lấy trainingStartTime", e);
-                    // Fallback: sử dụng mặc định 08:00
-                    createWorkoutsAndScheduleWithTime("08:00");
+                    Log.e(TAG, "Lỗi khi load profile để lấy trainingStartTime và weeklyGoal", e);
+                    // Fallback: sử dụng mặc định
+                    createWorkoutsAndScheduleWithTime("08:00", 4);
                 });
     }
 
     /**
      * Tạo workouts và schedule với thời gian cụ thể
+     * @param trainingStartTime Thời gian bắt đầu tập luyện (format: "HH:mm")
+     * @param weeklyGoal Số ngày có thể tập luyện trong 1 tuần
      */
-    private void createWorkoutsAndScheduleWithTime(String trainingStartTime) {
+    private void createWorkoutsAndScheduleWithTime(String trainingStartTime, int weeklyGoal) {
         List<UserWorkout> workouts = new ArrayList<>();
         List<Schedule.ScheduleItem> scheduleItems = new ArrayList<>();
         long currentTime = System.currentTimeMillis() / 1000;
 
-        // Tính toán ngày bắt đầu (thứ 2 của tuần hiện tại hoặc tuần tiếp theo)
+        // ✅ Tính toán ngày bắt đầu: bắt đầu từ ngày mai (hoặc hôm nay nếu chưa qua giờ tập)
         Calendar calendar = Calendar.getInstance();
         int currentDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK);
         
@@ -644,45 +678,138 @@ public class PlanPreviewActivity extends AppCompatActivity {
             Log.w(TAG, "Lỗi parse trainingStartTime, sử dụng mặc định 8:00", e);
         }
         
-        int daysUntilMonday = (Calendar.MONDAY - currentDayOfWeek + 7) % 7;
-        if (daysUntilMonday == 0) {
-            // Nếu đã qua thời gian tập luyện trong ngày, bắt đầu từ tuần sau
-            int currentHour = calendar.get(Calendar.HOUR_OF_DAY);
-            int currentMinute = calendar.get(Calendar.MINUTE);
-            if (currentHour > trainingHour || (currentHour == trainingHour && currentMinute >= trainingMinute)) {
-                daysUntilMonday = 7;
-            }
-        }
-        
-        calendar.add(Calendar.DAY_OF_MONTH, daysUntilMonday);
+        // ✅ Xác định ngày bắt đầu: LUÔN bắt đầu từ ngày mai để tránh ngày trong quá khứ
+        // Không bắt đầu hôm nay vì có thể đã qua giờ tập, dẫn đến exactDate trong quá khứ
+        calendar.add(Calendar.DAY_OF_MONTH, 1); // Luôn bắt đầu từ ngày mai
         calendar.set(Calendar.HOUR_OF_DAY, 0);
         calendar.set(Calendar.MINUTE, 0);
         calendar.set(Calendar.SECOND, 0);
         calendar.set(Calendar.MILLISECOND, 0);
-        Calendar weekStart = (Calendar) calendar.clone();
+        Calendar startDate = (Calendar) calendar.clone();
+        
+        // ✅ Tạo Calendar cho ngày hôm nay (dùng chung cho toàn bộ method)
+        Calendar today = Calendar.getInstance();
+        today.set(Calendar.HOUR_OF_DAY, 0);
+        today.set(Calendar.MINUTE, 0);
+        today.set(Calendar.SECOND, 0);
+        today.set(Calendar.MILLISECOND, 0);
+        
+        // ✅ Đảm bảo startDate không phải là quá khứ (double check)
+        if (startDate.before(today)) {
+            // Nếu vì lý do nào đó startDate vẫn là quá khứ, set về ngày mai
+            startDate = (Calendar) today.clone();
+            startDate.add(Calendar.DAY_OF_MONTH, 1);
+            Log.w(TAG, "⚠️ startDate là quá khứ, đã điều chỉnh về ngày mai: " + 
+                new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(startDate.getTime()));
+        }
+        
+        Log.d(TAG, String.format("Bắt đầu từ ngày: %s, weeklyGoal: %d ngày/tuần", 
+            new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(startDate.getTime()), 
+            weeklyGoal));
 
         // Convert mỗi Day thành UserWorkout
+        // ✅ Tính toán ngày bắt đầu: bắt đầu từ ngày mai (hoặc hôm nay nếu chưa qua giờ tập)
+        Calendar firstWorkoutDate = (Calendar) startDate.clone();
+        
+        // ✅ Tìm thứ 2 của tuần chứa startDate
+        Calendar currentWeekMonday = (Calendar) startDate.clone();
+        int dayOfWeek = startDate.get(Calendar.DAY_OF_WEEK);
+        int daysFromMonday = (dayOfWeek == Calendar.SUNDAY) ? 6 : (dayOfWeek - Calendar.MONDAY);
+        currentWeekMonday.add(Calendar.DAY_OF_MONTH, -daysFromMonday);
+        currentWeekMonday.set(Calendar.HOUR_OF_DAY, 0);
+        currentWeekMonday.set(Calendar.MINUTE, 0);
+        currentWeekMonday.set(Calendar.SECOND, 0);
+        currentWeekMonday.set(Calendar.MILLISECOND, 0);
+        
+        // ✅ Logic mới: Nhóm các ngày theo tuần
+        // Mỗi tuần có weeklyGoal ngày, bắt đầu từ thứ 2 (dayOfWeek = 1, 2, 3, ...)
+        // currentDayInWeek: vị trí trong tuần (0 = thứ 2, 1 = thứ 3, ..., weeklyGoal-1 = thứ cuối)
+        int currentDayInWeek = 0;
+        
+        // ✅ Ngày hiện tại: bắt đầu từ thứ 2 của tuần chứa startDate
+        // Nếu startDate không phải thứ 2, vẫn bắt đầu từ thứ 2 của tuần đó
+        Calendar currentDate = (Calendar) currentWeekMonday.clone();
+        
+        Log.d(TAG, String.format("Bắt đầu: %s, Thứ 2 tuần hiện tại: %s, weeklyGoal: %d ngày/tuần", 
+            new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(startDate.getTime()),
+            new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(currentWeekMonday.getTime()),
+            weeklyGoal));
+        
         for (PlanModels.Day day : currentPlan.days) {
             // Tạo UserWorkout từ Day
             UserWorkout workout = createUserWorkoutFromDay(day, currentTime);
             workouts.add(workout);
 
-            // Tạo ScheduleItem cho Day này
-            // dayIndex 1-7 tương ứng với thứ 2-8 (Monday-Sunday)
-            // Chuyển dayIndex thành dayOfWeek (1=Monday, 2=Tuesday, ..., 7=Sunday)
-            int dayOfWeek = day.dayIndex;
-            if (dayOfWeek < 1 || dayOfWeek > 7) {
-                dayOfWeek = ((day.dayIndex - 1) % 7) + 1; // Đảm bảo trong khoảng 1-7
+            // ✅ QUAN TRỌNG: Kiểm tra và chuyển tuần TRƯỚC KHI tính exactDate
+            // Nếu đã đủ weeklyGoal ngày trong tuần hiện tại, chuyển sang tuần tiếp theo (thứ 2)
+            if (currentDayInWeek >= weeklyGoal) {
+                // Chuyển sang tuần tiếp theo: thứ 2 của tuần sau
+                currentWeekMonday.add(Calendar.DAY_OF_MONTH, 7);
+                currentDate = (Calendar) currentWeekMonday.clone();
+                currentDayInWeek = 0;
+                Log.d(TAG, String.format("✅ Đã đủ %d ngày trong tuần, chuyển sang tuần mới (thứ 2): %s, reset currentDayInWeek về 0", 
+                    weeklyGoal,
+                    new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(currentDate.getTime())));
             }
-
-            List<Integer> daysOfWeek = new ArrayList<>();
-            daysOfWeek.add(dayOfWeek);
-
-            // Tính toán exactDate: thứ 2 + (dayIndex - 1) ngày
-            Calendar exactDateCalendar = (Calendar) weekStart.clone();
-            exactDateCalendar.add(Calendar.DAY_OF_MONTH, dayOfWeek - 1);
+            
+            // ✅ Tính exactDate: thứ 2 của tuần hiện tại + currentDayInWeek ngày
+            // Điều này đảm bảo: tuần 1 = thứ 2, 3, 4; tuần 2 = thứ 2, 3, 4; ...
+            Calendar exactDateCalendar = (Calendar) currentWeekMonday.clone();
+            exactDateCalendar.add(Calendar.DAY_OF_MONTH, currentDayInWeek);
+            
+            // ✅ Đảm bảo exactDate không phải là quá khứ
+            if (exactDateCalendar.before(today)) {
+                // Nếu exactDate là quá khứ, điều chỉnh về ngày mai
+                exactDateCalendar = (Calendar) today.clone();
+                exactDateCalendar.add(Calendar.DAY_OF_MONTH, 1);
+                // Cập nhật lại currentWeekMonday và currentDayInWeek
+                int newDayOfWeek = exactDateCalendar.get(Calendar.DAY_OF_WEEK);
+                int newDaysFromMonday = (newDayOfWeek == Calendar.SUNDAY) ? 6 : (newDayOfWeek - Calendar.MONDAY);
+                currentWeekMonday = (Calendar) exactDateCalendar.clone();
+                currentWeekMonday.add(Calendar.DAY_OF_MONTH, -newDaysFromMonday);
+                currentDayInWeek = newDaysFromMonday;
+                currentDate = (Calendar) exactDateCalendar.clone();
+                Log.w(TAG, String.format("⚠️ Day %d: exactDate là quá khứ, đã điều chỉnh về: %s", 
+                    day.dayIndex,
+                    new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(exactDateCalendar.getTime())));
+            }
+            
             java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault());
             String exactDate = sdf.format(exactDateCalendar.getTime());
+            
+            // ✅ Tính dayOfWeek cho ScheduleItem
+            // dayOfWeek = currentDayInWeek + 1 (vì bắt đầu từ thứ 2 = 1)
+            // Ví dụ: currentDayInWeek = 0 → dayOfWeek = 1 (thứ 2)
+            //        currentDayInWeek = 1 → dayOfWeek = 2 (thứ 3)
+            //        currentDayInWeek = 2 → dayOfWeek = 3 (thứ 4)
+            int scheduleDay = currentDayInWeek + 1; // 1=Monday, 2=Tuesday, ..., weeklyGoal=thứ cuối
+            
+            // ✅ Đảm bảo scheduleDay không vượt quá 7
+            if (scheduleDay > 7) {
+                scheduleDay = 7; // Tối đa là chủ nhật
+                Log.w(TAG, String.format("⚠️ Day %d: scheduleDay vượt quá 7, đã điều chỉnh về 7", day.dayIndex));
+            }
+            
+            List<Integer> daysOfWeek = new ArrayList<>();
+            daysOfWeek.add(scheduleDay);
+            
+            String dayName = "";
+            switch (scheduleDay) {
+                case 1: dayName = "Thứ 2"; break;
+                case 2: dayName = "Thứ 3"; break;
+                case 3: dayName = "Thứ 4"; break;
+                case 4: dayName = "Thứ 5"; break;
+                case 5: dayName = "Thứ 6"; break;
+                case 6: dayName = "Thứ 7"; break;
+                case 7: dayName = "Chủ nhật"; break;
+            }
+            
+            Log.d(TAG, String.format("Day %d: exactDate=%s, dayOfWeek=%d (%s), dayInWeek=%d/%d, weekMonday=%s", 
+                day.dayIndex, exactDate, scheduleDay, dayName, currentDayInWeek + 1, weeklyGoal,
+                new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(currentWeekMonday.getTime())));
+            
+            // ✅ Tăng counter SAU KHI đã tính exactDate và dayOfWeek
+            currentDayInWeek++;
 
             // ✅ Sử dụng trainingStartTime từ profile thay vì hardcode "08:00"
             Schedule.ScheduleItem scheduleItem = new Schedule.ScheduleItem(
@@ -824,6 +951,32 @@ public class PlanPreviewActivity extends AppCompatActivity {
                 Log.e(TAG, "Failed to save schedule");
             }
         });
+    }
+
+    /**
+     * Convert Calendar day of week to Schedule day of week format
+     * Calendar: Sunday=1, Monday=2, ..., Saturday=7
+     * Schedule: Monday=1, Tuesday=2, ..., Sunday=7
+     */
+    private int convertCalendarDayToScheduleDay(int calendarDay) {
+        switch (calendarDay) {
+            case Calendar.MONDAY:
+                return 1; // Monday = 1
+            case Calendar.TUESDAY:
+                return 2; // Tuesday = 2
+            case Calendar.WEDNESDAY:
+                return 3; // Wednesday = 3
+            case Calendar.THURSDAY:
+                return 4; // Thursday = 4
+            case Calendar.FRIDAY:
+                return 5; // Friday = 5
+            case Calendar.SATURDAY:
+                return 6; // Saturday = 6
+            case Calendar.SUNDAY:
+                return 7; // Sunday = 7
+            default:
+                return 1; // Default to Monday
+        }
     }
 
     /**
