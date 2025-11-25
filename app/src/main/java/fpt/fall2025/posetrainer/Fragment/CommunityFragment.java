@@ -155,6 +155,34 @@ public class CommunityFragment extends Fragment {
             startActivity(i);
         });
 
+        // change text color in SearchView
+        try {
+            SearchView.SearchAutoComplete searchAutoComplete =
+                    searchView.findViewById(androidx.appcompat.R.id.search_src_text);
+
+            if (searchAutoComplete != null) {
+                searchAutoComplete.setTextColor(android.graphics.Color.parseColor("#ffffff"));
+
+                searchAutoComplete.setHintTextColor(android.graphics.Color.parseColor("#99ffffff"));
+
+                searchAutoComplete.setTextSize(14);
+            }
+
+            ImageView searchIcon = searchView.findViewById(androidx.appcompat.R.id.search_mag_icon);
+            if (searchIcon != null) {
+                searchIcon.setColorFilter(android.graphics.Color.parseColor("#99ffffff"),
+                        android.graphics.PorterDuff.Mode.SRC_IN);
+            }
+
+            ImageView closeIcon = searchView.findViewById(androidx.appcompat.R.id.search_close_btn);
+            if (closeIcon != null) {
+                closeIcon.setColorFilter(android.graphics.Color.parseColor("#99ffffff"),
+                        android.graphics.PorterDuff.Mode.SRC_IN);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error customizing SearchView: " + e.getMessage());
+        }
+
         // Back button
         ImageButton btnBack = v.findViewById(R.id.btnBack);
         btnBack.setOnClickListener(view -> {
@@ -164,6 +192,7 @@ public class CommunityFragment extends Fragment {
                     .addToBackStack(null)
                     .commit();
         });
+
     }
 
     private void setupTabs() {

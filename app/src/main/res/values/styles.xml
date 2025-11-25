@@ -243,4 +243,14 @@
         <item name="android:windowIsFloating">false</item>
         <item name="android:windowContentOverlay">@null</item>
     </style>
+
+
+    <!-- Text Color in SearchView -->
+    <style name="SearchViewStyle" parent="Widget.AppCompat.SearchView">
+        <item name="android:textColor">#ffffff</item>
+        <item name="android:textColorHint">#99ffffff</item>
+
+        <item name="searchIcon">@drawable/ic_search</item>
+        <item name="closeIcon">@drawable/ic_close</item>
+    </style>
 </resources>

@@ -4,13 +4,13 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="@android:color/white"
+    android:background="#ff2a3142"
     android:layout_marginBottom="8dp"
     android:padding="8dp"
-    android:elevation="2dp"
+    android:elevation="0dp"
     android:layout_marginHorizontal="6dp"
     android:clipToOutline="true"
-    android:backgroundTint="@android:color/white">
+    android:backgroundTint="#ff2a3142">
 
     <!-- Header: Avatar + Tên người đăng + thời gian -->
     <LinearLayout
@@ -41,7 +41,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Tên người đăng"
-                android:textColor="@android:color/black"
+                android:textColor="#ffffff"
                 android:textStyle="bold"
                 android:textSize="15sp" />
 
@@ -51,7 +51,7 @@
                 android:layout_height="wrap_content"
                 android:text="04/11/2025 13:27"
                 android:textSize="12sp"
-                android:textColor="#888888" />
+                android:textColor="#99ffffff" />
         </LinearLayout>
     </LinearLayout>
 
@@ -61,7 +61,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Nội dung bài viết ở đây"
-        android:textColor="@android:color/black"
+        android:textColor="#ffffff"
         android:textSize="14sp"
         android:layout_marginTop="6dp" />
 
@@ -73,14 +73,14 @@
         android:layout_marginTop="6dp"
         android:orientation="vertical"
         android:visibility="gone">
-        
+
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvImages"
             android:layout_width="match_parent"
             android:layout_height="300dp"
-            android:background="#EEE"
+            android:background="#ff1a1f2e"
             android:orientation="horizontal" />
-        
+
         <!-- Indicator dots để hiển thị số lượng ảnh -->
         <LinearLayout
             android:id="@+id/indicatorDots"
@@ -100,7 +100,7 @@
         android:layout_marginTop="6dp"
         android:scaleType="centerCrop"
         android:visibility="gone"
-        android:background="#EEE" />
+        android:background="#ff1a1f2e" />
 
     <!-- Video player -->
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -109,7 +109,7 @@
         android:layout_height="200dp"
         android:layout_marginTop="6dp"
         android:visibility="gone"
-        android:background="#000">
+        android:background="#ff1a1f2e">
 
         <VideoView
             android:id="@+id/videoView"
@@ -122,6 +122,7 @@
             android:layout_height="64dp"
             android:src="@android:drawable/ic_media_play"
             android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="#ffffff"
             android:contentDescription="Phát video"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
@@ -144,7 +145,7 @@
             android:layout_height="wrap_content"
             android:text="❤ 0   💬 0"
             android:textSize="13sp"
-            android:textColor="#555" />
+            android:textColor="#99ffffff" />
 
         <TextView
             android:id="@+id/tvLikesCount"
@@ -152,7 +153,7 @@
             android:layout_height="wrap_content"
             android:text="❤ 0"
             android:textSize="13sp"
-            android:textColor="#555"
+            android:textColor="#99ffffff"
             android:padding="4dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:clickable="true"
@@ -163,7 +164,8 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="0.5dp"
-        android:background="#DDD"
+        android:background="#ffffff"
+        android:alpha="0.15"
         android:layout_marginTop="6dp"
         android:layout_marginBottom="4dp" />
 
@@ -189,7 +191,7 @@
                 android:layout_width="22dp"
                 android:layout_height="22dp"
                 android:src="@drawable/ic_favorite_border"
-                android:tint="#606770" />
+                android:tint="#99ffffff" />
 
             <TextView
                 android:id="@+id/tvLike"
@@ -197,7 +199,7 @@
                 android:layout_height="wrap_content"
                 android:text="Thích"
                 android:textSize="14sp"
-                android:textColor="#606770"
+                android:textColor="#99ffffff"
                 android:layout_marginStart="6dp" />
         </LinearLayout>
 
@@ -216,7 +218,7 @@
                 android:layout_width="22dp"
                 android:layout_height="22dp"
                 android:src="@drawable/ic_comment"
-                android:tint="#606770" />
+                app:tint="#99ffffff" />
 
             <TextView
                 android:id="@+id/tvComment"
@@ -224,7 +226,7 @@
                 android:layout_height="wrap_content"
                 android:text="Bình luận"
                 android:textSize="14sp"
-                android:textColor="#606770"
+                android:textColor="#99ffffff"
                 android:layout_marginStart="6dp" />
         </LinearLayout>
     </LinearLayout>
