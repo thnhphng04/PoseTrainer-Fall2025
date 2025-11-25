@@ -17,9 +17,14 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+
 import fpt.fall2025.posetrainer.Adapter.CompletedExerciseAdapter;
 import fpt.fall2025.posetrainer.Domain.Exercise;
 import fpt.fall2025.posetrainer.Domain.Session;
+import fpt.fall2025.posetrainer.Dialog.AchievementUnlockedDialog;
+import fpt.fall2025.posetrainer.Manager.AchievementManager;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
 
@@ -92,10 +97,67 @@ public class CompletedExerciseActivity extends AppCompatActivity {
         // Back button
         ivBack.setOnClickListener(v -> finish());
 
-        // Save button
+        // Save button - Update streak, achievements, and user progress
         btnSave.setOnClickListener(v -> {
-            // Finish activity and return to previous screen
-            finish();
+            if (currentSession == null) {
+                Toast.makeText(this, "Không tìm thấy thông tin buổi tập", Toast.LENGTH_SHORT).show();
+                finish();
+                return;
+            }
+
+            // Disable button to prevent multiple clicks
+            btnSave.setEnabled(false);
+            btnSave.setText("Đang lưu...");
+
+            // Get current user
+            FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+            if (currentUser == null) {
+                Toast.makeText(this, "Vui lòng đăng nhập để lưu kết quả", Toast.LENGTH_SHORT).show();
+                btnSave.setEnabled(true);
+                btnSave.setText("Lưu");
+                return;
+            }
+
+            String uid = currentUser.getUid();
+
+            Log.d(TAG, "🔥 Bắt đầu cập nhật streak và achievements cho session: " + currentSession.getId());
+
+            // Update streak
+            FirebaseService.getInstance().updateStreak(uid, currentSession, streak -> {
+                if (streak != null) {
+                    Log.d(TAG, "✅ Streak updated: " + streak.getCurrentStreak() + " ngày");
+
+                    // Check achievements after streak update
+                    AchievementManager.getInstance().checkAchievements(uid, currentSession, newlyUnlocked -> {
+                        if (newlyUnlocked != null && !newlyUnlocked.isEmpty()) {
+                            Log.d(TAG, "🎉 New achievements unlocked: " + newlyUnlocked.size());
+
+                            // Show dialog for first achievement
+                            if (!newlyUnlocked.isEmpty()) {
+                                String firstBadge = newlyUnlocked.get(0);
+                                AchievementUnlockedDialog dialog = AchievementUnlockedDialog.newInstance(firstBadge);
+                                dialog.show(getSupportFragmentManager(), "AchievementUnlockedDialog");
+                            }
+                        }
+
+                        // Update user progress (calendar heatmap)
+                        FirebaseService.getInstance().updateUserProgress(uid, progress -> {
+                            if (progress != null) {
+                                Log.d(TAG, "✅ User progress updated: " + progress.getTotalWorkoutDays() + " days");
+                            }
+
+                            // Finish activity after all updates complete
+                            Toast.makeText(CompletedExerciseActivity.this, "Đã lưu kết quả thành công!", Toast.LENGTH_SHORT).show();
+                            finish();
+                        });
+                    });
+                } else {
+                    Log.e(TAG, "❌ Failed to update streak");
+                    Toast.makeText(CompletedExerciseActivity.this, "Lỗi khi cập nhật streak", Toast.LENGTH_SHORT).show();
+                    btnSave.setEnabled(true);
+                    btnSave.setText("Lưu");
+                }
+            });
         });
     }
 
