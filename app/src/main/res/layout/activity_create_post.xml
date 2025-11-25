@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF">
+    android:background="#ff1a1f2e">
 
     <!-- Thanh tiêu đề -->
     <LinearLayout
@@ -12,7 +13,7 @@
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingHorizontal="12dp"
-        android:background="?attr/colorPrimary">
+        android:background="#ff1a1f2e">
 
         <ImageButton
             android:id="@+id/btnBack"
@@ -20,14 +21,14 @@
             android:layout_height="36dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_arrow_back"
-            android:tint="@android:color/white" />
+            app:tint="#ffffff" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Tạo bài viết"
             android:textSize="18sp"
-            android:textColor="@android:color/white"
+            android:textColor="#ffffff"
             android:textStyle="bold"
             android:layout_marginStart="12dp" />
 
@@ -42,8 +43,8 @@
             android:layout_height="wrap_content"
             android:text="Đăng"
             android:textStyle="bold"
-            android:textColor="@android:color/white"
-            android:backgroundTint="@android:color/transparent" />
+            android:textColor="#ffffff"
+            android:background="@drawable/button_primary" />
     </LinearLayout>
 
     <!-- Nội dung chính -->
@@ -52,7 +53,7 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:fillViewport="true"
-        android:background="#FFFFFF">
+        android:background="#ff1a1f2e">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -67,14 +68,14 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:layout_marginBottom="12dp">
+                android:layout_marginBottom="16dp">
 
                 <ImageView
                     android:id="@+id/ivUserAvatar"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
                     android:src="@drawable/ic_person"
-                    android:background="@drawable/circle_gray_bg"
+                    android:background="@drawable/circle_background"
                     android:scaleType="centerCrop"
                     android:layout_marginEnd="12dp" />
 
@@ -84,36 +85,55 @@
                     android:layout_height="wrap_content"
                     android:text="Tên người dùng"
                     android:textStyle="bold"
-                    android:textSize="16sp" />
+                    android:textSize="16sp"
+                    android:textColor="#ffffff" />
             </LinearLayout>
 
             <!-- Ô nhập nội dung -->
-            <EditText
-                android:id="@+id/edtContent"
+            <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Bạn đang nghĩ gì?"
-                android:textSize="16sp"
-                android:background="@null"
-                android:minHeight="120dp"
-                android:padding="8dp" />
+                android:layout_marginBottom="16dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="#ff2a3142">
+
+                <EditText
+                    android:id="@+id/edtContent"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Bạn đang nghĩ gì?"
+                    android:textColor="#ffffff"
+                    android:textColorHint="#99ffffff"
+                    android:textSize="16sp"
+                    android:background="@null"
+                    android:minHeight="120dp"
+                    android:padding="16dp"
+                    android:gravity="top|start"
+                    android:inputType="textMultiLine|textCapSentences" />
+
+            </androidx.cardview.widget.CardView>
 
             <!-- RecyclerView hiển thị nhiều ảnh -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvSelectedImages"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginBottom="16dp"
                 android:orientation="horizontal"
                 android:visibility="gone" />
 
             <!-- Nút chọn ảnh -->
             <Button
                 android:id="@+id/btnPickImage"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
                 android:text="Thêm ảnh (tối đa 10)"
-                android:layout_marginTop="12dp" />
+                android:textColor="#ffffff"
+                android:textStyle="bold"
+                android:textSize="15sp"
+                android:background="@drawable/button_secondary"
+                android:layout_marginBottom="8dp" />
 
             <!-- Thanh tiến trình -->
             <ProgressBar
@@ -122,6 +142,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:layout_marginTop="16dp"
+                android:indeterminateTint="#4d9df2"
                 android:visibility="gone" />
         </LinearLayout>
     </ScrollView>

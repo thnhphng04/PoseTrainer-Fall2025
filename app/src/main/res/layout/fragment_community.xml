@@ -52,21 +52,27 @@
         </LinearLayout>
 
         <!-- SearchView -->
-        <LinearLayout
+        <!-- SearchView -->
+        <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:paddingHorizontal="12dp"
-            android:paddingBottom="8dp"
-            android:gravity="center_vertical">
+            android:layout_marginHorizontal="12dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="4dp"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="#ff2a3142">
 
             <androidx.appcompat.widget.SearchView
                 android:id="@+id/searchView"
                 android:layout_width="match_parent"
                 android:layout_height="40dp"
                 android:queryHint="Tìm kiếm bài viết, người dùng..."
-                android:iconifiedByDefault="false" />
-        </LinearLayout>
+                android:iconifiedByDefault="false"
+                android:focusable="true"
+                android:clickable="true" />
+
+        </androidx.cardview.widget.CardView>
 
         <!-- TabLayout -->
         <com.google.android.material.tabs.TabLayout
@@ -78,10 +84,11 @@
             app:tabGravity="fill"
             app:tabTextColor="#99ffffff"
             app:tabSelectedTextColor="#4d9df2"
-            app:tabIndicatorColor="#4d9df2" />
+            app:tabIndicatorColor="#4d9df2"
+            app:tabIndicatorHeight="3dp" />
+
     </LinearLayout>
 
-    <!-- Ô tạo bài viết -->
     <!-- Ô tạo bài viết -->
     <LinearLayout
         android:id="@+id/layoutCreatePost"
@@ -91,9 +98,9 @@
         android:background="#ff2a3142"
         android:padding="12dp"
         android:gravity="center_vertical"
-        android:layout_marginTop="4dp"
-        android:layout_marginBottom="6dp"
-        android:elevation="0dp">
+        android:layout_marginHorizontal="12dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp">
 
         <ImageView
             android:id="@+id/profile_image"
@@ -110,7 +117,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Bạn đang nghĩ gì?"
-            android:textColor="#99ffffff"
+            android:textColor="#000000"
             android:padding="10dp"
             android:background="@drawable/bg_input_fake"
             android:gravity="center_vertical" />
@@ -126,7 +133,7 @@
             app:tint="#4d9df2" />
     </LinearLayout>
 
-    <!-- Danh sách bài viết với SwipeRefreshLayout -->
+    <!-- List SwipeRefreshLayout -->
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/swipeRefresh"
         android:layout_width="match_parent"

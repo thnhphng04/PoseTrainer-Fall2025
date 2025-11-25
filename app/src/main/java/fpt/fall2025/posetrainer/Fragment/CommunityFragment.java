@@ -1,6 +1,8 @@
 package fpt.fall2025.posetrainer.Fragment;
 
 import android.content.Intent;
+import android.graphics.Color;
+import android.graphics.PorterDuff;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
@@ -71,6 +73,7 @@ public class CommunityFragment extends Fragment {
     private String cachedPhotoUrl = null;
     private boolean isFragmentVisible = false;
 
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
@@ -93,28 +96,31 @@ public class CommunityFragment extends Fragment {
         rvFeed = v.findViewById(R.id.rvFeed);
         swipeRefresh = v.findViewById(R.id.swipeRefresh);
         tabLayout = v.findViewById(R.id.tabLayout);
-        searchView = v.findViewById(R.id.searchView);
+        searchView = v.findViewById(R.id.searchView);  // ← PHẢI FIND VIEW TRƯỚC
         btnNotifications = v.findViewById(R.id.btnNotifications);
         emptyState = v.findViewById(R.id.emptyState);
         loadingState = v.findViewById(R.id.loadingState);
 
+        // ===== SAU ĐÓ MỚI SETUP SEARCHVIEW =====
+        searchView.setIconifiedByDefault(false);
+        searchView.setIconified(false);
+        searchView.clearFocus();
+
         // Setup tabs
         setupTabs();
-        
+
         // Setup search
         setupSearch();
-        
+
         // Setup swipe refresh
         swipeRefresh.setOnRefreshListener(this::refreshFeed);
-        
+
         // Setup notifications button
         btnNotifications.setOnClickListener(view -> {
-            // Mở NotificationFragment thông qua MainActivity
             if (getActivity() instanceof MainActivity) {
                 MainActivity mainActivity = (MainActivity) getActivity();
                 mainActivity.openNotificationFragment();
             } else {
-                // Nếu không phải MainActivity, mở MainActivity với intent
                 Intent intent = new Intent(getContext(), MainActivity.class);
                 intent.putExtra("openFragment", "notifications");
                 startActivity(intent);
@@ -155,33 +161,41 @@ public class CommunityFragment extends Fragment {
             startActivity(i);
         });
 
-        // change text color in SearchView
+        searchView.setIconifiedByDefault(false);
+        searchView.setIconified(false);
+
         try {
             SearchView.SearchAutoComplete searchAutoComplete =
                     searchView.findViewById(androidx.appcompat.R.id.search_src_text);
-
             if (searchAutoComplete != null) {
-                searchAutoComplete.setTextColor(android.graphics.Color.parseColor("#ffffff"));
-
-                searchAutoComplete.setHintTextColor(android.graphics.Color.parseColor("#99ffffff"));
-
+                searchAutoComplete.setHint("Tìm kiếm bài viết, người dùng…");
+                searchAutoComplete.setText("");
+                searchAutoComplete.setBackgroundColor(Color.TRANSPARENT);
+                searchAutoComplete.setTextColor(Color.WHITE);
+                searchAutoComplete.setHintTextColor(Color.parseColor("#99FFFFFF"));
                 searchAutoComplete.setTextSize(14);
+                searchAutoComplete.setFocusable(true);
+                searchAutoComplete.setFocusableInTouchMode(true);
             }
 
             ImageView searchIcon = searchView.findViewById(androidx.appcompat.R.id.search_mag_icon);
             if (searchIcon != null) {
-                searchIcon.setColorFilter(android.graphics.Color.parseColor("#99ffffff"),
-                        android.graphics.PorterDuff.Mode.SRC_IN);
+                searchIcon.setColorFilter(Color.parseColor("#99ffffff"), PorterDuff.Mode.SRC_IN);
             }
 
             ImageView closeIcon = searchView.findViewById(androidx.appcompat.R.id.search_close_btn);
             if (closeIcon != null) {
-                closeIcon.setColorFilter(android.graphics.Color.parseColor("#99ffffff"),
-                        android.graphics.PorterDuff.Mode.SRC_IN);
+                closeIcon.setColorFilter(Color.parseColor("#99ffffff"), PorterDuff.Mode.SRC_IN);
             }
         } catch (Exception e) {
             Log.e(TAG, "Error customizing SearchView: " + e.getMessage());
         }
+
+        searchView.setQuery("", false);
+        searchView.clearFocus();
+        searchView.setMaxWidth(Integer.MAX_VALUE);
+        searchView.setSubmitButtonEnabled(false);
+
 
         // Back button
         ImageButton btnBack = v.findViewById(R.id.btnBack);
@@ -192,7 +206,6 @@ public class CommunityFragment extends Fragment {
                     .addToBackStack(null)
                     .commit();
         });
-
     }
 
     private void setupTabs() {
