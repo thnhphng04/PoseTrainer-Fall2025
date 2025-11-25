@@ -1,7 +1,6 @@
 package fpt.fall2025.posetrainer.Fragment;
 
 import android.Manifest;
-import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -24,6 +23,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.ListenerRegistration;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -73,6 +73,12 @@ public class DailyFragment extends Fragment {
     private String cachedUserId = null;
     private long lastWeeklyStatusUpdate = 0;
     private static final long WEEKLY_STATUS_UPDATE_INTERVAL = 60000; // 60 giây
+    
+    // Firestore listener để real-time update
+    private ListenerRegistration sessionsListener;
+    private long lastSessionUpdateTime = 0;
+    private static final long SESSION_UPDATE_DEBOUNCE = 2000; // 2 giây để tránh update quá nhiều
+    private boolean isListenerInitialized = false; // Để tránh trigger ngay khi khởi tạo
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -133,6 +139,12 @@ public class DailyFragment extends Fragment {
         // Track DailyFragment visibility: đang visible
         AppStateHelper.setDailyFragmentVisible(true);
         Log.d(TAG, "DailyFragment onResume: Fragment đang hiển thị - thông báo sẽ bị ẩn");
+        
+        // Start listening for session updates khi fragment visible
+        startSessionsListener();
+        
+        // Refresh data nếu cần (chỉ refresh nếu đã qua một khoảng thời gian)
+        refreshSessionsIfNeeded();
     }
     
     @Override
@@ -141,6 +153,17 @@ public class DailyFragment extends Fragment {
         // Track DailyFragment visibility: không còn visible
         AppStateHelper.setDailyFragmentVisible(false);
         Log.d(TAG, "DailyFragment onPause: Fragment đã ẩn - thông báo sẽ được hiển thị");
+        
+        // Stop listening khi fragment không visible để tiết kiệm tài nguyên
+        stopSessionsListener();
+    }
+    
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        // Clean up listener khi fragment bị destroy
+        stopSessionsListener();
+        binding = null;
     }
 
     /**
@@ -1241,13 +1264,142 @@ public class DailyFragment extends Fragment {
                 if (i == selectedIndex) {
                     // Selected day - make it bold
                     dayTextViews[i].setTypeface(null, android.graphics.Typeface.BOLD);
-                    dayTextViews[i].setTextColor(getResources().getColor(fpt.fall2025.posetrainer.R.color.hw_primary, null));
+                    dayTextViews[i].setTextColor(ContextCompat.getColor(requireContext(), fpt.fall2025.posetrainer.R.color.daily_selected_primary));
                 } else {
                     // Other days - normal weight
                     dayTextViews[i].setTypeface(null, android.graphics.Typeface.NORMAL);
-                    dayTextViews[i].setTextColor(getResources().getColor(fpt.fall2025.posetrainer.R.color.hw_text_secondary, null));
+                    dayTextViews[i].setTextColor(ContextCompat.getColor(requireContext(), fpt.fall2025.posetrainer.R.color.daily_selected_secondary));
                 }
             }
+        }
+    }
+    
+    /**
+     * Bắt đầu lắng nghe real-time updates từ Firestore cho sessions
+     * Tối ưu: chỉ lắng nghe khi fragment visible
+     */
+    private void startSessionsListener() {
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser == null || getContext() == null) {
+            return;
+        }
+        
+        // Dừng listener cũ nếu có
+        stopSessionsListener();
+        
+        String uid = currentUser.getUid();
+        Log.d(TAG, "Bắt đầu lắng nghe real-time updates cho sessions của user: " + uid);
+        
+        // Sử dụng Firestore real-time listener
+        com.google.firebase.firestore.FirebaseFirestore db = com.google.firebase.firestore.FirebaseFirestore.getInstance();
+        sessionsListener = db.collection("sessions")
+                .whereEqualTo("uid", uid)
+                .addSnapshotListener((querySnapshot, error) -> {
+                    if (error != null) {
+                        Log.e(TAG, "Lỗi khi lắng nghe sessions updates: " + error.getMessage());
+                        return;
+                    }
+                    
+                    // Bỏ qua lần trigger đầu tiên (khi listener được khởi tạo)
+                    if (!isListenerInitialized) {
+                        isListenerInitialized = true;
+                        Log.d(TAG, "Listener đã được khởi tạo, bỏ qua lần trigger đầu tiên");
+                        return;
+                    }
+                    
+                    if (querySnapshot != null) {
+                        // Có thay đổi trong sessions (có thể là thêm, sửa, xóa)
+                        long currentTime = System.currentTimeMillis();
+                        
+                        // Debounce: chỉ update nếu đã qua 2 giây từ lần update cuối
+                        if (currentTime - lastSessionUpdateTime < SESSION_UPDATE_DEBOUNCE) {
+                            Log.d(TAG, "Bỏ qua update (debounce)");
+                            return;
+                        }
+                        
+                        lastSessionUpdateTime = currentTime;
+                        Log.d(TAG, "Phát hiện thay đổi trong sessions (" + querySnapshot.size() + " sessions), đang cập nhật...");
+                        
+                        // Reload sessions và cập nhật UI
+                        refreshSessionsData();
+                    }
+                });
+    }
+    
+    /**
+     * Dừng lắng nghe real-time updates
+     */
+    private void stopSessionsListener() {
+        if (sessionsListener != null) {
+            sessionsListener.remove();
+            sessionsListener = null;
+            isListenerInitialized = false; // Reset flag khi dừng listener
+            Log.d(TAG, "Đã dừng lắng nghe sessions updates");
+        }
+    }
+    
+    /**
+     * Refresh sessions data khi có thay đổi
+     * Tối ưu: chỉ reload sessions mới, không reload toàn bộ
+     */
+    private void refreshSessionsData() {
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser == null || getActivity() == null) {
+            return;
+        }
+        
+        String uid = currentUser.getUid();
+        
+        // Reload sessions từ Firestore
+        FirebaseService.getInstance().loadUserSessions(uid, (androidx.appcompat.app.AppCompatActivity) getActivity(), new FirebaseService.OnSessionsLoadedListener() {
+            @Override
+            public void onSessionsLoaded(ArrayList<Session> loadedSessions) {
+                // So sánh với sessions hiện tại để xem có session mới không
+                boolean hasNewSessions = false;
+                if (sessions == null || sessions.isEmpty()) {
+                    hasNewSessions = loadedSessions != null && !loadedSessions.isEmpty();
+                } else if (loadedSessions != null && !loadedSessions.isEmpty()) {
+                    // Kiểm tra xem có session mới hơn không
+                    long latestSessionTime = sessions.get(0).getStartedAt();
+                    for (Session newSession : loadedSessions) {
+                        if (newSession.getStartedAt() > latestSessionTime) {
+                            hasNewSessions = true;
+                            break;
+                        }
+                    }
+                }
+                
+                sessions = loadedSessions != null ? loadedSessions : new ArrayList<>();
+                isSessionsLoaded = true;
+                
+                if (hasNewSessions) {
+                    Log.d(TAG, "Có session mới, đang cập nhật UI...");
+                }
+                
+                // Cập nhật UI
+                analyzeWeeklySessions();
+                filterSessionsForSelectedDay();
+                updateActivityInfo();
+            }
+        });
+    }
+    
+    /**
+     * Refresh sessions khi onResume nếu cần
+     * Tối ưu: chỉ refresh nếu đã qua một khoảng thời gian nhất định
+     */
+    private void refreshSessionsIfNeeded() {
+        // Chỉ refresh nếu đã qua 30 giây từ lần load cuối
+        long currentTime = System.currentTimeMillis();
+        if (lastSessionUpdateTime > 0 && (currentTime - lastSessionUpdateTime) < 30000) {
+            Log.d(TAG, "Bỏ qua refresh (vừa mới update)");
+            return;
+        }
+        
+        // Nếu chưa load hoặc đã qua lâu, refresh lại
+        if (!isSessionsLoaded || sessions == null || sessions.isEmpty()) {
+            Log.d(TAG, "Refresh sessions khi onResume");
+            refreshSessionsData();
         }
     }
 }

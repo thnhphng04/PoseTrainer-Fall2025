@@ -102,46 +102,8 @@ public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.Viewho
                     .into(holder.binding.pic);
         }
 
-        // Set up sets and reps controls
-        holder.binding.setsMinusBtn.setOnClickListener(v -> {
-            if (holder.currentSets > 1) {
-                holder.currentSets--;
-                holder.binding.setsTxt.setText(String.valueOf(holder.currentSets));
-                holder.binding.durationTxt.setText(holder.currentSets + " sets x " + holder.currentReps + " reps");
-                if (listener != null) {
-                    listener.onSetsRepsChanged(position, holder.currentSets, holder.currentReps);
-                }
-            }
-        });
-        
-        holder.binding.setsPlusBtn.setOnClickListener(v -> {
-            holder.currentSets++;
-            holder.binding.setsTxt.setText(String.valueOf(holder.currentSets));
-            holder.binding.durationTxt.setText(holder.currentSets + " sets x " + holder.currentReps + " reps");
-            if (listener != null) {
-                listener.onSetsRepsChanged(position, holder.currentSets, holder.currentReps);
-            }
-        });
-        
-        holder.binding.repsMinusBtn.setOnClickListener(v -> {
-            if (holder.currentReps > 1) {
-                holder.currentReps--;
-                holder.binding.repsTxt.setText(String.valueOf(holder.currentReps));
-                holder.binding.durationTxt.setText(holder.currentSets + " sets x " + holder.currentReps + " reps");
-                if (listener != null) {
-                    listener.onSetsRepsChanged(position, holder.currentSets, holder.currentReps);
-                }
-            }
-        });
-        
-        holder.binding.repsPlusBtn.setOnClickListener(v -> {
-            holder.currentReps++;
-            holder.binding.repsTxt.setText(String.valueOf(holder.currentReps));
-            holder.binding.durationTxt.setText(holder.currentSets + " sets x " + holder.currentReps + " reps");
-            if (listener != null) {
-                listener.onSetsRepsChanged(position, holder.currentSets, holder.currentReps);
-            }
-        });
+        // Sets and reps controls are disabled in WorkoutActivity - buttons are hidden
+        // No click listeners needed as users cannot edit sets/reps in this view
 
         // Difficulty button
         holder.binding.difficultyBtn.setOnClickListener(v -> {

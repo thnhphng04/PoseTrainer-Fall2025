@@ -3,11 +3,14 @@ package fpt.fall2025.posetrainer.Fragment;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.format.DateUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -29,7 +32,6 @@ import java.util.stream.Collectors;
 import fpt.fall2025.posetrainer.Activity.MainActivity;
 import fpt.fall2025.posetrainer.Activity.WorkoutActivity;
 import fpt.fall2025.posetrainer.Activity.PostDetailActivity;
-import fpt.fall2025.posetrainer.Activity.MainActivity;
 import fpt.fall2025.posetrainer.Adapter.NotificationAdapter;
 import fpt.fall2025.posetrainer.Domain.Notification;
 import fpt.fall2025.posetrainer.R;
@@ -260,7 +262,7 @@ public class NotificationFragment extends Fragment {
     }
 
     /**
-     * Xử lý khi click vào thông báo
+     * Xử lý khi click vào thông báo - Hiển thị dialog chi tiết
      */
     private void handleNotificationClick(Notification notification) {
         Log.d(TAG, "Click vào thông báo: " + notification.getTitle());
@@ -270,45 +272,148 @@ public class NotificationFragment extends Fragment {
             markNotificationAsRead(notification);
         }
         
-        // Xử lý action dựa trên actionType
+        // Hiển thị dialog chi tiết
+        showNotificationDetailDialog(notification);
+    }
+    
+    /**
+     * Hiển thị dialog chi tiết thông báo
+     */
+    private void showNotificationDetailDialog(Notification notification) {
+        // Tạo dialog
+        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+        
+        // Inflate layout dialog
+        View dialogView = LayoutInflater.from(getContext())
+            .inflate(R.layout.dialog_notification_detail, null);
+        
+        builder.setView(dialogView);
+        
+        // Tạo dialog
+        AlertDialog dialog = builder.create();
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
+        
+        // Ánh xạ các views
+        ImageView iconImageView = dialogView.findViewById(R.id.dialog_notification_icon);
+        TextView titleTextView = dialogView.findViewById(R.id.dialog_notification_title);
+        TextView bodyTextView = dialogView.findViewById(R.id.dialog_notification_body);
+        TextView timeTextView = dialogView.findViewById(R.id.dialog_notification_time);
+        TextView typeTextView = dialogView.findViewById(R.id.dialog_notification_type);
+        TextView aiBadge = dialogView.findViewById(R.id.dialog_ai_badge);
+        com.google.android.material.button.MaterialButton viewDetailButton = 
+            dialogView.findViewById(R.id.dialog_view_detail_button);
+        com.google.android.material.button.MaterialButton closeButton = 
+            dialogView.findViewById(R.id.dialog_close_button);
+        
+        // Set dữ liệu vào dialog
+        titleTextView.setText(notification.getTitle());
+        bodyTextView.setText(notification.getBody());
+        
+        // Format thời gian
+        CharSequence timeAgo = DateUtils.getRelativeTimeSpanString(
+            notification.getSentAt(),
+            System.currentTimeMillis(),
+            DateUtils.MINUTE_IN_MILLIS,
+            DateUtils.FORMAT_ABBREV_RELATIVE
+        );
+        timeTextView.setText(timeAgo);
+        
+        // Set icon dựa theo loại thông báo
+        int iconRes = getIconResourceForType(notification.getType());
+        iconImageView.setImageResource(iconRes);
+        
+        // Hiển thị badge AI nếu là thông báo từ AI
+        if (notification.isFromAI()) {
+            aiBadge.setVisibility(View.VISIBLE);
+        } else {
+            aiBadge.setVisibility(View.GONE);
+        }
+        
+        // Ẩn type text view (không cần thiết)
+        typeTextView.setVisibility(View.GONE);
+        
+        // Xử lý nút "Xem chi tiết"
         String actionType = notification.getActionType();
         String actionData = notification.getActionData();
         
+        // Chỉ hiển thị nút "Xem chi tiết" nếu có actionType hợp lệ
+        if (actionType != null && !actionType.isEmpty() && !"none".equals(actionType)) {
+            viewDetailButton.setVisibility(View.VISIBLE);
+            viewDetailButton.setOnClickListener(v -> {
+                dialog.dismiss();
+                navigateToAction(notification, actionType, actionData);
+            });
+        } else {
+            viewDetailButton.setVisibility(View.GONE);
+        }
+        
+        // Xử lý nút đóng
+        closeButton.setOnClickListener(v -> dialog.dismiss());
+        
+        // Gửi feedback nếu là thông báo AI
+        if (notification.isFromAI()) {
+            firebaseService.sendNotificationFeedback(notification.getId(), "accepted", null);
+        }
+        
+        // Hiển thị dialog
+        dialog.show();
+    }
+    
+    /**
+     * Điều hướng đến màn hình tương ứng dựa trên actionType
+     */
+    private void navigateToAction(Notification notification, String actionType, String actionData) {
         if ("open_workout".equals(actionType) && actionData != null) {
-            // Mở WorkoutActivity với workoutId
             Intent intent = new Intent(getContext(), WorkoutActivity.class);
             intent.putExtra("workoutId", actionData);
             intent.putExtra("fromNotification", true);
             startActivity(intent);
         } else if ("open_exercise".equals(actionType) && actionData != null) {
-            // Mở ExerciseDetailActivity (nếu có)
-            // TODO: Implement khi có ExerciseDetailActivity
             Toast.makeText(getContext(), "Mở chi tiết bài tập: " + actionData, Toast.LENGTH_SHORT).show();
         } else if ("open_post".equals(actionType) && actionData != null) {
-            // Mở PostDetailActivity với postId (cho thông báo xã hội)
             Intent intent = new Intent(getContext(), PostDetailActivity.class);
             intent.putExtra(PostDetailActivity.EXTRA_POST_ID, actionData);
             startActivity(intent);
         } else if ("view_progress".equals(actionType)) {
-            // Chuyển sang ProfileFragment
-            // Lấy MainActivity và mở ProfileFragment
             if (getActivity() instanceof MainActivity) {
                 MainActivity mainActivity = (MainActivity) getActivity();
                 mainActivity.openProfileFragment();
             } else {
-                // Nếu không phải MainActivity, mở MainActivity với intent
                 Intent intent = new Intent(getContext(), MainActivity.class);
                 intent.putExtra("openFragment", "profile");
                 startActivity(intent);
             }
-        } else {
-            // Không có action cụ thể, chỉ hiển thị thông báo đã đọc
-            Toast.makeText(getContext(), "Đã đánh dấu đã đọc", Toast.LENGTH_SHORT).show();
         }
+    }
+    
+    /**
+     * Lấy icon phù hợp theo loại thông báo
+     */
+    private int getIconResourceForType(String type) {
+        if (type == null) return R.drawable.ic_notifications;
         
-        // Gửi feedback nếu là thông báo AI
-        if (notification.isFromAI()) {
-            firebaseService.sendNotificationFeedback(notification.getId(), "accepted", null);
+        switch (type) {
+            case "ai_reminder_smart":
+            case "workout_reminder_sent":
+                return R.drawable.ic_time;
+            case "ai_feedback_posture":
+            case "ai_feedback_consistency":
+                return R.drawable.ic_feedback;
+            case "ai_achievement":
+            case "achievement":
+                return R.drawable.ic_trophy;
+            case "ai_plan_update":
+                return R.drawable.ic_plan;
+            case "social":
+            case "social_like":
+            case "social_comment":
+            case "social_follow":
+                return R.drawable.ic_social;
+            default:
+                return R.drawable.ic_notifications;
         }
     }
 
