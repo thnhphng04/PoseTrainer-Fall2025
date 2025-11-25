@@ -31,4 +31,17 @@
     <color name="colorPrimary">#FF2196F3</color>
     <color name="colorPrimaryDark">#FF1976D2</color>
     <color name="colorAccent">#FFFF5722</color>
+    
+    <!-- Colors for DailyFragment -->
+    <color name="daily_background">#ff1a1f2e</color>
+    <color name="daily_card_background">#ff2a3142</color>
+    <color name="daily_text_primary">#ffffff</color>
+    <color name="daily_text_secondary">#99ffffff</color>
+    <color name="daily_primary_blue">#4d9df2</color>
+    <color name="daily_divider">#33ffffff</color>
+    <color name="daily_progress_blue">#4d9df2</color>
+    
+    <!-- Colors for highlight selected day in DailyFragment -->
+    <color name="daily_selected_primary">#4d9df2</color>
+    <color name="daily_selected_secondary">#99ffffff</color>
 </resources>

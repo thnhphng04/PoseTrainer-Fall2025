@@ -27,7 +27,34 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingTop="4dp"
-            android:paddingBottom="12dp"/>
+            android:paddingBottom="8dp"/>
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="4dp"
+            android:paddingBottom="8dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:text="Số ngày tập mong muốn:"
+                android:textSize="14sp"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"/>
+
+            <EditText
+                android:id="@+id/etDesiredDays"
+                android:hint="Nhập số ngày"
+                android:inputType="number"
+                android:textSize="14sp"
+                android:layout_width="100dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:padding="8dp"
+                android:background="@android:drawable/edit_text"/>
+        </LinearLayout>
 
         <LinearLayout
             android:orientation="horizontal"

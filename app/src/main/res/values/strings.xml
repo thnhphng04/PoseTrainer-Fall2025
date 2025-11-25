@@ -2,5 +2,21 @@
     <string name="app_name">PoseTrainer</string>
     <string name="loginTxt">Are you have an account? <font color="#FD511E">Signin</font></string>
     <string name="default_web_client_id">761757020017-8rufa0bn2fdiv72s8l9pj1i5k06sr486.apps.googleusercontent.com</string>
+    
+    <!-- Strings for DailyFragment -->
+    <string name="daily_title">📅 Ngày</string>
+    <string name="daily_edit">✏️ Chỉnh sửa</string>
+    <string name="daily_weekly_goal_title">Mục tiêu hàng tuần</string>
+    <string name="daily_weekly_progress">Tiến độ: 0/0 ngày</string>
+    <string name="daily_activities_title">Các hoạt động</string>
+    <string name="daily_history">Lịch sử ➜</string>
+    <string name="daily_time_label">Thời gian</string>
+    <string name="daily_time_default">0 phút</string>
+    <string name="daily_calories_label">Calo</string>
+    <string name="daily_calories_default">0 kcal</string>
+    <string name="daily_sessions_title">Buổi tập trong ngày</string>
+    <string name="daily_empty_state">Không có buổi tập nào trong ngày này</string>
+    <string name="daily_view_schedule">📅 Xem lịch đã lên</string>
+    <string name="daily_add_activity">➕ Thêm hoạt động</string>
 
 </resources>
