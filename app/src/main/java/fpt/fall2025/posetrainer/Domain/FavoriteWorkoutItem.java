@@ -66,7 +66,8 @@ public class FavoriteWorkoutItem implements Serializable {
             // Tính duration từ items của UserWorkout (ước tính)
             if (userWorkout.getItems() != null) {
                 // Ước tính: mỗi exercise ~3 phút
-                return userWorkout.getItems().size() * 3;
+                int itemsCount = (userWorkout.getItems() != null) ? userWorkout.getItems().size() : 0;
+                return itemsCount * 3;
             }
             return 0;
         } else if (workoutTemplate != null) {

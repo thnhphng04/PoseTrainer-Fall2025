@@ -58,7 +58,9 @@ public class WorkoutTemplateAdapter extends RecyclerView.Adapter<WorkoutTemplate
                 .load(resId)
                 .into(holder.binding.pic);
 
-        holder.binding.excerciseTxt.setText(workoutTemplate.getItems().size() + " Exercise");
+        // Null check để tránh NullPointerException
+        int exerciseCount = (workoutTemplate.getItems() != null) ? workoutTemplate.getItems().size() : 0;
+        holder.binding.excerciseTxt.setText(exerciseCount + " Exercise");
         holder.binding.durationTxt.setText(workoutTemplate.getEstDurationMin() + " min");
 
         // Set click listener on the root view

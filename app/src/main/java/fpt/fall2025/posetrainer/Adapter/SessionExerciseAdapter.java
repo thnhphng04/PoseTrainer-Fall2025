@@ -194,7 +194,8 @@ public class SessionExerciseAdapter extends RecyclerView.Adapter<SessionExercise
         
         android.util.Log.d("SessionExerciseAdapter", "Looking for exercise with order: " + exerciseOrder);
         android.util.Log.d("SessionExerciseAdapter", "Available exercises: " + exercises.size());
-        android.util.Log.d("SessionExerciseAdapter", "Available workout items: " + workoutTemplate.getItems().size());
+        int itemsCount = (workoutTemplate.getItems() != null) ? workoutTemplate.getItems().size() : 0;
+        android.util.Log.d("SessionExerciseAdapter", "Available workout items: " + itemsCount);
         
         // Find WorkoutItem with matching order
         WorkoutTemplate.WorkoutItem workoutItem = null;

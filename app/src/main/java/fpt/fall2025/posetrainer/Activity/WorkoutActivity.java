@@ -831,7 +831,9 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
         binding.descriptionTxt.setText(workoutTemplate.getDescription());
         
         // Set exercise count
-        binding.excerciseTxt.setText(workoutTemplate.getItems().size() + " Exercise");
+        // Null check để tránh NullPointerException
+        int exerciseCount = (workoutTemplate.getItems() != null) ? workoutTemplate.getItems().size() : 0;
+        binding.excerciseTxt.setText(exerciseCount + " Exercise");
         
         // Set duration
         binding.durationTxt.setText(workoutTemplate.getEstDurationMin() + " min");
@@ -885,7 +887,8 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
             Log.d(TAG, "  " + i + ": " + loadedExercises.get(i).getName() + " (" + loadedExercises.get(i).getId() + ")");
         }
         
-        Log.d(TAG, "WorkoutTemplate items (" + workoutTemplate.getItems().size() + "):");
+        int itemsCount = (workoutTemplate.getItems() != null) ? workoutTemplate.getItems().size() : 0;
+        Log.d(TAG, "WorkoutTemplate items (" + itemsCount + "):");
         for (WorkoutTemplate.WorkoutItem item : workoutTemplate.getItems()) {
             Log.d(TAG, "  Order " + item.getOrder() + ": " + item.getExerciseId());
         }

@@ -194,7 +194,9 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
         // Set workout template info
         binding.workoutTitleTxt.setText(workoutTemplate.getTitle());
         binding.workoutDescriptionTxt.setText(workoutTemplate.getDescription());
-        binding.exerciseCountTxt.setText(workoutTemplate.getItems().size() + " Exercises");
+        // Null check để tránh NullPointerException
+        int exerciseCount = (workoutTemplate.getItems() != null) ? workoutTemplate.getItems().size() : 0;
+        binding.exerciseCountTxt.setText(exerciseCount + " Exercises");
 
         // Set workout image (using default image)
         binding.workoutImage.setImageResource(R.drawable.pic_1);

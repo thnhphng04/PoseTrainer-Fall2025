@@ -872,7 +872,9 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
         binding.descriptionTxt.setText(userWorkout.getDescription());
         
         // Set exercise count
-        binding.excerciseTxt.setText(userWorkout.getItems().size() + " Exercise");
+        // Null check để tránh NullPointerException
+        int exerciseCount = (userWorkout.getItems() != null) ? userWorkout.getItems().size() : 0;
+        binding.excerciseTxt.setText(exerciseCount + " Exercise");
         
         // Calculate estimated duration from UserWorkout items
         int estimatedDuration = calculateDurationFromUserWorkout();
@@ -939,7 +941,8 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
         Log.d(TAG, "UserWorkout Items: " + (userWorkout != null && userWorkout.getItems() != null ? userWorkout.getItems().size() : "null"));
         
         if (userWorkout != null && userWorkout.getItems() != null) {
-            for (int i = 0; i < userWorkout.getItems().size(); i++) {
+            int itemsSize = (userWorkout.getItems() != null) ? userWorkout.getItems().size() : 0;
+            for (int i = 0; i < itemsSize; i++) {
                 UserWorkout.UserWorkoutItem item = userWorkout.getItems().get(i);
                 Log.d(TAG, "Item " + i + ": Order=" + item.getOrder() + ", ExerciseId=" + item.getExerciseId());
                 if (item.getConfig() != null) {
@@ -964,7 +967,8 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
 
         Log.d(TAG, "=== LOADING EXERCISES FOR USER WORKOUT ===");
         Log.d(TAG, "UserWorkout: " + userWorkout.getTitle());
-        Log.d(TAG, "Items count: " + userWorkout.getItems().size());
+        int itemsCount = (userWorkout.getItems() != null) ? userWorkout.getItems().size() : 0;
+        Log.d(TAG, "Items count: " + itemsCount);
         
         for (UserWorkout.UserWorkoutItem item : userWorkout.getItems()) {
             Log.d(TAG, "Item - Order: " + item.getOrder() + ", ExerciseId: " + item.getExerciseId());
@@ -1249,7 +1253,8 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
             Log.d(TAG, "  " + i + ": " + loadedExercises.get(i).getName() + " (" + loadedExercises.get(i).getId() + ")");
         }
         
-        Log.d(TAG, "UserWorkout items (" + userWorkout.getItems().size() + "):");
+        int itemsCount = (userWorkout.getItems() != null) ? userWorkout.getItems().size() : 0;
+        Log.d(TAG, "UserWorkout items (" + itemsCount + "):");
         for (UserWorkout.UserWorkoutItem item : userWorkout.getItems()) {
             Log.d(TAG, "  Order " + item.getOrder() + ": " + item.getExerciseId());
         }

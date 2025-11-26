@@ -1,7 +1,9 @@
 package fpt.fall2025.posetrainer.Domain;
 
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Session implements Serializable {
     private String id;
@@ -230,6 +232,8 @@ public class Session implements Serializable {
         private int targetReps;
         private int correctReps;
         private String state; // "incomplete", "completed", "skipped"
+        // Note: Using Map<String, Integer> for Java compatibility, but Kotlin will use Map<String, Int>
+        private Map<String, Integer> errorCounts; // Map lưu số lần mỗi lỗi xuất hiện: "Chân bị gập" -> 5
 
         public SetData() {}
 
@@ -271,6 +275,14 @@ public class Session implements Serializable {
 
         public void setState(String state) {
             this.state = state;
+        }
+
+        public Map<String, Integer> getErrorCounts() {
+            return errorCounts;
+        }
+
+        public void setErrorCounts(Map<String, Integer> errorCounts) {
+            this.errorCounts = errorCounts;
         }
     }
 

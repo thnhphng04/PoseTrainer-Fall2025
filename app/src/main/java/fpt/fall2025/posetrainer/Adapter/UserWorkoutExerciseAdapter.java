@@ -66,7 +66,8 @@ public class UserWorkoutExerciseAdapter extends RecyclerView.Adapter<UserWorkout
         }
         
         if (userWorkout != null && userWorkout.getItems() != null) {
-            android.util.Log.d("UserWorkoutExerciseAdapter", "UserWorkout items: " + userWorkout.getItems().size());
+            int itemsCount = (userWorkout.getItems() != null) ? userWorkout.getItems().size() : 0;
+            android.util.Log.d("UserWorkoutExerciseAdapter", "UserWorkout items: " + itemsCount);
             for (UserWorkout.UserWorkoutItem item : userWorkout.getItems()) {
                 android.util.Log.d("UserWorkoutExerciseAdapter", "Item - Order: " + item.getOrder() + ", ExerciseId: " + item.getExerciseId());
             }

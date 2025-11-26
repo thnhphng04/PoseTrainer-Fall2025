@@ -147,8 +147,17 @@ public class FirebaseService {
         }
 
         ArrayList<Exercise> exercises = new ArrayList<>();
-        final int totalItems = workoutTemplate.getItems().size();
+        // Null check để tránh NullPointerException
+        final int totalItems = (workoutTemplate.getItems() != null) ? workoutTemplate.getItems().size() : 0;
         final int[] loadedItems = {0}; // Use array to make it effectively final
+
+        if (workoutTemplate.getItems() == null || totalItems == 0) {
+            Log.e(TAG, "WorkoutTemplate has no items");
+            activity.runOnUiThread(() -> {
+                listener.onExercisesLoaded(exercises);
+            });
+            return;
+        }
 
         for (WorkoutTemplate.WorkoutItem item : workoutTemplate.getItems()) {
             db.collection("exercises")
