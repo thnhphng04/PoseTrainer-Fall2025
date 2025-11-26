@@ -167,11 +167,11 @@ public class SquatAnalyzer implements ExerciseAnalyzerInterface {
                 // Feedback động tác
                 if (hipAngle > thresholds.getHipMax()) {
                     displayText[0] = true;
-                    feedbackList.add("Ngả lưng ra sau");
+                    feedbackList.add("Hãy ngả lưng ra sau");
                 }
                 if (hipAngle < thresholds.getHipMin() && stateSequence.stream().filter(s -> s.equals("s2")).count() == 1) {
                     displayText[1] = true;
-                    feedbackList.add("Cúi người về trước");
+                    feedbackList.add("Hãy cúi người về trước");
                 }
                 if (kneeAngle > thresholds.getKneeMax()) {
                     displayText[3] = true;

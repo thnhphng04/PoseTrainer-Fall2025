@@ -8,6 +8,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
@@ -61,6 +63,7 @@ import fpt.fall2025.posetrainer.Activity.ExerciseActivity
 import fpt.fall2025.posetrainer.View.UnifiedOverlayView
 import fpt.fall2025.posetrainer.databinding.FragmentUnifiedCameraBinding
 import com.google.mediapipe.tasks.vision.core.RunningMode
+import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -104,11 +107,19 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
     private var totalCorrectCount: Int = 0
     private var lastCorrectCount: Int = 0
     private var isUIReset: Boolean = false
+    
+    // Error tracking
+    private val currentSetErrorCounts = mutableMapOf<String, Int>()
+    private var lastFeedbackList: List<String> = emptyList()
 
     // Analyzer and overlay
     private var currentAnalyzer: ExerciseAnalyzerInterface? = null
     private var unifiedOverlayView: UnifiedOverlayView? = null
     private var lastFeedback: ExerciseFeedback? = null
+    private var textToSpeech: TextToSpeech? = null
+    private var isTtsReady: Boolean = false
+    private var isSpeakingFeedback: Boolean = false
+    private var lastFeedbackSignature: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -203,6 +214,8 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
                 poseLandmarkerHelperListener = this
             )
         }
+
+        initTextToSpeech()
     }
 
     private fun initializeAnalyzer() {
@@ -436,6 +449,9 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         correctCount = 0
         lastCorrectCount = 0
         
+        // Reset error tracking for new set
+        resetErrorTracking()
+        
         // Reset UI counts to 0 when starting
         binding.tvCorrectCount.text = "0"
         binding.tvIncorrectCount.text = "0"
@@ -469,6 +485,9 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         correctCount = 0
         lastCorrectCount = 0
         
+        // Reset error tracking when stopping
+        resetErrorTracking()
+        
         // Reset UI counts to 0 when stopping
         binding.tvCorrectCount.text = "0"
         binding.tvIncorrectCount.text = "0"
@@ -485,12 +504,13 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         // Log.d(TAG, "Set $currentSet completed")
         isExerciseActive = false
         
-        // Cập nhật session với kết quả set vừa hoàn thành
+        // Cập nhật session với kết quả set vừa hoàn thành (bao gồm errorCounts)
         (activity as? ExerciseActivity)?.updateSessionAfterSet(
             setNumber = currentSet,
             correctReps = correctCount,
             targetReps = reps,
-            skipped = false
+            skipped = false,
+            errorCounts = currentSetErrorCounts.toMap() // Convert to immutable map
         )
         
         // Force reload session to get latest data
@@ -503,6 +523,9 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         currentRep = 0
         correctCount = 0
         lastCorrectCount = 0
+        
+        // Reset error tracking for next set
+        resetErrorTracking()
         
         // Reset UI counts to 0 when set completed
         binding.tvCorrectCount.text = "0"
@@ -606,12 +629,13 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
     private fun skipCurrentSet() {
         // Log.d(TAG, "Skipping current set: $currentSet")
         
-        // Cập nhật session với set bị skip
+        // Cập nhật session với set bị skip (bao gồm errorCounts nếu có)
         (activity as? ExerciseActivity)?.updateSessionAfterSet(
             setNumber = currentSet,
             correctReps = correctCount,
             targetReps = reps,
-            skipped = true
+            skipped = true,
+            errorCounts = currentSetErrorCounts.toMap() // Convert to immutable map
         )
         
         // Stop current exercise if active
@@ -624,6 +648,9 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         currentRep = 0
         correctCount = 0
         lastCorrectCount = 0
+        
+        // Reset error tracking for next set
+        resetErrorTracking()
         
         // Reset UI counts
         binding.tvCorrectCount.text = "0"
@@ -732,6 +759,7 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
 
         backgroundExecutor.shutdown()
         backgroundExecutor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS)
+        shutdownTextToSpeech()
     }
 
     private fun setUpCamera() {
@@ -810,6 +838,9 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
 
                      // Update UI with correct/incorrect counts
                      lastFeedback?.let { feedback ->
+                         // Track errors from feedback (chỉ track khi exercise active)
+                         trackErrors(feedback)
+                         
                          // Only update UI counts when exercise is active (Start button pressed)
                          if (isExerciseActive) {
                              // Don't update UI immediately after reset - wait for meaningful feedback
@@ -841,6 +872,7 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
                              
                              // Update last correct count to prevent duplicate counting
                              lastCorrectCount = feedback.correctCount
+                             maybeSpeakFeedback(feedback)
                          } else {
                              // When not active, show 0 counts
                              binding.tvCorrectCount.text = "0"
@@ -872,6 +904,91 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         )
     }
 
+    private fun initTextToSpeech() {
+        // Thử khởi tạo với Google TTS engine trước
+        val googleTtsIntent = android.content.Intent(android.speech.tts.TextToSpeech.Engine.ACTION_CHECK_TTS_DATA)
+        val resolveInfo = requireContext().packageManager.resolveActivity(googleTtsIntent, 0)
+        
+        // Nếu có Google TTS, thử dùng nó
+        val engine = if (resolveInfo != null) {
+            "com.google.android.tts"
+        } else {
+            null // Dùng engine mặc định
+        }
+        
+        textToSpeech = TextToSpeech(requireContext(), { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                val vietnamese = Locale("vi", "VN")
+                val result = textToSpeech?.setLanguage(vietnamese)
+                if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                    Log.w(TAG, "Vietnamese not supported, falling back to English")
+                    textToSpeech?.setLanguage(Locale.US)
+                }
+                textToSpeech?.setSpeechRate(1.0f)
+                textToSpeech?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                    override fun onStart(utteranceId: String?) {
+                        isSpeakingFeedback = true
+                    }
+
+                    override fun onDone(utteranceId: String?) {
+                        isSpeakingFeedback = false
+                    }
+
+                    override fun onError(utteranceId: String?) {
+                        isSpeakingFeedback = false
+                    }
+                })
+                isTtsReady = true
+                Log.d(TAG, "TextToSpeech initialized successfully")
+            } else {
+                Log.e(TAG, "TextToSpeech init failed: $status. TTS feature will be disabled.")
+                isTtsReady = false
+                // Nếu không có TTS engine, tính năng phát âm thanh sẽ bị tắt
+                // Feedback vẫn hiển thị trên màn hình
+            }
+        }, engine)
+    }
+
+    private fun shutdownTextToSpeech() {
+        if (isTtsReady && textToSpeech != null) {
+            try {
+                textToSpeech?.stop()
+                textToSpeech?.shutdown()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error shutting down TTS: ${e.message}")
+            }
+        }
+        textToSpeech = null
+        isTtsReady = false
+        isSpeakingFeedback = false
+        lastFeedbackSignature = null
+    }
+
+    private fun maybeSpeakFeedback(feedback: ExerciseFeedback) {
+        if (!isTtsReady || textToSpeech == null || isSpeakingFeedback) {
+            return
+        }
+        val messages = feedback.feedbackList
+        if (messages.isNullOrEmpty()) {
+            return
+        }
+        val signature = messages.joinToString("|")
+        if (signature == lastFeedbackSignature) {
+            return
+        }
+        val textToSpeak = messages.last().trim()
+        if (textToSpeak.isEmpty()) {
+            return
+        }
+
+        lastFeedbackSignature = signature
+        val utteranceId = "feedback-${System.currentTimeMillis()}"
+        val speakResult = textToSpeech?.speak(textToSpeak, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
+        if (speakResult == TextToSpeech.ERROR) {
+            isSpeakingFeedback = false
+        }
+    }
+
     override fun onError(error: String, errorCode: Int) {
         activity?.runOnUiThread {
             Toast.makeText(requireContext(), error, Toast.LENGTH_SHORT).show()
@@ -879,5 +996,50 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
                 // Log.e(TAG, "GPU error, switching to CPU")
             }
         }
+    }
+    
+    /**
+     * Track errors from ExerciseFeedback - chỉ đếm khi lỗi mới xuất hiện
+     * Không đếm errors khi cameraWarning = true (camera lệch, feedback không chính xác)
+     * Và filter ra các errors liên quan đến camera
+     */
+    private fun trackErrors(feedback: ExerciseFeedback) {
+        if (!isExerciseActive) return // Chỉ track khi đang tập
+        
+        // Không track errors khi camera bị lệch (cameraWarning = true)
+        if (feedback.isCameraWarning) {
+            // Reset lastFeedbackList để không track errors từ frame camera lệch
+            lastFeedbackList = emptyList()
+            return
+        }
+        
+        val currentErrors = feedback.feedbackList ?: emptyList()
+        
+        // Chỉ đếm lỗi mới xuất hiện và không phải lỗi về camera
+        // Filter ra các errors có chứa "Camera" (case-insensitive)
+        val newErrors = currentErrors.filter { errorMessage ->
+            val isNotBlank = errorMessage.isNotBlank()
+            val isNew = errorMessage !in lastFeedbackList
+            val isNotCameraError = !errorMessage.contains("Camera", ignoreCase = true)
+            isNotBlank && isNew && isNotCameraError
+        }
+        
+        newErrors.forEach { errorMessage ->
+            currentSetErrorCounts[errorMessage] = 
+                currentSetErrorCounts.getOrDefault(errorMessage, 0) + 1
+            Log.d(TAG, "Error tracked: $errorMessage (count: ${currentSetErrorCounts[errorMessage]})")
+        }
+        
+        // Cập nhật cho frame tiếp theo (bao gồm cả camera errors để tránh đếm lại)
+        lastFeedbackList = currentErrors
+    }
+    
+    /**
+     * Reset error tracking khi bắt đầu set mới hoặc stop exercise
+     */
+    private fun resetErrorTracking() {
+        currentSetErrorCounts.clear()
+        lastFeedbackList = emptyList()
+        Log.d(TAG, "Error tracking reset")
     }
 }

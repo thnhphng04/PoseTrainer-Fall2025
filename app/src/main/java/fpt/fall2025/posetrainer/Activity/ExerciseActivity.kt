@@ -444,9 +444,12 @@ class ExerciseActivity : AppCompatActivity() {
         }
     }
     
-    fun updateSessionAfterSet(setNumber: Int, correctReps: Int, targetReps: Int, skipped: Boolean = false) {
+    fun updateSessionAfterSet(setNumber: Int, correctReps: Int, targetReps: Int, skipped: Boolean = false, errorCounts: Map<String, Int>? = null) {
         android.util.Log.d("ExerciseActivity", "=== UPDATE SESSION AFTER SET ===")
         android.util.Log.d("ExerciseActivity", "Set: $setNumber, CorrectReps: $correctReps, TargetReps: $targetReps, Skipped: $skipped")
+        if (errorCounts != null) {
+            android.util.Log.d("ExerciseActivity", "ErrorCounts: $errorCounts")
+        }
         
         currentSession?.let { session ->
             // Tìm PerExercise tương ứng với exercise hiện tại dựa trên exerciseNo
@@ -469,6 +472,17 @@ class ExerciseActivity : AppCompatActivity() {
                     setData.setTargetReps(targetReps)
                     // Nếu skip thì state = "skipped", nếu không skip thì state = "completed"
                     setData.setState(newState)
+                    
+                    // Cập nhật errorCounts nếu có
+                    if (errorCounts != null && errorCounts.isNotEmpty()) {
+                        // Kotlin interop: Java method setErrorCounts(Map<String, Integer>) 
+                        // is seen as setErrorCounts(Map<String, Int>!) in Kotlin
+                        // So we can pass Kotlin Map<String, Int> directly
+                        // But we need to ensure it's a mutable map that can be stored
+                        val errorCountsMap = errorCounts.toMutableMap()
+                        setData.setErrorCounts(errorCountsMap)
+                        android.util.Log.d("ExerciseActivity", "Set $setNumber errorCounts updated: $errorCountsMap")
+                    }
                     
                     // Luôn save session khi user thực sự tập (dù là resume hay new workout)
                     saveSessionToFirebase()
