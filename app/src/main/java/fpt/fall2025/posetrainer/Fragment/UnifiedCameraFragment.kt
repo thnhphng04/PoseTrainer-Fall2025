@@ -838,11 +838,15 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
 
                      // Update UI with correct/incorrect counts
                      lastFeedback?.let { feedback ->
-                         // Track errors from feedback (chỉ track khi exercise active)
-                         trackErrors(feedback)
-                         
                          // Only update UI counts when exercise is active (Start button pressed)
                          if (isExerciseActive) {
+                             // Phát âm thanh trước khi track errors (để có thể phát hiện lỗi mới)
+                             maybeSpeakFeedback(feedback)
+                             
+                             // Track errors from feedback (chỉ track khi exercise active)
+                             // Phải gọi sau maybeSpeakFeedback để lastFeedbackList vẫn chứa feedback của frame trước
+                             trackErrors(feedback)
+                             
                              // Don't update UI immediately after reset - wait for meaningful feedback
                              if (!isUIReset || (feedback.correctCount > 0 || feedback.incorrectCount > 0)) {
                                  // Update our internal counters based on analyzer feedback
@@ -872,7 +876,6 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
                              
                              // Update last correct count to prevent duplicate counting
                              lastCorrectCount = feedback.correctCount
-                             maybeSpeakFeedback(feedback)
                          } else {
                              // When not active, show 0 counts
                              binding.tvCorrectCount.text = "0"
@@ -968,20 +971,41 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         if (!isTtsReady || textToSpeech == null || isSpeakingFeedback) {
             return
         }
-        val messages = feedback.feedbackList
-        if (messages.isNullOrEmpty()) {
+        
+        // Chỉ đọc khi exercise đang active (giống trackErrors)
+        if (!isExerciseActive) {
             return
         }
-        val signature = messages.joinToString("|")
-        if (signature == lastFeedbackSignature) {
+        
+        // Không đọc khi camera bị lệch (cameraWarning = true)
+        if (feedback.isCameraWarning) {
             return
         }
-        val textToSpeak = messages.last().trim()
+        
+        val currentMessages = feedback.feedbackList ?: emptyList()
+        if (currentMessages.isEmpty()) {
+            return
+        }
+        
+        // Chỉ đọc lỗi mới xuất hiện và không phải lỗi về camera
+        // Filter ra các errors có chứa "Camera" (case-insensitive)
+        val newErrors = currentMessages.filter { errorMessage ->
+            val isNotBlank = errorMessage.isNotBlank()
+            val isNew = errorMessage !in lastFeedbackList
+            val isNotCameraError = !errorMessage.contains("Camera", ignoreCase = true)
+            isNotBlank && isNew && isNotCameraError
+        }
+        
+        if (newErrors.isEmpty()) {
+            return
+        }
+        
+        // Nối tất cả lỗi mới lại bằng dấu phẩy
+        val textToSpeak = newErrors.joinToString(", ").trim()
         if (textToSpeak.isEmpty()) {
             return
         }
 
-        lastFeedbackSignature = signature
         val utteranceId = "feedback-${System.currentTimeMillis()}"
         val speakResult = textToSpeech?.speak(textToSpeak, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
         if (speakResult == TextToSpeech.ERROR) {
