@@ -4,36 +4,38 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/mainColor">
+    android:background="#ff1a1f2e">
 
     <!-- App Bar Layout -->
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
+        android:background="#ff1a1f2e"
+        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+        app:elevation="0dp">
 
         <!-- Toolbar -->
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:background="@color/mainColor"
+            android:background="#ff1a1f2e"
             app:title="Bài tập của tôi"
-            app:titleTextColor="@color/white"
+            app:titleTextColor="#ffffff"
             app:navigationIcon="@drawable/ic_arrow_back"
-            app:navigationIconTint="@color/white" />
+            app:navigationIconTint="#ffffff" />
 
         <!-- Tabs -->
         <com.google.android.material.tabs.TabLayout
             android:id="@+id/tab_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@color/mainColor"
+            android:background="#ff1a1f2e"
             app:tabMode="fixed"
             app:tabGravity="fill"
             app:tabTextColor="#99ffffff"
-            app:tabSelectedTextColor="@color/white"
-            app:tabIndicatorColor="@color/hw_primary"
+            app:tabSelectedTextColor="#ffffff"
+            app:tabIndicatorColor="#4d9df2"
             app:tabIndicatorHeight="3dp"
             app:tabIndicatorFullWidth="false">
 
@@ -79,7 +81,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:minWidth="120dp"
-                android:backgroundTint="@color/white" />
+                android:backgroundTint="#ffffff" />
 
         </LinearLayout>
 
@@ -112,7 +114,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="6 Th10 - 12 Th10"
-                    android:textColor="@color/white"
+                    android:textColor="#ffffff"
                     android:textSize="14sp"
                     android:textStyle="bold" />
 
@@ -174,9 +176,8 @@
         android:layout_gravity="bottom|end"
         android:layout_margin="16dp"
         android:src="@drawable/ic_add"
-        app:tint="@color/white"
-        app:backgroundTint="@color/hw_primary"
+        app:tint="#ffffff"
+        app:backgroundTint="#4d9df2"
         app:elevation="6dp" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
-
