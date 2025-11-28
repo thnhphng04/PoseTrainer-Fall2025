@@ -4,20 +4,20 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     app:cardCornerRadius="24dp"
-    app:cardElevation="8dp"
-    app:cardBackgroundColor="@color/hw_surface">
+    app:cardElevation="0dp"
+    app:cardBackgroundColor="#ff2a3142">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="@color/hw_surface">
+        android:background="#ff2a3142">
 
         <!-- Header with gradient background -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/button_primary"
+            android:background="@drawable/blue_bg"
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:padding="16dp">
@@ -30,7 +30,7 @@
                 android:layout_weight="1"
                 android:gravity="center_vertical|start"
                 android:text="💪 Chọn bài tập"
-                android:textColor="@color/hw_text_white"
+                android:textColor="#ffffff"
                 android:textSize="20sp"
                 android:textStyle="bold" />
 
@@ -41,7 +41,7 @@
                 android:layout_height="40dp"
                 android:src="@drawable/ic_close"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:tint="@color/hw_text_white"
+                android:tint="#ffffff"
                 android:contentDescription="Đóng"
                 android:padding="8dp" />
 
@@ -124,7 +124,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Không tìm thấy bài tập nào"
-                    android:textColor="@color/gray_text"
+                    android:textColor="#99ffffff"
                     android:textSize="16sp"
                     android:gravity="center" />
 
@@ -132,7 +132,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Thử tìm kiếm với từ khóa khác"
-                    android:textColor="@color/gray_text"
+                    android:textColor="#66ffffff"
                     android:textSize="14sp"
                     android:layout_marginTop="8dp"
                     android:gravity="center" />
@@ -145,6 +145,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
+                android:indeterminateTint="#4d9df2"
                 android:visibility="gone" />
 
         </LinearLayout>
@@ -152,4 +153,3 @@
     </LinearLayout>
 
 </androidx.cardview.widget.CardView>
-
