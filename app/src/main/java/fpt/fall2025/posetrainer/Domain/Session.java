@@ -1,8 +1,11 @@
 package fpt.fall2025.posetrainer.Domain;
 
 import java.io.Serializable;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class Session implements Serializable {
@@ -123,6 +126,27 @@ public class Session implements Serializable {
 
     public void setAppVersion(String appVersion) {
         this.appVersion = appVersion;
+    }
+
+    /**
+     * Generate session title with format: "<Title workout> HH:MM DD-MM-YYYY"
+     * This makes each session title unique and includes timestamp information
+     */
+    public static String generateSessionTitle(String workoutTitle) {
+        // Use workout title or default
+        String title = workoutTitle != null ? workoutTitle : "Workout";
+        
+        // Format current date and time
+        SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy", Locale.getDefault());
+        Date now = new Date();
+        String time = timeFormat.format(now);
+        String date = dateFormat.format(now);
+        
+        // Combine: "<Title workout> HH:MM DD-MM-YYYY"
+        String sessionTitle = String.format("%s %s %s", title, time, date);
+        
+        return sessionTitle;
     }
 
     // Inner class for SessionSummary

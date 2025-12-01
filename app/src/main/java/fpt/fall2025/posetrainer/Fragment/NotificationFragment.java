@@ -407,6 +407,8 @@ public class NotificationFragment extends Fragment {
                 return R.drawable.ic_trophy;
             case "ai_plan_update":
                 return R.drawable.ic_plan;
+            case "ai_streak_reminder":
+                return R.drawable.ic_trophy; // Icon cúp cho streak reminder
             case "social":
             case "social_like":
             case "social_comment":

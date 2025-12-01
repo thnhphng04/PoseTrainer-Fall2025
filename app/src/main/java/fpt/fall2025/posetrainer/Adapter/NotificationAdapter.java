@@ -147,6 +147,9 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
             case "ai_plan_update":
                 return R.drawable.ic_plan; // Icon kế hoạch (cần tạo)
                 
+            case "ai_streak_reminder":
+                return R.drawable.ic_trophy; // Icon cúp cho streak reminder
+                
             case "social":
                 return R.drawable.ic_social; // Icon mạng xã hội (cần tạo)
                 

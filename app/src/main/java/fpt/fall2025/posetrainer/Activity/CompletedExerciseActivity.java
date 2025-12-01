@@ -122,8 +122,64 @@ public class CompletedExerciseActivity extends AppCompatActivity {
 
             Log.d(TAG, "🔥 Bắt đầu cập nhật streak và achievements cho session: " + currentSession.getId());
 
-            // Update streak
-            FirebaseService.getInstance().updateStreak(uid, currentSession, streak -> {
+            // QUAN TRỌNG: Đảm bảo session đã completed trước khi update streak
+            // 1. Đảm bảo tất cả PerExercise có state = "completed" (bao gồm cả khi skip)
+            if (currentSession.getPerExercise() != null) {
+                int totalExercises = currentSession.getPerExercise().size();
+                int completedCount = 0;
+                for (Session.PerExercise perExercise : currentSession.getPerExercise()) {
+                    String currentState = perExercise.getState();
+                    if (!"completed".equals(currentState)) {
+                        Log.d(TAG, "Đang set state = 'completed' cho Exercise #" + perExercise.getExerciseNo() + 
+                            " (state hiện tại: " + (currentState != null ? currentState : "null") + ")");
+                        perExercise.setState("completed");
+                    }
+                    completedCount++;
+                }
+                Log.d(TAG, "Đã đảm bảo tất cả " + completedCount + "/" + totalExercises + " exercises có state = 'completed'");
+            }
+
+            // 2. Đảm bảo endedAt được set nếu chưa có
+            if (currentSession.getEndedAt() == 0 || currentSession.getEndedAt() <= currentSession.getStartedAt()) {
+                Log.d(TAG, "Đang set endedAt cho session (endedAt hiện tại: " + currentSession.getEndedAt() + ")");
+                currentSession.setEndedAt(System.currentTimeMillis() / 1000);
+                
+                // Đảm bảo Summary được tạo nếu chưa có
+                if (currentSession.getSummary() == null) {
+                    currentSession.setSummary(new Session.SessionSummary());
+                }
+                
+                // Update duration và calories
+                long durationSec = currentSession.getEndedAt() - currentSession.getStartedAt();
+                currentSession.getSummary().setDurationSec((int) durationSec);
+                int estimatedKcal = (int) (durationSec * 0.1);
+                currentSession.getSummary().setEstKcal(estimatedKcal);
+                
+                // Save session với endedAt mới trước khi update streak
+                FirebaseService.getInstance().saveSession(currentSession, success -> {
+                    if (success) {
+                        Log.d(TAG, "✅ Session đã được cập nhật với endedAt trước khi update streak");
+                        updateStreakAndAchievements(uid);
+                    } else {
+                        Log.e(TAG, "❌ Lỗi khi lưu session với endedAt");
+                        Toast.makeText(CompletedExerciseActivity.this, "Lỗi khi lưu session", Toast.LENGTH_SHORT).show();
+                        btnSave.setEnabled(true);
+                        btnSave.setText("Lưu");
+                    }
+                });
+            } else {
+                // Session đã có endedAt, update streak ngay
+                updateStreakAndAchievements(uid);
+            }
+        });
+    }
+
+    /**
+     * Update streak và achievements sau khi đảm bảo session đã completed
+     */
+    private void updateStreakAndAchievements(String uid) {
+        // Update streak
+        FirebaseService.getInstance().updateStreak(uid, currentSession, streak -> {
                 if (streak != null) {
                     Log.d(TAG, "✅ Streak updated: " + streak.getCurrentStreak() + " ngày");
 
@@ -158,7 +214,6 @@ public class CompletedExerciseActivity extends AppCompatActivity {
                     btnSave.setText("Lưu");
                 }
             });
-        });
     }
 
     /**

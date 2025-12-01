@@ -99,7 +99,7 @@ public class ExerciseDetailDialog extends Dialog {
         setCanceledOnTouchOutside(true);
 
         if (exercise == null) {
-            Toast.makeText(context, "No exercise data provided", Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, "Không có dữ liệu bài tập", Toast.LENGTH_SHORT).show();
             dismiss();
             return;
         }
@@ -156,7 +156,7 @@ public class ExerciseDetailDialog extends Dialog {
         if (exercise.getCategory() != null && !exercise.getCategory().isEmpty()) {
             binding.exerciseCategoryTxt.setText(exercise.getCategory().get(0));
         } else {
-            binding.exerciseCategoryTxt.setText("General");
+            binding.exerciseCategoryTxt.setText("Tổng quát");
         }
 
         // Set sets x reps - use custom config if available, otherwise use default
@@ -183,7 +183,7 @@ public class ExerciseDetailDialog extends Dialog {
             }
             binding.exerciseMusclesTxt.setText(musclesText.toString());
         } else {
-            binding.exerciseMusclesTxt.setText("Full body");
+            binding.exerciseMusclesTxt.setText("Toàn thân");
         }
 
         // Set equipment (if available)
@@ -195,7 +195,7 @@ public class ExerciseDetailDialog extends Dialog {
             }
             binding.exerciseEquipmentTxt.setText(equipmentText.toString());
         } else {
-            binding.exerciseEquipmentTxt.setText("No equipment");
+            binding.exerciseEquipmentTxt.setText("Không cần thiết bị");
         }
 
         // Load media (demo video or thumbnail)
@@ -256,7 +256,7 @@ public class ExerciseDetailDialog extends Dialog {
                                             Log.d(TAG, "Chuyển sang hiển thị thumbnail: " + thumbnailUrl);
                                         } else {
                                             // Show error message
-                                            binding.mediaPlaceholderTxt.setText("Video unavailable");
+                                            binding.mediaPlaceholderTxt.setText("Video không khả dụng");
                                             binding.mediaPlaceholderTxt.setVisibility(View.VISIBLE);
                                         }
                                     }
@@ -293,7 +293,7 @@ public class ExerciseDetailDialog extends Dialog {
                                     Log.d(TAG, "Chuyển sang hiển thị thumbnail: " + thumbnailUrl);
                                 } else {
                                     // Show error message
-                                    binding.mediaPlaceholderTxt.setText("Video unavailable");
+                                    binding.mediaPlaceholderTxt.setText("Video không khả dụng");
                                     binding.mediaPlaceholderTxt.setVisibility(View.VISIBLE);
                                 }
                             }
@@ -319,7 +319,7 @@ public class ExerciseDetailDialog extends Dialog {
                 binding.exerciseWebView.setVisibility(View.GONE);
                 binding.exerciseVideoView.setVisibility(View.GONE);
                 binding.exerciseImageView.setVisibility(View.GONE);
-                binding.mediaPlaceholderTxt.setText("No media available");
+                binding.mediaPlaceholderTxt.setText("Không có video/ảnh");
                 binding.mediaPlaceholderTxt.setVisibility(View.VISIBLE);
             }
         } else {
@@ -327,7 +327,7 @@ public class ExerciseDetailDialog extends Dialog {
             binding.exerciseWebView.setVisibility(View.GONE);
             binding.exerciseVideoView.setVisibility(View.GONE);
             binding.exerciseImageView.setVisibility(View.GONE);
-            binding.mediaPlaceholderTxt.setText("No media available");
+            binding.mediaPlaceholderTxt.setText("Không có video/ảnh");
             binding.mediaPlaceholderTxt.setVisibility(View.VISIBLE);
         }
     }
