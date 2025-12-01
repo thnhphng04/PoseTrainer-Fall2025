@@ -1,11 +1,9 @@
 package fpt.fall2025.posetrainer.Activity;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.view.WindowManager;
-import android.widget.ArrayAdapter;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.firebase.auth.FirebaseAuth;
@@ -16,7 +14,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.FragmentManager;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -29,6 +26,7 @@ import fpt.fall2025.posetrainer.Dialog.ExerciseSelectionDialog;
 import fpt.fall2025.posetrainer.Domain.Exercise;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
+import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.databinding.ActivityEditWorkoutBinding;
 
@@ -57,27 +55,40 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
         binding = ActivityEditWorkoutBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-//        getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
-
         // Get workout template ID from intent
         workoutTemplateId = getIntent().getStringExtra("workoutTemplateId");
-        if (workoutTemplateId == null) {
-            Toast.makeText(this, "Không có ID workout template", Toast.LENGTH_SHORT).show();
-            finish();
-            return;
-        }
-        binding.backBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                finish();
-            }
-        });
+        boolean isCreateNew = getIntent().getBooleanExtra("createNew", false);
+        
         // Get current user UID
         getCurrentUserId();
 
         initializeData();
         setupUI();
-        loadWorkoutTemplate();
+        
+        // If creating new workout, skip loading template
+        if (isCreateNew || workoutTemplateId == null || workoutTemplateId.equals("new")) {
+            // Create new workout mode - initialize empty workout
+            originalWorkoutTemplate = null;
+            exercises = new ArrayList<>();
+            
+            // Update header title for create new mode
+            TextView headerTitleTxt = binding.getRoot().findViewById(R.id.headerTitleTxt);
+            if (headerTitleTxt != null) {
+                headerTitleTxt.setText("Tạo buổi tập mới");
+            }
+            
+            // Set default title and description
+            binding.titleTxt.setText("");
+            binding.descriptionTxt.setText("");
+            binding.levelTxt.setText(selectedLevel);
+            
+            // Setup RecyclerView with empty exercises
+            setupRecyclerView();
+            updateDuration();
+        } else {
+            // Edit existing workout mode - keep default "Chỉnh sửa bài tập" text
+            loadWorkoutTemplate();
+        }
     }
 
     /**
@@ -108,28 +119,21 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
      */
     private void setupUI() {
         // Back button
-        binding.backBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                finish();
-            }
-        });
+        binding.backBtn.setOnClickListener(v -> finish());
 
-        // Save button
-        binding.saveBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                saveWorkout();
-            }
-        });
+        // Save button - handle both saveBtn and saveButtonCard
+        View saveButton = binding.getRoot().findViewById(R.id.saveBtn);
+        if (saveButton != null) {
+            saveButton.setOnClickListener(v -> saveWorkout());
+        }
+        
+        View saveButtonCard = binding.getRoot().findViewById(R.id.saveButtonCard);
+        if (saveButtonCard != null) {
+            saveButtonCard.setOnClickListener(v -> saveWorkout());
+        }
 
         // Add exercise button
-        binding.addExerciseBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                openExerciseSelection();
-            }
-        });
+        binding.addExerciseBtn.setOnClickListener(v -> openExerciseSelection());
 
         // Setup RecyclerView
         setupRecyclerView();
@@ -145,7 +149,6 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
         binding.exercisesRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         
         adapter = new EditWorkoutAdapter(exercises, this);
-        // Set reorder listener to update duration when exercises are reordered
         adapter.setOnExerciseReorderListener(new EditWorkoutAdapter.OnExerciseReorderListener() {
             @Override
             public void onExerciseMoved(int fromPosition, int toPosition) {
@@ -154,15 +157,13 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
             
             @Override
             public void onExercisesReordered() {
-                // Update duration when exercises are reordered (drag & drop complete)
                 updateDuration();
             }
         });
         binding.exercisesRecyclerView.setAdapter(adapter);
 
-        // Setup drag & drop with ExerciseItemTouchHelper
-        ExerciseItemTouchHelper callback = new ExerciseItemTouchHelper(adapter);
-        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(callback);
+        // Setup drag & drop
+        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(new ExerciseItemTouchHelper(adapter));
         itemTouchHelper.attachToRecyclerView(binding.exercisesRecyclerView);
     }
 
@@ -190,13 +191,7 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
      * Setup level spinner for selecting workout level
      */
     private void setupLevelSpinner() {
-        // Set click listener on TextView to show dialog
-        binding.levelTxt.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showLevelSelectionDialog();
-            }
-        });
+        binding.levelTxt.setOnClickListener(v -> showLevelSelectionDialog());
     }
     
     /**
@@ -222,17 +217,18 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
      */
     private String convertLevelToVietnamese(String englishLevel) {
         if (englishLevel == null || englishLevel.isEmpty()) {
-            return LEVELS_VI[0]; // Default to "Người mới bắt đầu"
+            return LEVELS_VI[0];
         }
         
+        String lowerLevel = englishLevel.toLowerCase();
         for (int i = 0; i < LEVELS_EN.length; i++) {
-            if (LEVELS_EN[i].equalsIgnoreCase(englishLevel)) {
+            if (LEVELS_EN[i].equalsIgnoreCase(englishLevel) || 
+                lowerLevel.contains(LEVELS_EN[i].toLowerCase())) {
                 return LEVELS_VI[i];
             }
         }
         
-        // If not found, try to match case-insensitive
-        String lowerLevel = englishLevel.toLowerCase();
+        // Fallback matching
         if (lowerLevel.contains("beginner") || lowerLevel.contains("mới")) {
             return LEVELS_VI[0];
         } else if (lowerLevel.contains("intermediate") || lowerLevel.contains("trung")) {
@@ -241,25 +237,7 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
             return LEVELS_VI[2];
         }
         
-        return LEVELS_VI[0]; // Default
-    }
-    
-    /**
-     * Convert Vietnamese level to English for database
-     */
-    private String convertLevelToEnglish(String vietnameseLevel) {
-        if (vietnameseLevel == null || vietnameseLevel.isEmpty()) {
-            return LEVELS_EN[0]; // Default to "Beginner"
-        }
-        
-        for (int i = 0; i < LEVELS_VI.length; i++) {
-            if (LEVELS_VI[i].equals(vietnameseLevel)) {
-                return LEVELS_EN[i];
-            }
-        }
-        
-        // If not found, return as is (might already be English)
-        return vietnameseLevel;
+        return LEVELS_VI[0];
     }
 
     /**
@@ -353,20 +331,28 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
      * Add selected exercise to workout
      */
     private void addExerciseToWorkout(Exercise exercise) {
+        if (exercise == null) return;
+        
+        // Check if exercise already exists
+        for (Exercise existing : exercises) {
+            if (existing.getId().equals(exercise.getId())) {
+                Toast.makeText(this, "Bài tập này đã có trong danh sách", Toast.LENGTH_SHORT).show();
+                return;
+            }
+        }
+        
         // Add exercise to the end of the list
+        int position = exercises.size();
         exercises.add(exercise);
         
-        // Update adapter
-        adapter.notifyItemInserted(exercises.size() - 1);
-        
-        // Update order numbers
-        adapter.notifyDataSetChanged();
+        // Update adapter efficiently
+        adapter.notifyItemInserted(position);
         
         // Update duration after adding exercise
         updateDuration();
         
         Log.d(TAG, "Đã thêm bài tập: " + exercise.getName());
-        Toast.makeText(this, "Đã thêm " + exercise.getName() + " vào bài tập", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "Đã thêm " + exercise.getName(), Toast.LENGTH_SHORT).show();
     }
     
     /**
@@ -381,37 +367,32 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
         
         int totalSeconds = 0;
         final int TIME_PER_REP_SECONDS = 2; // Estimated 2 seconds per rep
+        final int DEFAULT_SETS = 3;
+        final int DEFAULT_REPS = 12;
+        final int DEFAULT_REST_SEC = 30;
         
         for (Exercise exercise : exercises) {
+            int sets, reps, restSec;
+            
             if (exercise.getDefaultConfig() != null) {
-                int sets = exercise.getDefaultConfig().getSets();
-                int reps = exercise.getDefaultConfig().getReps();
-                int restSec = exercise.getDefaultConfig().getRestSec();
-                
-                // Default values if not set
-                if (sets <= 0) sets = 3;
-                if (reps <= 0) reps = 12;
-                if (restSec <= 0) restSec = 30;
-                
-                // Calculate time for this exercise
-                // Exercise time = sets * reps * timePerRep
-                int exerciseTime = sets * reps * TIME_PER_REP_SECONDS;
-                
-                // Rest time = (sets - 1) * restSec (rest between sets, not after last set)
-                int restTime = (sets - 1) * restSec;
-                
-                totalSeconds += exerciseTime + restTime;
+                sets = exercise.getDefaultConfig().getSets();
+                reps = exercise.getDefaultConfig().getReps();
+                restSec = exercise.getDefaultConfig().getRestSec();
             } else {
-                // Default values if no config
-                int sets = 3;
-                int reps = 12;
-                int restSec = 30;
-                
-                int exerciseTime = sets * reps * TIME_PER_REP_SECONDS;
-                int restTime = (sets - 1) * restSec;
-                
-                totalSeconds += exerciseTime + restTime;
+                sets = DEFAULT_SETS;
+                reps = DEFAULT_REPS;
+                restSec = DEFAULT_REST_SEC;
             }
+            
+            // Default values if not set
+            if (sets <= 0) sets = DEFAULT_SETS;
+            if (reps <= 0) reps = DEFAULT_REPS;
+            if (restSec <= 0) restSec = DEFAULT_REST_SEC;
+            
+            // Calculate time: exercise time + rest time
+            int exerciseTime = sets * reps * TIME_PER_REP_SECONDS;
+            int restTime = (sets - 1) * restSec; // Rest between sets, not after last set
+            totalSeconds += exerciseTime + restTime;
         }
         
         // Convert to minutes (round up)
@@ -493,11 +474,11 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
         String workoutTitle = binding.titleTxt.getText().toString().trim();
         String workoutDescription = binding.descriptionTxt.getText().toString().trim();
         
-        // Use original values as fallback if fields are empty
-        if (workoutTitle.isEmpty()) {
+        // Use original values as fallback if fields are empty (only if editing existing workout)
+        if (workoutTitle.isEmpty() && originalWorkoutTemplate != null) {
             workoutTitle = originalWorkoutTemplate.getTitle();
         }
-        if (workoutDescription.isEmpty()) {
+        if (workoutDescription.isEmpty() && originalWorkoutTemplate != null) {
             workoutDescription = originalWorkoutTemplate.getDescription();
         }
         
@@ -539,19 +520,16 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
 
     @Override
     public void onExerciseRemoved(int position) {
-        if (position >= 0 && position < exercises.size()) {
-            Exercise removedExercise = exercises.remove(position);
-            adapter.notifyItemRemoved(position);
-            
-            // Update order numbers for remaining items
-            adapter.notifyDataSetChanged();
-            
-            // Update duration after removing exercise
-            updateDuration();
-            
-            Log.d(TAG, "Đã xóa bài tập: " + removedExercise.getName());
-            Toast.makeText(this, "Đã xóa " + removedExercise.getName(), Toast.LENGTH_SHORT).show();
-        }
+        if (position < 0 || position >= exercises.size()) return;
+        
+        Exercise removedExercise = exercises.remove(position);
+        adapter.notifyItemRemoved(position);
+        // Update order numbers for remaining items
+        adapter.notifyItemRangeChanged(position, exercises.size() - position);
+        updateDuration();
+        
+        Log.d(TAG, "Đã xóa bài tập: " + removedExercise.getName());
+        Toast.makeText(this, "Đã xóa " + removedExercise.getName(), Toast.LENGTH_SHORT).show();
     }
 }
 

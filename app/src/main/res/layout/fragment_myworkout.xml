@@ -321,6 +321,22 @@
 
         </androidx.cardview.widget.CardView>
 
+        <!-- Floating Action Button - Create New Workout -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fab_create_workout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="16dp"
+            android:src="@drawable/ic_plus"
+            android:contentDescription="Tạo bài tập mới"
+            android:tint="@color/white"
+            app:backgroundTint="@color/orange"
+            app:elevation="8dp"
+            app:pressedTranslationZ="12dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.core.widget.NestedScrollView>

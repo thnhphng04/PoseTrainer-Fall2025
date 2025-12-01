@@ -47,8 +47,14 @@ public class SessionAdapter extends RecyclerView.Adapter<SessionAdapter.SessionV
     public void onBindViewHolder(@NonNull SessionViewHolder holder, int position) {
         Session session = sessions.get(position);
         
-        // Set session title - get from workout template
-        holder.titleTxt.setText("Session " + session.getId());
+        // Set session title from Session object
+        String title = session.getTitle();
+        if (title != null && !title.isEmpty()) {
+            holder.titleTxt.setText(title);
+        } else {
+            // Fallback nếu title rỗng
+            holder.titleTxt.setText("Session " + (session.getId() != null ? session.getId() : "Unknown"));
+        }
         
         // Set date
         if (session.getStartedAt() > 0) {
