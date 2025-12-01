@@ -43,7 +43,8 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
     private SessionExerciseAdapter sessionAdapter;
 
     private CountDownTimer sessionTimer;
-    private long sessionStartTime;
+    private long sessionStartTime; // Fallback nếu startedAt không có
+    private long sessionResumeTime; // Thời điểm mở màn hình lần này (để tính thời gian thực tế đã tập)
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,6 +58,17 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
             Log.e(TAG, "Missing sessionId from intent");
             finish();
             return;
+        }
+
+        // Get isCompleted flag from intent (default to false)
+        boolean isCompleted = getIntent().getBooleanExtra("isCompleted", false);
+        
+        // If session is completed, hide both buttons immediately
+        // Timer will be handled in loadExercisesFromSession to show completed duration
+        if (isCompleted) {
+            binding.startResumeBtn.setVisibility(View.GONE);
+            binding.finishWorkoutBtn.setVisibility(View.GONE);
+            Log.d(TAG, "Session is completed, hiding start/resume and finish buttons");
         }
 
         // Load session data from Firebase
@@ -118,7 +130,16 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
                     setupRecyclerView();
                     debugSessionData();
                     updateSessionProgress();
-                    startSessionTimer();
+                    
+                    // Handle timer based on completion status
+                    boolean isCompleted = getIntent().getBooleanExtra("isCompleted", false);
+                    if (isCompleted) {
+                        // If completed, show the duration from session data (endedAt - startedAt)
+                        displayCompletedSessionDuration(session);
+                    } else {
+                        // If not completed, start live timer
+                        startSessionTimer();
+                    }
                 } else {
                     Log.e(TAG, "Failed to load exercises");
                     finish();
@@ -257,12 +278,25 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
         // Update start/resume button
         updateStartResumeButton();
 
-        // Show finish button if all exercises completed
-        if (completedExercises == totalExercises && totalExercises > 0) {
-            binding.finishWorkoutBtn.setVisibility(View.VISIBLE);
-            binding.startResumeBtn.setVisibility(View.GONE);
-        } else {
+        // Check if session is completed (from intent)
+        boolean isCompleted = getIntent().getBooleanExtra("isCompleted", false);
+        
+        // If session is completed, hide both buttons
+        if (isCompleted) {
             binding.finishWorkoutBtn.setVisibility(View.GONE);
+            binding.startResumeBtn.setVisibility(View.GONE);
+            // Duration will be shown from session data (endedAt - startedAt)
+            if (currentSession != null) {
+                displayCompletedSessionDuration(currentSession);
+            }
+        } else {
+            // Show finish button if all exercises completed (but session not fully completed yet)
+            if (completedExercises == totalExercises && totalExercises > 0) {
+                binding.finishWorkoutBtn.setVisibility(View.VISIBLE);
+                binding.startResumeBtn.setVisibility(View.GONE);
+            } else {
+                binding.finishWorkoutBtn.setVisibility(View.GONE);
+            }
         }
 
         // Update adapter
@@ -273,7 +307,11 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
     }
 
     private void startSessionTimer() {
-        sessionStartTime = System.currentTimeMillis();
+        sessionStartTime = System.currentTimeMillis(); // Fallback
+        sessionResumeTime = System.currentTimeMillis(); // Thời điểm mở màn hình lần này
+        
+        // Hiển thị thời gian ngay lập tức
+        updateDurationDisplay();
 
         sessionTimer = new CountDownTimer(Long.MAX_VALUE, 1000) {
             @Override
@@ -290,13 +328,125 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
     }
 
     private void updateDurationDisplay() {
-        long elapsedTime = System.currentTimeMillis() - sessionStartTime;
-        long seconds = elapsedTime / 1000;
-        long minutes = seconds / 60;
-        seconds = seconds % 60;
+        // Check if session is completed - if so, don't update timer
+        boolean isCompleted = getIntent().getBooleanExtra("isCompleted", false);
+        if (isCompleted) {
+            return;
+        }
+        
+        // Lấy thời gian đã tập trước đó từ summary (thời gian thực tế đã tập)
+        int previousDurationSec = 0;
+        if (currentSession != null && currentSession.getSummary() != null) {
+            previousDurationSec = currentSession.getSummary().getDurationSec();
+        }
+        
+        // Tính thời gian từ khi mở màn hình đến hiện tại
+        long elapsedSinceResume = System.currentTimeMillis() - sessionResumeTime;
+        long currentSessionSec = elapsedSinceResume / 1000;
+        
+        // Tổng thời gian = thời gian đã tập trước đó + thời gian hiện tại
+        long totalSeconds = previousDurationSec + currentSessionSec;
+        long minutes = totalSeconds / 60;
+        long seconds = totalSeconds % 60;
 
         String timeString = String.format("%02d:%02d", minutes, seconds);
         binding.durationTxt.setText(timeString);
+    }
+    
+    /**
+     * Lưu thời gian thực tế đã tập vào summary.durationSec
+     * Gọi khi pause, destroy, hoặc finish
+     */
+    private void saveActiveDuration() {
+        if (currentSession == null) {
+            return;
+        }
+        
+        // Lấy thời gian đã tập trước đó
+        int previousDurationSec = 0;
+        if (currentSession.getSummary() != null) {
+            previousDurationSec = currentSession.getSummary().getDurationSec();
+        }
+        
+        // Tính thời gian từ khi mở màn hình đến hiện tại
+        long elapsedSinceResume = System.currentTimeMillis() - sessionResumeTime;
+        long currentSessionSec = elapsedSinceResume / 1000;
+        
+        // Cộng dồn vào summary
+        int totalDurationSec = (int)(previousDurationSec + currentSessionSec);
+        
+        if (currentSession.getSummary() == null) {
+            currentSession.setSummary(new Session.SessionSummary());
+        }
+        currentSession.getSummary().setDurationSec(totalDurationSec);
+        
+        Log.d(TAG, "Saving active duration: " + totalDurationSec + " seconds (previous: " + previousDurationSec + ", current: " + currentSessionSec + ")");
+        
+        // Lưu vào Firebase
+        FirebaseService.getInstance().saveSession(currentSession, success -> {
+            if (success) {
+                Log.d(TAG, "Active duration saved successfully: " + totalDurationSec + " seconds");
+            } else {
+                Log.e(TAG, "Failed to save active duration");
+            }
+        });
+    }
+    
+    /**
+     * Lấy thời gian thực tế đã tập từ durationTxt (format MM:SS)
+     * @return thời gian tính bằng giây
+     */
+    private int getCurrentActiveDurationFromDisplay() {
+        String durationText = binding.durationTxt.getText().toString();
+        if (durationText == null || durationText.isEmpty()) {
+            return 0;
+        }
+        
+        try {
+            // Parse format "MM:SS"
+            String[] parts = durationText.split(":");
+            if (parts.length == 2) {
+                int minutes = Integer.parseInt(parts[0]);
+                int seconds = Integer.parseInt(parts[1]);
+                return minutes * 60 + seconds;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error parsing duration from display: " + durationText, e);
+        }
+        
+        return 0;
+    }
+    
+    /**
+     * Display duration from completed session data (endedAt - startedAt)
+     * Format: "X phút Y giây" to match CompletedExerciseActivity
+     */
+    private void displayCompletedSessionDuration(Session session) {
+        if (session == null || session.getEndedAt() == 0 || session.getStartedAt() == 0) {
+            binding.durationTxt.setVisibility(View.GONE);
+            return;
+        }
+        
+        // Calculate duration from session data (both in seconds)
+        long durationSec = session.getEndedAt() - session.getStartedAt();
+        long minutes = durationSec / 60;
+        long seconds = durationSec % 60;
+        
+        // Format: "X phút Y giây" to match CompletedExerciseActivity
+        String timeString;
+        if (minutes > 0) {
+            if (seconds > 0) {
+                timeString = minutes + " phút " + seconds + " giây";
+            } else {
+                timeString = minutes + " phút";
+            }
+        } else {
+            timeString = seconds + " giây";
+        }
+        
+        binding.durationTxt.setText(timeString);
+        binding.durationTxt.setVisibility(View.VISIBLE);
+        Log.d(TAG, "Displaying completed session duration: " + timeString + " (" + durationSec + " seconds)");
     }
 
     private boolean isSessionCompleted() {
@@ -317,14 +467,16 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
             sessionTimer.cancel();
         }
 
+        // Lưu thời gian thực tế đã tập trước khi end
+        saveActiveDuration();
+
         // Update session end time
         if (currentSession != null) {
             currentSession.setEndedAt(System.currentTimeMillis() / 1000);
 
-            // Update summary
+            // Update summary với thời gian thực tế đã tập (đã được lưu trong saveActiveDuration)
             if (currentSession.getSummary() != null) {
-                long durationSec = (System.currentTimeMillis() - sessionStartTime) / 1000;
-                currentSession.getSummary().setDurationSec((int) durationSec);
+                int durationSec = currentSession.getSummary().getDurationSec();
                 
                 // Estimate calories (simple calculation based on duration)
                 int estimatedKcal = (int) (durationSec * 0.1); // Rough estimate: 0.1 kcal per second
@@ -353,26 +505,35 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
         if (currentSession != null) {
             currentSession.setEndedAt(System.currentTimeMillis() / 1000);
 
-            // Calculate duration
-            long durationSec;
-            if (currentSession.getStartedAt() > 0) {
-                durationSec = currentSession.getEndedAt() - currentSession.getStartedAt();
-            } else {
-                // Fallback: use sessionStartTime if startedAt is not set
-                durationSec = (System.currentTimeMillis() - sessionStartTime) / 1000;
+            // Lấy thời gian thực tế đã tập từ durationTxt (hiển thị trên màn hình)
+            int durationSec = getCurrentActiveDurationFromDisplay();
+            
+            // Nếu không lấy được từ display, tính từ summary + thời gian hiện tại
+            if (durationSec == 0) {
+                // Lấy thời gian đã tập trước đó
+                int previousDurationSec = 0;
+                if (currentSession.getSummary() != null) {
+                    previousDurationSec = currentSession.getSummary().getDurationSec();
+                }
+                
+                // Tính thời gian từ khi mở màn hình đến hiện tại
+                long elapsedSinceResume = System.currentTimeMillis() - sessionResumeTime;
+                long currentSessionSec = elapsedSinceResume / 1000;
+                
+                durationSec = (int)(previousDurationSec + currentSessionSec);
             }
 
-            // Update summary
+            // Update summary với thời gian thực tế đã tập
             if (currentSession.getSummary() == null) {
                 currentSession.setSummary(new Session.SessionSummary());
             }
-            currentSession.getSummary().setDurationSec((int) durationSec);
+            currentSession.getSummary().setDurationSec(durationSec);
             
             // Estimate calories (simple calculation based on duration)
             int estimatedKcal = (int) (durationSec * 0.1); // Rough estimate: 0.1 kcal per second
             currentSession.getSummary().setEstKcal(estimatedKcal);
 
-            Log.d(TAG, "Finishing workout - Duration: " + durationSec + "s, Calories: " + estimatedKcal);
+            Log.d(TAG, "Finishing workout - Duration: " + durationSec + "s (from display), Calories: " + estimatedKcal);
 
             // Save to Firebase and then navigate
             FirebaseService.getInstance().saveSession(currentSession, new FirebaseService.OnSessionSavedListener() {
@@ -468,6 +629,14 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
     }
 
     private void updateStartResumeButton() {
+        // Check if session is completed (from intent) - if so, hide button
+        boolean isCompleted = getIntent().getBooleanExtra("isCompleted", false);
+        if (isCompleted) {
+            binding.startResumeBtn.setVisibility(View.GONE);
+            Log.d(TAG, "Session is completed, hiding start/resume button");
+            return;
+        }
+        
         Session.PerExercise currentExercise = getCurrentExercise();
         if (currentExercise == null) {
             binding.startResumeBtn.setVisibility(View.GONE);
@@ -611,10 +780,23 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
 
 
     @Override
+    protected void onPause() {
+        super.onPause();
+        // Lưu thời gian thực tế đã tập khi pause (người dùng thoát hoặc chuyển app)
+        if (sessionTimer != null && !isFinishing()) {
+            saveActiveDuration();
+        }
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
         if (sessionTimer != null) {
             sessionTimer.cancel();
+        }
+        // Lưu thời gian thực tế đã tập khi destroy (nếu chưa lưu trong onPause)
+        if (!isFinishing()) {
+            saveActiveDuration();
         }
     }
 

@@ -327,28 +327,36 @@ public class CompletedExerciseActivity extends AppCompatActivity {
             tvHeaderTitle.setText("Hoàn thành bài tập");
         }
 
-        // Update duration
-        if (session.getSummary() != null) {
-            int durationSec = session.getSummary().getDurationSec();
-            int minutes = durationSec / 60;
-            int seconds = durationSec % 60;
-            if (minutes > 0) {
-                if (seconds > 0) {
-                    tvDurationValue.setText(minutes + " phút " + seconds + " giây");
-                } else {
-                    tvDurationValue.setText(minutes + " phút");
-                }
-            } else {
-                tvDurationValue.setText(seconds + " giây");
-            }
-
-            // Update calories
-            int calories = session.getSummary().getEstKcal();
-            tvCalories.setText(calories + " kcal");
-        } else {
-            tvDurationValue.setText("0 phút");
-            tvCalories.setText("0 kcal");
+        // Update duration - lấy từ summary.durationSec (thời gian thực tế đã tập)
+        int durationSec = 0;
+        if (session.getSummary() != null && session.getSummary().getDurationSec() > 0) {
+            durationSec = session.getSummary().getDurationSec();
+        } else if (session.getEndedAt() > 0 && session.getStartedAt() > 0) {
+            // Fallback: tính từ endedAt - startedAt nếu summary không có
+            durationSec = (int)(session.getEndedAt() - session.getStartedAt());
         }
+        
+        int minutes = durationSec / 60;
+        int seconds = durationSec % 60;
+        if (minutes > 0) {
+            if (seconds > 0) {
+                tvDurationValue.setText(minutes + " phút " + seconds + " giây");
+            } else {
+                tvDurationValue.setText(minutes + " phút");
+            }
+        } else {
+            tvDurationValue.setText(seconds + " giây");
+        }
+
+        // Update calories
+        int calories = 0;
+        if (session.getSummary() != null) {
+            calories = session.getSummary().getEstKcal();
+        } else {
+            // Estimate calories nếu summary không có
+            calories = (int)(durationSec * 0.1);
+        }
+        tvCalories.setText(calories + " kcal");
 
         // Update level - lấy từ exercise đầu tiên hoặc tính trung bình
         String averageLevel = calculateAverageLevel(session);

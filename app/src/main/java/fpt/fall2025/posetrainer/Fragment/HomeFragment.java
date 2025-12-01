@@ -2,7 +2,6 @@ package fpt.fall2025.posetrainer.Fragment;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.*;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -11,7 +10,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import fpt.fall2025.posetrainer.Activity.SearchActivity;
 import fpt.fall2025.posetrainer.Adapter.WorkoutTemplateAdapter;
@@ -31,12 +29,8 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.bumptech.glide.Glide;
 
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.Calendar;
 
 public class HomeFragment extends Fragment {
-    private static final String TAG = "HomeFragment";
     private FragmentHomeBinding binding;
     private ArrayList<WorkoutTemplate> workoutTemplates;
     private ArrayList<WorkoutTemplate> filteredWorkoutTemplates;
@@ -190,8 +184,6 @@ public class HomeFragment extends Fragment {
             if (getActivity() instanceof MainActivity) {
                 MainActivity mainActivity = (MainActivity) getActivity();
                 mainActivity.openNotificationFragment();
-            } else {
-                Log.w(TAG, "Activity không phải MainActivity, không thể mở NotificationFragment");
             }
         });
     }
@@ -204,7 +196,6 @@ public class HomeFragment extends Fragment {
     private void loadUnreadNotificationCount() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser == null) {
-            Log.w(TAG, "User chưa đăng nhập, không thể load notification count");
             return;
         }
         
@@ -213,16 +204,13 @@ public class HomeFragment extends Fragment {
         // Debounce: Chỉ load nếu đã qua 5 giây từ lần update cuối
         long currentTime = System.currentTimeMillis();
         if (currentTime - lastNotificationCountUpdate < NOTIFICATION_COUNT_UPDATE_INTERVAL) {
-            Log.d(TAG, "Bỏ qua load notification count (debounce)");
             return;
         }
         
         lastNotificationCountUpdate = currentTime;
-        Log.d(TAG, "Đang load số lượng thông báo chưa đọc cho user: " + uid);
         
         // Gọi FirebaseService để đếm thông báo chưa đọc
         FirebaseService.getInstance().countUnreadNotifications(uid, count -> {
-            Log.d(TAG, "Số thông báo chưa đọc: " + count);
             updateNotificationBadge(count);
         });
     }
@@ -263,11 +251,9 @@ public class HomeFragment extends Fragment {
      */
     private void loadCollections() {
         if (getActivity() == null || !(getActivity() instanceof androidx.appcompat.app.AppCompatActivity)) {
-            Log.w(TAG, "Activity không tồn tại, không thể load collections");
             return;
         }
 
-        Log.d(TAG, "Đang load collections từ Firebase...");
         FirebaseService.getInstance().loadCollections(
                 (androidx.appcompat.app.AppCompatActivity) getActivity(),
                 loadedCollections -> {
@@ -277,7 +263,6 @@ public class HomeFragment extends Fragment {
 
                     if (loadedCollections != null) {
                         collections = loadedCollections;
-                        Log.d(TAG, "Đã load " + collections.size() + " collections");
 
                         // Update adapter
                         if (collectionAdapter != null) {
@@ -291,7 +276,6 @@ public class HomeFragment extends Fragment {
                         if (collectionAdapter != null) {
                             collectionAdapter.updateList(collections);
                         }
-                        Log.e(TAG, "Không thể load collections");
                     }
                 }
         );
@@ -332,8 +316,6 @@ public class HomeFragment extends Fragment {
                         }
                     }
 
-                    Log.d(TAG, "Đã load " + recentSessions.size() + " recent sessions");
-
                     // Update adapter
                     if (recentActivityAdapter != null) {
                         recentActivityAdapter.updateSessions(recentSessions);
@@ -351,7 +333,6 @@ public class HomeFragment extends Fragment {
                     if (!isAdded() || binding == null) {
                         return;
                     }
-                    Log.e(TAG, "Error loading recent activity: " + e.getMessage());
                     recentSessions.clear();
                     if (recentActivityAdapter != null) {
                         recentActivityAdapter.updateSessions(recentSessions);
@@ -378,8 +359,6 @@ public class HomeFragment extends Fragment {
      */
     private void showEmptyStateForFeatured() {
         // Có thể thêm empty state view nếu cần
-        // Hiện tại chỉ log
-        Log.d(TAG, "Featured workouts empty");
     }
 
     /**
@@ -387,7 +366,6 @@ public class HomeFragment extends Fragment {
      */
     private void showEmptyStateForPersonalized() {
         // Có thể thêm empty state view nếu cần
-        Log.d(TAG, "Personalized workouts empty");
     }
 
     /**
@@ -395,7 +373,6 @@ public class HomeFragment extends Fragment {
      */
     private void showEmptyStateForRecentActivity() {
         // Có thể thêm empty state view nếu cần
-        Log.d(TAG, "Recent activity empty");
     }
 
     /**
@@ -405,7 +382,6 @@ public class HomeFragment extends Fragment {
         if (getActivity() != null && isAdded()) {
             Toast.makeText(getActivity(), message, Toast.LENGTH_SHORT).show();
         }
-        Log.e(TAG, "Error state: " + message);
     }
 
     /**
@@ -425,12 +401,9 @@ public class HomeFragment extends Fragment {
             } else {
                 badgeTextView.setText(String.valueOf(count));
             }
-            
-            Log.d(TAG, "✓ Hiển thị badge với số lượng: " + count);
         } else {
             // Không có thông báo chưa đọc → Ẩn badge
             badgeTextView.setVisibility(android.view.View.GONE);
-            Log.d(TAG, "✓ Ẩn badge (không có thông báo chưa đọc)");
         }
     }
 
@@ -441,7 +414,6 @@ public class HomeFragment extends Fragment {
     private void loadWorkoutTemplates() {
         // Kiểm tra xem đã load chưa để tránh reload không cần thiết
         if (isWorkoutTemplatesLoaded && workoutTemplates != null && !workoutTemplates.isEmpty()) {
-            Log.d(TAG, "Workout templates đã được load, bỏ qua reload");
             applyFilters();
             loadRecommendedWorkouts();
             loadPersonalizedWorkouts();
@@ -450,22 +422,18 @@ public class HomeFragment extends Fragment {
         
         // Kiểm tra activity có tồn tại không
         if (getActivity() == null || !(getActivity() instanceof androidx.appcompat.app.AppCompatActivity)) {
-            Log.w(TAG, "Activity không tồn tại, không thể load workout templates");
             return;
         }
         
-        Log.d(TAG, "Đang load workout templates từ Firebase...");
         FirebaseService.getInstance().loadWorkoutTemplates(
                 (androidx.appcompat.app.AppCompatActivity) getActivity(),
                 templates -> {
                     if (templates != null) {
                         workoutTemplates = templates;
                         isWorkoutTemplatesLoaded = true;
-                        Log.d(TAG, "Đã load " + templates.size() + " workout templates");
                     } else {
                         workoutTemplates = new ArrayList<>();
                         isWorkoutTemplatesLoaded = true;
-                        Log.w(TAG, "Không có workout templates nào được load");
                     }
                     applyFilters();
                     // Load recommended và personalized workouts sau khi có data
@@ -481,7 +449,6 @@ public class HomeFragment extends Fragment {
      */
     private void loadRecommendedWorkouts() {
         if (workoutTemplates == null || workoutTemplates.isEmpty()) {
-            Log.w(TAG, "Không có workout templates để recommend");
             featuredWorkouts.clear();
             if (featuredAdapter != null) {
                 featuredAdapter.updateList(featuredWorkouts);
@@ -505,8 +472,6 @@ public class HomeFragment extends Fragment {
             featuredWorkouts.add(sortedByDate.get(i));
         }
         
-        Log.d(TAG, "Đã load " + featuredWorkouts.size() + " featured workouts");
-        
         // Update adapter
         if (featuredAdapter != null) {
             featuredAdapter.updateList(featuredWorkouts);
@@ -527,7 +492,6 @@ public class HomeFragment extends Fragment {
      */
     private void loadPersonalizedWorkouts() {
         if (workoutTemplates == null || workoutTemplates.isEmpty()) {
-            Log.w(TAG, "Không có workout templates để personalize");
             personalizedWorkouts.clear();
             if (personalizedAdapter != null) {
                 personalizedAdapter.updateList(personalizedWorkouts);
@@ -573,8 +537,6 @@ public class HomeFragment extends Fragment {
             personalizedWorkouts.add(levelFiltered.get(i));
         }
         
-        Log.d(TAG, "Đã load " + personalizedWorkouts.size() + " personalized workouts");
-        
         // Update adapter
         if (personalizedAdapter != null) {
             personalizedAdapter.updateList(personalizedWorkouts);
@@ -613,7 +575,6 @@ public class HomeFragment extends Fragment {
         );
 
         binding.swipeRefreshLayout.setOnRefreshListener(() -> {
-            Log.d(TAG, "Pull to refresh triggered");
             refreshAllData();
         });
     }
@@ -649,7 +610,6 @@ public class HomeFragment extends Fragment {
     private void loadCurrentUserInfo() {
         FirebaseUser current = mAuth.getCurrentUser();
         if (current == null) {
-            Log.w(TAG, "Không tìm thấy người dùng hiện tại");
             return;
         }
 
@@ -657,7 +617,6 @@ public class HomeFragment extends Fragment {
         
         // Kiểm tra cache: Chỉ reload nếu user thay đổi hoặc chưa load lần nào
         if (cachedUserId != null && cachedUserId.equals(uid) && binding.ivUserAvatar.getDrawable() != null) {
-            Log.d(TAG, "User info đã được cache, bỏ qua reload");
             return;
         }
         
@@ -665,7 +624,6 @@ public class HomeFragment extends Fragment {
         
         // Kiểm tra fragment view có còn attached không
         if (!isAdded() || getView() == null) {
-            Log.w(TAG, "Fragment không còn attached, bỏ qua load user info");
             return;
         }
         
@@ -704,7 +662,6 @@ public class HomeFragment extends Fragment {
                     if (!isAdded() || getView() == null || binding == null) {
                         return;
                     }
-                    Log.e(TAG, "Lỗi: Không thể tải thông tin người dùng", e);
                     updateUserUIFromAuth(current);
                 });
     }
@@ -920,8 +877,6 @@ public class HomeFragment extends Fragment {
             adapter = new WorkoutTemplateAdapter(filteredWorkoutTemplates);
             binding.view1.setAdapter(adapter);
         }
-        
-        Log.d(TAG, "Đã lọc bài tập: " + filteredWorkoutTemplates.size() + " / " + workoutTemplates.size());
     }
 
     @Override

@@ -2,7 +2,6 @@ package fpt.fall2025.posetrainer.Fragment;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -33,7 +32,6 @@ import java.util.ArrayList;
  * Cho phép xem và xóa các workout đã tạo
  */
 public class MyWorkoutFragment extends Fragment {
-    private static final String TAG = "MyWorkoutFragment";
     private FragmentMyworkoutBinding binding;
     private ArrayList<UserWorkout> userWorkouts; // Workouts của user (không phải AI)
     private ArrayList<UserWorkout> aiWorkouts; // Workouts từ AI
@@ -94,7 +92,6 @@ public class MyWorkoutFragment extends Fragment {
     private void loadUserFromFirestore() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser == null) {
-            Log.w(TAG, "Cảnh báo: Chưa có người dùng đăng nhập");
             // Show empty state with login message
             showEmptyState("Vui lòng đăng nhập để xem bài tập của bạn");
             return;
@@ -104,7 +101,6 @@ public class MyWorkoutFragment extends Fragment {
         
         // Kiểm tra cache: Chỉ reload nếu user thay đổi hoặc chưa load lần nào
         if (cachedUserId != null && cachedUserId.equals(uid) && isWorkoutsLoaded) {
-            Log.d(TAG, "User data và workouts đã được cache, bỏ qua reload");
             // Vẫn cần load workouts để đảm bảo data mới nhất
             loadUserWorkouts(uid);
             return;
@@ -112,7 +108,6 @@ public class MyWorkoutFragment extends Fragment {
         
         // Kiểm tra fragment view có còn attached không
         if (!isAdded() || binding == null) {
-            Log.w(TAG, "Fragment không còn attached, bỏ qua load user info");
             return;
         }
         
@@ -155,7 +150,6 @@ public class MyWorkoutFragment extends Fragment {
                     if (!isAdded() || binding == null) {
                         return;
                     }
-                    Log.e(TAG, "Lỗi: Không thể tải thông tin người dùng", e);
                     updateUserUIFromAuth(currentUser);
                     loadUserWorkouts(uid);
                 });
@@ -245,7 +239,6 @@ public class MyWorkoutFragment extends Fragment {
      */
     private void filterAndDisplayWorkouts(ArrayList<UserWorkout> allWorkouts) {
         if (allWorkouts == null || allWorkouts.isEmpty()) {
-            Log.d(TAG, "Không có workouts để filter");
             userWorkouts.clear();
             aiWorkouts.clear();
             updateWorkoutCounts();
@@ -278,8 +271,6 @@ public class MyWorkoutFragment extends Fragment {
         
         // Cập nhật count texts
         updateWorkoutCounts();
-        
-        Log.d(TAG, "Đã filter: " + userWorkouts.size() + " user workouts, " + aiWorkouts.size() + " AI workouts");
     }
 
     /**
@@ -302,25 +293,17 @@ public class MyWorkoutFragment extends Fragment {
         // Kiểm tra cache: Chỉ reload nếu user thay đổi hoặc chưa load lần nào
         if (cachedUserId != null && cachedUserId.equals(userId) && isWorkoutsLoaded && 
             userWorkouts != null && !userWorkouts.isEmpty()) {
-            Log.d(TAG, "Workouts đã được cache, bỏ qua reload");
             return;
         }
         
         // Kiểm tra activity có tồn tại không
         if (getActivity() == null || !(getActivity() instanceof androidx.appcompat.app.AppCompatActivity)) {
-            Log.w(TAG, "Activity không tồn tại, không thể load workouts");
             return;
         }
-        
-        Log.d(TAG, "========== ĐANG TẢI BÀI TẬP CỦA NGƯỜI DÙNG ==========");
-        Log.d(TAG, "Đang tải bài tập của người dùng với ID: " + userId);
         
         FirebaseService.getInstance().loadUserWorkouts(userId, (androidx.appcompat.app.AppCompatActivity) getActivity(), new FirebaseService.OnUserWorkoutsLoadedListener() {
             @Override
             public void onUserWorkoutsLoaded(ArrayList<UserWorkout> workouts) {
-                Log.d(TAG, "========== CALLBACK TẢI BÀI TẬP ==========");
-                Log.d(TAG, "Đã nhận được " + (workouts != null ? workouts.size() : 0) + " bài tập");
-                
                 isWorkoutsLoaded = true;
                 
                 // Kiểm tra fragment view có còn attached không
@@ -330,8 +313,6 @@ public class MyWorkoutFragment extends Fragment {
                 
                 // Filter và hiển thị workouts vào 2 RecyclerView riêng biệt
                 filterAndDisplayWorkouts(workouts != null ? workouts : new ArrayList<>());
-                
-                Log.d(TAG, "========== KẾT THÚC CALLBACK TẢI BÀI TẬP ==========");
             }
         });
     }
@@ -365,7 +346,6 @@ public class MyWorkoutFragment extends Fragment {
                 // Reload workouts mỗi khi fragment resume để đảm bảo data mới nhất
                 FirebaseUser currentUser = mAuth.getCurrentUser();
                 if (currentUser != null) {
-                    Log.d(TAG, "Fragment resume - reloading workouts để cập nhật data mới");
                     isWorkoutsLoaded = false; // Reset flag để force reload
                     loadUserWorkouts(currentUser.getUid());
                 }
@@ -378,7 +358,6 @@ public class MyWorkoutFragment extends Fragment {
         super.onHiddenChanged(hidden);
         // Reload workouts khi fragment được show lại từ hidden state
         if (!hidden && isAdded() && isResumed()) {
-            Log.d(TAG, "Fragment được show lại - reloading workouts");
             FirebaseUser currentUser = mAuth.getCurrentUser();
             if (currentUser != null) {
                 isWorkoutsLoaded = false; // Reset flag để force reload
@@ -392,7 +371,6 @@ public class MyWorkoutFragment extends Fragment {
      */
     public void refreshWorkouts() {
         if (isAdded() && isResumed()) {
-            Log.d(TAG, "Manual refresh workouts được gọi");
             FirebaseUser currentUser = mAuth.getCurrentUser();
             if (currentUser != null) {
                 isWorkoutsLoaded = false; // Reset flag để force reload

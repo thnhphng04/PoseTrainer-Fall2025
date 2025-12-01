@@ -2,7 +2,6 @@ package fpt.fall2025.posetrainer.Fragment;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.*;
 import android.widget.Toast;
 
@@ -15,20 +14,20 @@ import com.google.android.gms.auth.api.signin.*;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import fpt.fall2025.posetrainer.Activity.AchievementsActivity;
 import fpt.fall2025.posetrainer.Activity.EditGoalsActivity;
 import fpt.fall2025.posetrainer.Activity.EditProfileActivity;
 import fpt.fall2025.posetrainer.Activity.LoginActivity;
 import fpt.fall2025.posetrainer.Activity.WorkoutHistoryActivity;
+import fpt.fall2025.posetrainer.Domain.Session;
 import fpt.fall2025.posetrainer.Domain.User;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.databinding.FragmentProfileBinding;
 
 public class ProfileFragment extends Fragment {
-    private static final String TAG = "ProfileFragment";
-
     private FragmentProfileBinding binding;
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
@@ -37,6 +36,7 @@ public class ProfileFragment extends Fragment {
     // Cache để tránh reload không cần thiết
     private String cachedUserId = null;
     private boolean isUserDataLoaded = false;
+    private boolean isStatsLoaded = false; // Cache riêng cho stats
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
@@ -116,13 +116,11 @@ public class ProfileFragment extends Fragment {
         
         // Kiểm tra cache: Chỉ reload nếu user thay đổi hoặc chưa load lần nào
         if (cachedUserId != null && cachedUserId.equals(uid) && isUserDataLoaded) {
-            Log.d(TAG, "User data đã được cache, bỏ qua reload");
             return;
         }
         
         // Kiểm tra fragment view có còn attached không
         if (!isAdded() || binding == null) {
-            Log.w(TAG, "Fragment không còn attached, bỏ qua load user data");
             return;
         }
 
@@ -168,7 +166,6 @@ public class ProfileFragment extends Fragment {
                     
                     setLoading(false);
                     isUserDataLoaded = true;
-                    Log.e(TAG, "loadUserFromFirestore: " + e.getMessage());
                     bindFromAuth(currentUser);
                 });
     }
@@ -202,27 +199,16 @@ public class ProfileFragment extends Fragment {
                         .circleCrop()
                         .into(binding.profileImage);
             }
-
-            if (binding.ivUserAvatarSmall != null) {
-                Glide.with(this)
-                        .load(photoUrl)
-                        .placeholder(R.drawable.profile)
-                        .error(R.drawable.profile)
-                        .circleCrop()
-                        .into(binding.ivUserAvatarSmall);
-            }
         } else {
             if (binding.profileImage != null) {
                 binding.profileImage.setImageResource(R.drawable.profile);
-            }
-            if (binding.ivUserAvatarSmall != null) {
-                binding.ivUserAvatarSmall.setImageResource(R.drawable.profile);
             }
         }
     }
 
     /**
-     * ✅ Load workout statistics từ Firestore
+     * ✅ Load workout statistics từ bảng sessions theo uid người dùng
+     * Tính toán từ các sessions đã hoàn thành (endedAt > 0)
      * Đã tối ưu với cache để tránh reload không cần thiết
      */
     private void loadUserStats() {
@@ -231,39 +217,78 @@ public class ProfileFragment extends Fragment {
 
         String uid = currentUser.getUid();
         
-        // Kiểm tra cache: Chỉ reload nếu user thay đổi hoặc chưa load lần nào
-        if (cachedUserId != null && cachedUserId.equals(uid) && isUserDataLoaded) {
-            Log.d(TAG, "User stats đã được cache, bỏ qua reload");
+        // Kiểm tra cache: Chỉ reload nếu user thay đổi hoặc chưa load stats lần nào
+        if (cachedUserId != null && cachedUserId.equals(uid) && isStatsLoaded) {
             return;
         }
         
         // Kiểm tra fragment view có còn attached không
         if (!isAdded() || binding == null) {
-            Log.w(TAG, "Fragment không còn attached, bỏ qua load user stats");
             return;
         }
 
-        db.collection("users").document(uid)
+        // Query sessions của user đã hoàn thành (endedAt > 0)
+        db.collection("sessions")
+                .whereEqualTo("uid", uid)
+                .whereGreaterThan("endedAt", 0)
                 .get()
-                .addOnSuccessListener(doc -> {
+                .addOnSuccessListener(queryDocumentSnapshots -> {
                     // Check if fragment view is still attached
                     if (binding == null || !isAdded()) {
                         return;
                     }
                     
-                    if (doc.exists()) {
-                        // Lấy stats từ Firestore
-                        long workoutCount = doc.contains("workoutCount") ? doc.getLong("workoutCount") : 0;
-                        long calories = doc.contains("totalCalories") ? doc.getLong("totalCalories") : 0;
-                        long duration = doc.contains("totalDuration") ? doc.getLong("totalDuration") : 0;
-
-                        binding.tvWorkoutCount.setText(String.valueOf(workoutCount));
-                        binding.tvCalories.setText(String.valueOf(calories));
-                        binding.tvDuration.setText(String.valueOf(duration));
-                    } else {
-                        // Set giá trị mặc định
-                        setDefaultStats();
+                    int workoutCount = 0;
+                    int totalCalories = 0;
+                    int totalDurationSec = 0;
+                    
+                    // Tính toán từ các sessions
+                    for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
+                        try {
+                            Session session = document.toObject(Session.class);
+                            if (session == null) continue;
+                            
+                            // Chỉ tính sessions đã hoàn thành (endedAt > 0)
+                            if (session.getEndedAt() <= 0) continue;
+                            
+                            workoutCount++;
+                            
+                            // Cộng dồn calories (ưu tiên từ summary, fallback = 0)
+                            if (session.getSummary() != null) {
+                                int estKcal = session.getSummary().getEstKcal();
+                                if (estKcal > 0) {
+                                    totalCalories += estKcal;
+                                }
+                            }
+                            
+                            // Cộng dồn duration (giây)
+                            // Ưu tiên từ summary, fallback tính từ endedAt - startedAt
+                            int durationSec = 0;
+                            if (session.getSummary() != null && session.getSummary().getDurationSec() > 0) {
+                                durationSec = session.getSummary().getDurationSec();
+                            } else if (session.getEndedAt() > 0 && session.getStartedAt() > 0) {
+                                // Fallback: tính từ endedAt - startedAt (cả hai đều là seconds)
+                                durationSec = (int) (session.getEndedAt() - session.getStartedAt());
+                            }
+                            
+                            if (durationSec > 0) {
+                                totalDurationSec += durationSec;
+                            }
+                        } catch (Exception e) {
+                            // Error parsing session, skip
+                        }
                     }
+                    
+                    // Chuyển duration từ giây sang phút
+                    int totalDurationMin = totalDurationSec / 60;
+                    
+                    // Hiển thị kết quả
+                    binding.tvWorkoutCount.setText(String.valueOf(workoutCount));
+                    binding.tvCalories.setText(String.valueOf(totalCalories));
+                    binding.tvDuration.setText(String.valueOf(totalDurationMin));
+                    
+                    // Đánh dấu đã load stats
+                    isStatsLoaded = true;
                 })
                 .addOnFailureListener(e -> {
                     // Check if fragment view is still attached
@@ -271,8 +296,8 @@ public class ProfileFragment extends Fragment {
                         return;
                     }
                     
-                    Log.e(TAG, "loadUserStats error: " + e.getMessage());
                     setDefaultStats();
+                    isStatsLoaded = true; // Vẫn đánh dấu đã load để tránh retry liên tục
                 });
     }
 
@@ -370,7 +395,6 @@ public class ProfileFragment extends Fragment {
                         goLogin();
                     })
                     .addOnFailureListener(e -> {
-                        Log.w(TAG, "Google signOut failed: " + e.getMessage());
                         safeFirebaseSignOut();
                         goLogin();
                     });
@@ -384,7 +408,7 @@ public class ProfileFragment extends Fragment {
         try {
             FirebaseAuth.getInstance().signOut();
         } catch (Exception e) {
-            Log.w(TAG, "Firebase signOut error: " + e.getMessage());
+            // Error during sign out
         }
     }
 
@@ -419,7 +443,6 @@ public class ProfileFragment extends Fragment {
         // User có thể pull-to-refresh hoặc quay lại fragment này để reload
         if (!hidden && isAdded() && isResumed()) {
             // Chỉ check cache, không reload
-            Log.d(TAG, "Fragment visible, kiểm tra cache");
         }
     }
 
@@ -428,6 +451,7 @@ public class ProfileFragment extends Fragment {
         super.onDestroyView();
         // Reset flag khi view bị destroy
         isDataLoaded = false;
+        isStatsLoaded = false; // Reset stats cache khi view bị destroy
         // Không reset cachedUserId và isUserDataLoaded để cache vẫn hoạt động khi fragment bị recreate
         binding = null;
     }

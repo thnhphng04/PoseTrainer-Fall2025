@@ -99,6 +99,9 @@ public class SessionAdapter extends RecyclerView.Adapter<SessionAdapter.SessionV
         holder.itemView.setOnClickListener(v -> {
             Intent intent = new Intent(context, SessionActivity.class);
             intent.putExtra("sessionId", session.getId());
+            // Check if session is completed and pass flag
+            boolean isCompleted = isSessionCompleted(session);
+            intent.putExtra("isCompleted", isCompleted);
             context.startActivity(intent);
         });
     }
@@ -106,6 +109,37 @@ public class SessionAdapter extends RecyclerView.Adapter<SessionAdapter.SessionV
     @Override
     public int getItemCount() {
         return sessions.size();
+    }
+
+    /**
+     * Kiểm tra session đã completed chưa
+     * Session được coi là completed khi:
+     * 1. endedAt > 0 và endedAt > startedAt (đã kết thúc)
+     * 2. Tất cả PerExercise có state = "completed"
+     */
+    private boolean isSessionCompleted(Session session) {
+        if (session == null) {
+            return false;
+        }
+        
+        // Kiểm tra 1: Session phải có endedAt > 0 và endedAt > startedAt
+        if (session.getEndedAt() == 0 || session.getEndedAt() <= session.getStartedAt()) {
+            return false;
+        }
+        
+        // Kiểm tra 2: Tất cả PerExercise phải có state = "completed"
+        if (session.getPerExercise() == null || session.getPerExercise().isEmpty()) {
+            return false;
+        }
+        
+        for (Session.PerExercise perExercise : session.getPerExercise()) {
+            String exerciseState = perExercise.getState();
+            if (exerciseState == null || !"completed".equals(exerciseState)) {
+                return false;
+            }
+        }
+        
+        return true;
     }
 
     public static class SessionViewHolder extends RecyclerView.ViewHolder {

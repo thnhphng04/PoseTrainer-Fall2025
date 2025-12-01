@@ -5,7 +5,6 @@ import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.os.Bundle;
 import android.text.TextUtils;
-import android.util.Log;
 import android.view.*;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -44,11 +43,10 @@ import fpt.fall2025.posetrainer.Dialog.LikeListDialog;
 import fpt.fall2025.posetrainer.Domain.Community;
 import fpt.fall2025.posetrainer.Domain.User;
 import fpt.fall2025.posetrainer.R;
+import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.View.CommunityViewModel;
 
 public class CommunityFragment extends Fragment {
-
-    private static final String TAG = "CommunityFragment";
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
     private ImageView imgAvatar;
@@ -61,7 +59,8 @@ public class CommunityFragment extends Fragment {
     private SwipeRefreshLayout swipeRefresh;
     private TabLayout tabLayout;
     private SearchView searchView;
-    private ImageButton btnNotifications;
+    private View btnNotifications;
+    private TextView tvNotificationBadge;
     private LinearLayout emptyState, loadingState;
     
     // Tab state
@@ -72,6 +71,10 @@ public class CommunityFragment extends Fragment {
     private String cachedUserId = null;
     private String cachedPhotoUrl = null;
     private boolean isFragmentVisible = false;
+    
+    // Notification badge
+    private long lastNotificationCountUpdate = 0;
+    private static final long NOTIFICATION_COUNT_UPDATE_INTERVAL = 5000; // 5 giây
 
 
     @Nullable
@@ -98,6 +101,7 @@ public class CommunityFragment extends Fragment {
         tabLayout = v.findViewById(R.id.tabLayout);
         searchView = v.findViewById(R.id.searchView);  // ← PHẢI FIND VIEW TRƯỚC
         btnNotifications = v.findViewById(R.id.btnNotifications);
+        tvNotificationBadge = v.findViewById(R.id.tv_notification_badge);
         emptyState = v.findViewById(R.id.emptyState);
         loadingState = v.findViewById(R.id.loadingState);
 
@@ -129,6 +133,9 @@ public class CommunityFragment extends Fragment {
 
         // Load avatar user
         loadUserFromFirestore();
+        
+        // Load notification count
+        loadUnreadNotificationCount();
 
         // Setup RecyclerView
         layoutManager = new LinearLayoutManager(getContext());
@@ -188,7 +195,7 @@ public class CommunityFragment extends Fragment {
                 closeIcon.setColorFilter(Color.parseColor("#99ffffff"), PorterDuff.Mode.SRC_IN);
             }
         } catch (Exception e) {
-            Log.e(TAG, "Error customizing SearchView: " + e.getMessage());
+            // Error customizing SearchView
         }
 
         searchView.setQuery("", false);
@@ -257,6 +264,58 @@ public class CommunityFragment extends Fragment {
         swipeRefresh.setRefreshing(false);
     }
 
+    /**
+     * Load và hiển thị số lượng thông báo chưa đọc
+     * Được gọi khi fragment hiển thị và định kỳ để cập nhật
+     * Đã tối ưu với debounce để tránh load quá nhiều lần
+     */
+    private void loadUnreadNotificationCount() {
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser == null) {
+            return;
+        }
+        
+        String uid = currentUser.getUid();
+        
+        // Debounce: Chỉ load nếu đã qua 5 giây từ lần update cuối
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastNotificationCountUpdate < NOTIFICATION_COUNT_UPDATE_INTERVAL) {
+            return;
+        }
+        
+        lastNotificationCountUpdate = currentTime;
+        
+        // Gọi FirebaseService để đếm thông báo chưa đọc
+        FirebaseService.getInstance().countUnreadNotifications(uid, count -> {
+            updateNotificationBadge(count);
+        });
+    }
+    
+    /**
+     * Cập nhật badge hiển thị số thông báo chưa đọc
+     * @param count Số lượng thông báo chưa đọc
+     */
+    private void updateNotificationBadge(int count) {
+        if (tvNotificationBadge == null) {
+            return;
+        }
+        
+        if (count > 0) {
+            // Có thông báo chưa đọc → Hiển thị badge
+            tvNotificationBadge.setVisibility(View.VISIBLE);
+            
+            // Hiển thị số lượng, nếu > 99 thì hiển thị "99+"
+            if (count > 99) {
+                tvNotificationBadge.setText("99+");
+            } else {
+                tvNotificationBadge.setText(String.valueOf(count));
+            }
+        } else {
+            // Không có thông báo chưa đọc → Ẩn badge
+            tvNotificationBadge.setVisibility(View.GONE);
+        }
+    }
+
     private void loadFeed() {
         showLoading(true);
         
@@ -316,13 +375,6 @@ public class CommunityFragment extends Fragment {
 
             @Override
             protected void onBindViewHolder(@NonNull PostVH h, int position, @NonNull Community p) {
-                Log.d("CommunityFragment", "Binding post at position " + position + ", id: " + p.id);
-                Log.d("CommunityFragment", "Post " + p.id + " - imageUrls: " + (p.imageUrls != null ? p.imageUrls.size() : "null"));
-                if (p.imageUrls != null && !p.imageUrls.isEmpty()) {
-                    for (int i = 0; i < p.imageUrls.size(); i++) {
-                        Log.d("CommunityFragment", "  imageUrls[" + i + "]: " + p.imageUrls.get(i));
-                    }
-                }
                 h.bind(p);
             }
 
@@ -459,13 +511,11 @@ public class CommunityFragment extends Fragment {
         String uid = currentUser.getUid();
         
         if (cachedUserId != null && cachedUserId.equals(uid) && cachedPhotoUrl != null) {
-            Log.d(TAG, "User avatar đã được cache, sử dụng cache");
             bindUser(cachedPhotoUrl);
             return;
         }
         
         if (!isAdded() || getView() == null || imgAvatar == null) {
-            Log.w(TAG, "Fragment không còn attached, bỏ qua load user avatar");
             return;
         }
 
@@ -500,7 +550,6 @@ public class CommunityFragment extends Fragment {
                     if (!isAdded() || getView() == null || imgAvatar == null) {
                         return;
                     }
-                    Log.e(TAG, "loadUserFromFirestore: " + e.getMessage());
                     String photoUrl = currentUser.getPhotoUrl() != null ? 
                             currentUser.getPhotoUrl().toString() : null;
                     cachedPhotoUrl = photoUrl;
@@ -629,7 +678,7 @@ public class CommunityFragment extends Fragment {
             }
 
             tvContent.setText(p.content != null ? p.content : "");
-            tvCounts.setText("❤ " + p.likesCount + "   💬 " + p.commentsCount);
+            tvCounts.setText("💬 " + p.commentsCount);
             if (tvLikesCount != null) {
                 tvLikesCount.setText("❤ " + p.likesCount);
                 tvLikesCount.setOnClickListener(v -> showLikeList(p.id));
@@ -641,40 +690,24 @@ public class CommunityFragment extends Fragment {
             } else tvTime.setText("");
 
             // Images - hỗ trợ nhiều ảnh
-            // Debug: Kiểm tra dữ liệu từ Firestore
-            android.util.Log.d("PostVH", "=== BINDING POST " + p.id + " ===");
-            android.util.Log.d("PostVH", "p.imageUrls: " + (p.imageUrls != null ? "size=" + p.imageUrls.size() : "NULL"));
-            android.util.Log.d("PostVH", "p.imageUrl: " + (p.imageUrl != null && !p.imageUrl.isEmpty() ? p.imageUrl : "NULL/EMPTY"));
-            
-            if (p.imageUrls != null) {
-                for (int i = 0; i < p.imageUrls.size(); i++) {
-                    android.util.Log.d("PostVH", "  imageUrls[" + i + "]: " + p.imageUrls.get(i));
-                }
-            }
-            
             // Kiểm tra cả imageUrls (mới) và imageUrl (cũ) để backward compatibility
             final List<String> imageUrls;
             
             // Ưu tiên imageUrls từ Firestore
             if (p.imageUrls != null && !p.imageUrls.isEmpty()) {
                 imageUrls = p.imageUrls;
-                android.util.Log.d("PostVH", "✓ Sử dụng imageUrls với " + imageUrls.size() + " ảnh");
             } else if (p.imageUrl != null && !p.imageUrl.isEmpty()) {
                 // Backward compatibility: nếu chỉ có imageUrl đơn
                 List<String> tempList = new ArrayList<>();
                 tempList.add(p.imageUrl);
                 imageUrls = tempList;
-                android.util.Log.d("PostVH", "✓ Sử dụng imageUrl (backward compatibility)");
             } else {
                 imageUrls = null;
-                android.util.Log.d("PostVH", "✗ Không có ảnh nào");
             }
             
             if (imageUrls != null && !imageUrls.isEmpty()) {
-                android.util.Log.d("PostVH", ">>> Post " + p.id + " sẽ hiển thị " + imageUrls.size() + " ảnh <<<");
                 if (imageUrls.size() == 1) {
                     // Single image - dùng ImageView (backward compatibility)
-                    android.util.Log.d("PostVH", "→ 1 ảnh: Dùng ImageView");
                     // Ẩn container nhiều ảnh
                     if (containerMultipleImages != null) {
                         containerMultipleImages.setVisibility(View.GONE);
@@ -693,33 +726,20 @@ public class CommunityFragment extends Fragment {
                     });
                 } else {
                     // Multiple images - dùng RecyclerView horizontal
-                    android.util.Log.d("PostVH", "→ " + imageUrls.size() + " ảnh: Dùng RecyclerView");
                     // Ẩn ImageView đơn
                     ivImage.setVisibility(View.GONE);
                     
                     // Hiển thị container nhiều ảnh
                     if (containerMultipleImages != null && rvImages != null) {
-                        android.util.Log.d("PostVH", "  - Container và RecyclerView không null, bắt đầu setup");
-                        
                         // QUAN TRỌNG: Set visibility TRƯỚC KHI setup
                         containerMultipleImages.setVisibility(View.VISIBLE);
                         rvImages.setVisibility(View.VISIBLE);
-                        android.util.Log.d("PostVH", "  - Container visibility set to: " + containerMultipleImages.getVisibility() + " (VISIBLE=0)");
-                        android.util.Log.d("PostVH", "  - RecyclerView visibility set to: " + rvImages.getVisibility() + " (VISIBLE=0)");
                         
                         setupImageRecyclerView(rvImages, imageUrls);
                         setupIndicatorDots(imageUrls.size());
-                        
-                        android.util.Log.d("PostVH", "  - Sau setup - Container visibility: " + containerMultipleImages.getVisibility());
-                        android.util.Log.d("PostVH", "  - Sau setup - RecyclerView visibility: " + rvImages.getVisibility());
-                        android.util.Log.d("PostVH", "  - RecyclerView adapter: " + (rvImages.getAdapter() != null ? "NOT NULL" : "NULL"));
-                    } else {
-                        android.util.Log.e("PostVH", "  - ERROR: Container=" + (containerMultipleImages != null ? "NOT NULL" : "NULL") 
-                                + ", RecyclerView=" + (rvImages != null ? "NOT NULL" : "NULL"));
                     }
                 }
             } else {
-                android.util.Log.d("PostVH", ">>> Post " + p.id + " không có ảnh <<<");
                 ivImage.setVisibility(View.GONE);
                 if (containerMultipleImages != null) {
                     containerMultipleImages.setVisibility(View.GONE);
@@ -751,13 +771,13 @@ public class CommunityFragment extends Fragment {
                 
                 if (isLiked) {
                     currentLikesCount++;
-                    tvCounts.setText("❤ " + currentLikesCount + "   💬 " + currentCommentsCount);
+                    tvCounts.setText("💬 " + currentCommentsCount);
                     if (tvLikesCount != null) {
                         tvLikesCount.setText("❤ " + currentLikesCount);
                     }
                 } else {
                     currentLikesCount = Math.max(0, currentLikesCount - 1);
-                    tvCounts.setText("❤ " + currentLikesCount + "   💬 " + currentCommentsCount);
+                    tvCounts.setText("💬 " + currentCommentsCount);
                     if (tvLikesCount != null) {
                         tvLikesCount.setText("❤ " + currentLikesCount);
                     }
@@ -769,11 +789,11 @@ public class CommunityFragment extends Fragment {
                             isLiked = previousLiked;
                             currentLikesCount = previousLikesCount;
                             renderLike(isLiked);
-                            tvCounts.setText("❤ " + currentLikesCount + "   💬 " + currentCommentsCount);
+                            tvCounts.setText("💬 " + currentCommentsCount);
                             if (tvLikesCount != null) {
                                 tvLikesCount.setText("❤ " + currentLikesCount);
                             }
-                            Log.e("LIKE", "Error toggling like: " + e.getMessage());
+                            // Error toggling like
                         });
             });
 
@@ -854,13 +874,7 @@ public class CommunityFragment extends Fragment {
         
         private void setupImageRecyclerView(RecyclerView recyclerView, final List<String> imageUrls) {
             if (imageUrls == null || imageUrls.isEmpty()) {
-                android.util.Log.e("PostVH", "setupImageRecyclerView: imageUrls null hoặc empty!");
                 return;
-            }
-            
-            android.util.Log.d("PostVH", "=== SETUP RecyclerView với " + imageUrls.size() + " ảnh ===");
-            for (int i = 0; i < imageUrls.size(); i++) {
-                android.util.Log.d("PostVH", "  URL[" + i + "]: " + imageUrls.get(i));
             }
             
             // Setup LinearLayoutManager horizontal
@@ -900,7 +914,6 @@ public class CommunityFragment extends Fragment {
                 @NonNull
                 @Override
                 public ImageVH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-                    android.util.Log.d("PostVH", "  onCreateViewHolder called");
                     View view = LayoutInflater.from(parent.getContext())
                             .inflate(R.layout.item_gallery_image, parent, false);
                     return new ImageVH(view);
@@ -910,27 +923,20 @@ public class CommunityFragment extends Fragment {
                 public void onBindViewHolder(@NonNull ImageVH holder, int position) {
                     if (position < imageUrls.size()) {
                         String imageUrl = imageUrls.get(position);
-                        android.util.Log.d("PostVH", "  onBindViewHolder position " + position + ": " + imageUrl);
                         holder.bind(imageUrl);
                         final int finalPosition = position;
                         holder.itemView.setOnClickListener(v -> {
-                            android.util.Log.d("PostVH", "  Click ảnh position " + finalPosition);
                             openImageGallery(imageUrls, finalPosition);
                         });
-                    } else {
-                        android.util.Log.e("PostVH", "  ERROR: position " + position + " >= size " + imageUrls.size());
                     }
                 }
 
                 @Override
                 public int getItemCount() {
-                    int count = imageUrls.size();
-                    android.util.Log.d("PostVH", "  getItemCount: " + count);
-                    return count;
+                    return imageUrls.size();
                 }
             };
             
-            android.util.Log.d("PostVH", "  Setting adapter to RecyclerView");
             recyclerView.setAdapter(adapter);
             
             // Thêm scroll listener để update indicator dots
@@ -947,11 +953,6 @@ public class CommunityFragment extends Fragment {
                     }
                 }
             });
-            
-            android.util.Log.d("PostVH", "=== RecyclerView setup hoàn tất ===");
-            android.util.Log.d("PostVH", "  - Visibility: " + recyclerView.getVisibility() + " (VISIBLE=0, GONE=8)");
-            android.util.Log.d("PostVH", "  - Adapter: " + (recyclerView.getAdapter() != null ? "NOT NULL" : "NULL"));
-            android.util.Log.d("PostVH", "  - Adapter itemCount: " + (recyclerView.getAdapter() != null ? recyclerView.getAdapter().getItemCount() : "N/A"));
         }
 
         private static class ImageVH extends androidx.recyclerview.widget.RecyclerView.ViewHolder {
@@ -1009,5 +1010,13 @@ public class CommunityFragment extends Fragment {
                 tvLike.setText("Thích");
             }
         }
+    }
+    
+    @Override
+    public void onResume() {
+        super.onResume();
+        // Refresh notification count khi fragment hiển thị lại
+        // Để badge cập nhật khi có thông báo mới
+        loadUnreadNotificationCount();
     }
 }

@@ -41,14 +41,49 @@
                 android:textColor="#ffffff"
                 android:layout_marginStart="8dp" />
 
-            <ImageButton
+            <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/btnNotifications"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_notifications"
-                android:contentDescription="Thông báo"
-                app:tint="#ffffff" />
+                android:clickable="true"
+                android:focusable="true"
+                android:clipChildren="false"
+                android:clipToPadding="false">
+
+                <ImageView
+                    android:id="@+id/iv_notification_icon"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_notifications"
+                    app:tint="#ffffff"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent" />
+
+                <!-- Badge hiển thị số thông báo chưa đọc -->
+                <TextView
+                    android:id="@+id/tv_notification_badge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/badge_red_background"
+                    android:paddingHorizontal="6dp"
+                    android:paddingVertical="2dp"
+                    android:text="0"
+                    android:textColor="@android:color/white"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:visibility="gone"
+                    android:minWidth="18dp"
+                    android:minHeight="18dp"
+                    android:gravity="center"
+                    app:layout_constraintTop_toTopOf="@id/iv_notification_icon"
+                    app:layout_constraintEnd_toEndOf="@id/iv_notification_icon"
+                    android:layout_marginTop="-4dp"
+                    android:layout_marginEnd="-4dp" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
         </LinearLayout>
 
         <!-- SearchView -->

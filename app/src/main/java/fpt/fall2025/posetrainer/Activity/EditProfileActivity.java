@@ -25,6 +25,9 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
+import android.os.Handler;
+import android.os.Looper;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -35,6 +38,7 @@ import fpt.fall2025.posetrainer.Service.FirebaseService;
 public class EditProfileActivity extends AppCompatActivity {
     private static final String TAG = "EditProfileActivity";
     private static final int PICK_IMAGE_REQUEST = 1001;
+    private static final long SAVE_DEBOUNCE_DELAY = 500; // 500ms debounce
 
     private ImageView imgProfile;
     private EditText etName;
@@ -47,6 +51,13 @@ public class EditProfileActivity extends AppCompatActivity {
     private SeekBar seekBarMaxNotifications;
     private TextView tvMaxNotificationsValue;
     private Switch switchMotivationalMessages;
+    
+    // Notification type switches
+    private Switch switchDailyAiReminder;
+    private Switch switchMissedWorkoutReminder;
+    private Switch switchUpcomingSchedule;
+    private Switch switchSessionFeedback;
+    private Switch switchStreakReminder;
 
     private Uri selectedImageUri;
     private FirebaseUser user;
@@ -59,6 +70,18 @@ public class EditProfileActivity extends AppCompatActivity {
     private int maxNotificationsPerDay = 30;
     private String language = "vi";
     private boolean allowMotivationalMessages = true;
+    
+    // Notification type settings
+    private boolean enableDailyAiReminder = true;
+    private boolean enableMissedWorkoutReminder = true;
+    private boolean enableUpcomingSchedule = true;
+    private boolean enableSessionFeedback = true;
+    private boolean enableStreakReminder = true;
+    
+    // Debounce handler cho save settings
+    private Handler saveSettingsHandler = new Handler(Looper.getMainLooper());
+    private Runnable saveSettingsRunnable;
+    private boolean isSavingSettings = false;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -76,6 +99,13 @@ public class EditProfileActivity extends AppCompatActivity {
         seekBarMaxNotifications = findViewById(R.id.seekBarMaxNotifications);
         tvMaxNotificationsValue = findViewById(R.id.tvMaxNotificationsValue);
         switchMotivationalMessages = findViewById(R.id.switchMotivationalMessages);
+        
+        // Notification type switches
+        switchDailyAiReminder = findViewById(R.id.switchDailyAiReminder);
+        switchMissedWorkoutReminder = findViewById(R.id.switchMissedWorkoutReminder);
+        switchUpcomingSchedule = findViewById(R.id.switchUpcomingSchedule);
+        switchSessionFeedback = findViewById(R.id.switchSessionFeedback);
+        switchStreakReminder = findViewById(R.id.switchStreakReminder);
 
         user = FirebaseAuth.getInstance().getCurrentUser();
         db = FirebaseFirestore.getInstance();
@@ -118,7 +148,8 @@ public class EditProfileActivity extends AppCompatActivity {
                 enableAiNotifications = false;
             }
             switchEnableAiNotifications.setEnabled(isChecked); // Chỉ enable khi allowNotification = true
-            saveNotificationSettings();
+            updateNotificationTypeSwitchesEnabled();
+            debouncedSaveNotificationSettings();
         });
         
         // Switch: Bật/tắt AI notifications
@@ -129,7 +160,8 @@ public class EditProfileActivity extends AppCompatActivity {
                 switchAllowNotification.setChecked(true);
                 allowNotification = true;
             }
-            saveNotificationSettings();
+            updateNotificationTypeSwitchesEnabled();
+            debouncedSaveNotificationSettings();
         });
         
         // SeekBar: Chọn số lượng thông báo hàng ngày (1-30)
@@ -137,8 +169,13 @@ public class EditProfileActivity extends AppCompatActivity {
         seekBarMaxNotifications.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                maxNotificationsPerDay = progress + 1; // progress 0-29 → 1-30
-                tvMaxNotificationsValue.setText(String.valueOf(maxNotificationsPerDay));
+                if (fromUser) {
+                    maxNotificationsPerDay = progress + 1; // progress 0-29 → 1-30
+                    // Đảm bảo giá trị trong khoảng 1-30
+                    if (maxNotificationsPerDay < 1) maxNotificationsPerDay = 1;
+                    if (maxNotificationsPerDay > 30) maxNotificationsPerDay = 30;
+                    tvMaxNotificationsValue.setText(String.valueOf(maxNotificationsPerDay));
+                }
             }
             
             @Override
@@ -148,15 +185,67 @@ public class EditProfileActivity extends AppCompatActivity {
             
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                saveNotificationSettings();
+                // Đảm bảo giá trị hợp lệ
+                int progress = seekBar.getProgress();
+                maxNotificationsPerDay = progress + 1;
+                if (maxNotificationsPerDay < 1) maxNotificationsPerDay = 1;
+                if (maxNotificationsPerDay > 30) maxNotificationsPerDay = 30;
+                seekBar.setProgress(maxNotificationsPerDay - 1);
+                tvMaxNotificationsValue.setText(String.valueOf(maxNotificationsPerDay));
+                debouncedSaveNotificationSettings();
             }
         });
         
         // Switch: Cho phép tin nhắn động viên
         switchMotivationalMessages.setOnCheckedChangeListener((buttonView, isChecked) -> {
             allowMotivationalMessages = isChecked;
-            saveNotificationSettings();
+            debouncedSaveNotificationSettings();
         });
+        
+        // Switch: Thông báo AI hằng ngày
+        switchDailyAiReminder.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            enableDailyAiReminder = isChecked;
+            debouncedSaveNotificationSettings();
+        });
+        
+        // Switch: Nhắc nhở workout chưa tập
+        switchMissedWorkoutReminder.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            enableMissedWorkoutReminder = isChecked;
+            debouncedSaveNotificationSettings();
+        });
+        
+        // Switch: Thông báo lịch tập sắp tới
+        switchUpcomingSchedule.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            enableUpcomingSchedule = isChecked;
+            debouncedSaveNotificationSettings();
+        });
+        
+        // Switch: Feedback sau khi hoàn thành session
+        switchSessionFeedback.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            enableSessionFeedback = isChecked;
+            debouncedSaveNotificationSettings();
+        });
+        
+        // Switch: Nhắc nhở giữ streak
+        switchStreakReminder.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            enableStreakReminder = isChecked;
+            debouncedSaveNotificationSettings();
+        });
+        
+        // Disable các switch loại thông báo nếu AI notifications bị tắt
+        updateNotificationTypeSwitchesEnabled();
+    }
+    
+    /**
+     * Enable/disable các switch loại thông báo dựa trên enableAiNotifications
+     */
+    private void updateNotificationTypeSwitchesEnabled() {
+        boolean enabled = enableAiNotifications && allowNotification;
+        switchDailyAiReminder.setEnabled(enabled);
+        switchMissedWorkoutReminder.setEnabled(enabled);
+        switchUpcomingSchedule.setEnabled(enabled);
+        switchSessionFeedback.setEnabled(enabled);
+        switchStreakReminder.setEnabled(enabled);
     }
     
     /**
@@ -197,6 +286,9 @@ public class EditProfileActivity extends AppCompatActivity {
                         } else {
                             maxNotificationsPerDay = 30; // Default
                         }
+                        // Đảm bảo giá trị trong khoảng 1-30
+                        if (maxNotificationsPerDay < 1) maxNotificationsPerDay = 1;
+                        if (maxNotificationsPerDay > 30) maxNotificationsPerDay = 30;
                         
                         // Load language
                         String lang = (String) notificationMap.get("language");
@@ -206,23 +298,44 @@ public class EditProfileActivity extends AppCompatActivity {
                         Boolean allowMotiv = (Boolean) notificationMap.get("allowMotivationalMessages");
                         allowMotivationalMessages = allowMotiv != null ? allowMotiv : true;
                         
+                        // Load notification type settings
+                        Boolean dailyReminder = (Boolean) notificationMap.get("enableDailyAiReminder");
+                        enableDailyAiReminder = dailyReminder != null ? dailyReminder : true;
+                        
+                        Boolean missedWorkout = (Boolean) notificationMap.get("enableMissedWorkoutReminder");
+                        enableMissedWorkoutReminder = missedWorkout != null ? missedWorkout : true;
+                        
+                        Boolean upcomingSchedule = (Boolean) notificationMap.get("enableUpcomingSchedule");
+                        enableUpcomingSchedule = upcomingSchedule != null ? upcomingSchedule : true;
+                        
+                        Boolean sessionFeedback = (Boolean) notificationMap.get("enableSessionFeedback");
+                        enableSessionFeedback = sessionFeedback != null ? sessionFeedback : true;
+                        
+                        Boolean streakReminder = (Boolean) notificationMap.get("enableStreakReminder");
+                        enableStreakReminder = streakReminder != null ? streakReminder : true;
+                        
                         // Update UI
                         updateNotificationUI();
                         
                         Log.d(TAG, "✓ Đã load notification settings thành công");
                     } else {
-                        // Không có notification settings → Dùng giá trị mặc định
-                        Log.d(TAG, "Không có notification settings, dùng giá trị mặc định");
+                        // Không có notification settings → Tạo settings mặc định
+                        Log.d(TAG, "Không có notification settings, tạo settings mặc định");
                         updateNotificationUI();
+                        // Tự động lưu settings mặc định lên Firestore
+                        saveNotificationSettings();
                     }
                 } else {
-                    Log.w(TAG, "User document không tồn tại");
+                    Log.w(TAG, "User document không tồn tại, tạo settings mặc định");
                     updateNotificationUI(); // Vẫn update UI với giá trị mặc định
+                    // Tự động lưu settings mặc định lên Firestore
+                    saveNotificationSettings();
                 }
             })
             .addOnFailureListener(e -> {
                 Log.e(TAG, "✗ Lỗi load notification settings: " + e.getMessage(), e);
                 updateNotificationUI(); // Vẫn update UI với giá trị mặc định
+                Toast.makeText(this, "Không thể tải cài đặt thông báo", Toast.LENGTH_SHORT).show();
             });
     }
     
@@ -236,6 +349,36 @@ public class EditProfileActivity extends AppCompatActivity {
         seekBarMaxNotifications.setProgress(maxNotificationsPerDay - 1); // 1-30 → 0-29
         tvMaxNotificationsValue.setText(String.valueOf(maxNotificationsPerDay));
         switchMotivationalMessages.setChecked(allowMotivationalMessages);
+        
+        // Update notification type switches
+        switchDailyAiReminder.setChecked(enableDailyAiReminder);
+        switchMissedWorkoutReminder.setChecked(enableMissedWorkoutReminder);
+        switchUpcomingSchedule.setChecked(enableUpcomingSchedule);
+        switchSessionFeedback.setChecked(enableSessionFeedback);
+        switchStreakReminder.setChecked(enableStreakReminder);
+        
+        // Update enabled state
+        updateNotificationTypeSwitchesEnabled();
+    }
+    
+    /**
+     * Debounced save notification settings - tránh gọi API quá nhiều lần
+     */
+    private void debouncedSaveNotificationSettings() {
+        // Hủy callback cũ nếu có
+        if (saveSettingsRunnable != null) {
+            saveSettingsHandler.removeCallbacks(saveSettingsRunnable);
+        }
+        
+        // Tạo callback mới
+        saveSettingsRunnable = () -> {
+            if (!isSavingSettings) {
+                saveNotificationSettings();
+            }
+        };
+        
+        // Đợi 500ms trước khi save
+        saveSettingsHandler.postDelayed(saveSettingsRunnable, SAVE_DEBOUNCE_DELAY);
     }
     
     /**
@@ -247,8 +390,19 @@ public class EditProfileActivity extends AppCompatActivity {
             return;
         }
         
+        // Nếu đang save, bỏ qua
+        if (isSavingSettings) {
+            Log.d(TAG, "Đang lưu settings, bỏ qua request mới");
+            return;
+        }
+        
+        isSavingSettings = true;
         String uid = user.getUid();
         Log.d(TAG, "Đang lưu notification settings cho user: " + uid);
+        
+        // Đảm bảo giá trị hợp lệ
+        if (maxNotificationsPerDay < 1) maxNotificationsPerDay = 1;
+        if (maxNotificationsPerDay > 30) maxNotificationsPerDay = 30;
         
         // Tạo map settings
         Map<String, Object> settings = new HashMap<>();
@@ -258,8 +412,16 @@ public class EditProfileActivity extends AppCompatActivity {
         settings.put("language", language);
         settings.put("allowMotivationalMessages", allowMotivationalMessages);
         
+        // Notification type settings
+        settings.put("enableDailyAiReminder", enableDailyAiReminder);
+        settings.put("enableMissedWorkoutReminder", enableMissedWorkoutReminder);
+        settings.put("enableUpcomingSchedule", enableUpcomingSchedule);
+        settings.put("enableSessionFeedback", enableSessionFeedback);
+        settings.put("enableStreakReminder", enableStreakReminder);
+        
         // Cập nhật lên Firestore
         FirebaseService.getInstance().updateAiNotificationSettings(uid, settings, success -> {
+            isSavingSettings = false;
             if (success) {
                 Log.d(TAG, "✓ Đã lưu notification settings thành công");
             } else {

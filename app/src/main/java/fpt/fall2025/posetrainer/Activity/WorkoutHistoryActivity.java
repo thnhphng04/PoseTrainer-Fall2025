@@ -66,7 +66,10 @@ public class WorkoutHistoryActivity extends AppCompatActivity {
     
     // Tab và Filter
     private int currentTab = 0; // 0: Lịch sử, 1: Gần đây, 2: Yêu thích
-    private String currentFilter = "Tất cả"; // "Tất cả", "Tuần này", "Tháng này", "Năm nay"
+    private String currentFilter = "Tất cả"; // "Tất cả", "Tuần này", "Tháng này", "Năm nay" hoặc "Đã hoàn thành", "Chưa hoàn thành"
+    private ArrayAdapter<String> filterAdapter;
+    private List<String> timeFilterOptions; // Filter cho tab Lịch sử
+    private List<String> statusFilterOptions; // Filter cho tab Gần đây
     
     private FirebaseAuth mAuth;
 
@@ -150,6 +153,9 @@ public class WorkoutHistoryActivity extends AppCompatActivity {
                     findViewById(R.id.layout_date_summary).setVisibility(View.GONE);
                 } else {
                     // Tab Lịch sử hoặc Gần đây: hiển thị sessions
+                    // Cập nhật filter options theo tab
+                    updateFilterOptions();
+                    // Filter sessions theo tab và filter hiện tại
                     filterSessionsByTab();
                     // Hiển thị filter section và date range/summary
                     layoutFilterSection.setVisibility(View.VISIBLE);
@@ -173,18 +179,26 @@ public class WorkoutHistoryActivity extends AppCompatActivity {
      * Setup filter spinner
      */
     private void setupFilter() {
-        // Tạo danh sách filter options
-        List<String> filterOptions = new ArrayList<>();
-        filterOptions.add("Tất cả");
-        filterOptions.add("Tuần này");
-        filterOptions.add("Tháng này");
-        filterOptions.add("Năm nay");
+        // Tạo danh sách filter options cho tab Lịch sử (filter theo thời gian + trạng thái)
+        timeFilterOptions = new ArrayList<>();
+        timeFilterOptions.add("Tất cả");
+        timeFilterOptions.add("Tuần này");
+        timeFilterOptions.add("Tháng này");
+        timeFilterOptions.add("Năm nay");
+        timeFilterOptions.add("Đã hoàn thành");
+        timeFilterOptions.add("Chưa hoàn thành");
         
-        // Tạo adapter cho spinner
-        ArrayAdapter<String> filterAdapter = new ArrayAdapter<>(
+        // Tạo danh sách filter options cho tab Gần đây (filter theo trạng thái)
+        statusFilterOptions = new ArrayList<>();
+        statusFilterOptions.add("Tất cả");
+        statusFilterOptions.add("Đã hoàn thành");
+        statusFilterOptions.add("Chưa hoàn thành");
+        
+        // Tạo adapter cho spinner (mặc định là time filter cho tab Lịch sử)
+        filterAdapter = new ArrayAdapter<>(
             this,
             android.R.layout.simple_spinner_item,
-            filterOptions
+            timeFilterOptions
         );
         filterAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerFilter.setAdapter(filterAdapter);
@@ -193,10 +207,13 @@ public class WorkoutHistoryActivity extends AppCompatActivity {
         spinnerFilter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                currentFilter = filterOptions.get(position);
-                Log.d(TAG, "Filter được chọn: " + currentFilter);
-                // Filter sessions theo filter được chọn
-                filterSessionsByTab();
+                List<String> currentOptions = (currentTab == 1) ? statusFilterOptions : timeFilterOptions;
+                if (position < currentOptions.size()) {
+                    currentFilter = currentOptions.get(position);
+                    Log.d(TAG, "Filter được chọn: " + currentFilter);
+                    // Filter sessions theo filter được chọn
+                    filterSessionsByTab();
+                }
             }
 
             @Override
@@ -204,6 +221,26 @@ public class WorkoutHistoryActivity extends AppCompatActivity {
                 // Không cần xử lý
             }
         });
+    }
+    
+    /**
+     * Cập nhật filter options theo tab hiện tại
+     */
+    private void updateFilterOptions() {
+        if (currentTab == 1) {
+            // Tab Gần đây: filter theo trạng thái
+            filterAdapter.clear();
+            filterAdapter.addAll(statusFilterOptions);
+            currentFilter = "Tất cả"; // Reset về "Tất cả" khi chuyển tab
+            spinnerFilter.setSelection(0);
+        } else if (currentTab == 0) {
+            // Tab Lịch sử: filter theo thời gian
+            filterAdapter.clear();
+            filterAdapter.addAll(timeFilterOptions);
+            currentFilter = "Tất cả"; // Reset về "Tất cả" khi chuyển tab
+            spinnerFilter.setSelection(0);
+        }
+        filterAdapter.notifyDataSetChanged();
     }
 
     /**
@@ -256,7 +293,8 @@ public class WorkoutHistoryActivity extends AppCompatActivity {
         filteredSessions.clear();
         
         if (allSessions == null || allSessions.isEmpty()) {
-            showEmptyState("Không có buổi tập nào");
+            String emptyMessage = getEmptyStateMessage();
+            showEmptyState(emptyMessage);
             if (currentTab != 2 && sessionAdapter != null) {
                 sessionAdapter.updateSessions(filteredSessions);
             }
@@ -271,27 +309,40 @@ public class WorkoutHistoryActivity extends AppCompatActivity {
         filterStart.set(Calendar.SECOND, 0);
         filterStart.set(Calendar.MILLISECOND, 0);
         
-        // Áp dụng filter theo thời gian (Tất cả, Tuần này, Tháng này, Năm nay)
+        // Xác định filter theo thời gian
+        boolean filterByTime = false;
+        long filterStartTime = 0;
+        
+        // Áp dụng filter theo thời gian (chỉ cho các filter thời gian)
         switch (currentFilter) {
             case "Tuần này":
+                filterByTime = true;
                 // Lấy thứ 2 đầu tuần
                 int dayOfWeek = filterStart.get(Calendar.DAY_OF_WEEK);
                 int daysFromMonday = (dayOfWeek == Calendar.SUNDAY ? 6 : dayOfWeek - Calendar.MONDAY);
                 filterStart.add(Calendar.DAY_OF_MONTH, -daysFromMonday);
+                filterStartTime = filterStart.getTimeInMillis() / 1000;
                 break;
             case "Tháng này":
+                filterByTime = true;
                 filterStart.set(Calendar.DAY_OF_MONTH, 1);
+                filterStartTime = filterStart.getTimeInMillis() / 1000;
                 break;
             case "Năm nay":
+                filterByTime = true;
                 filterStart.set(Calendar.DAY_OF_YEAR, 1);
+                filterStartTime = filterStart.getTimeInMillis() / 1000;
                 break;
             case "Tất cả":
+            case "Đã hoàn thành":
+            case "Chưa hoàn thành":
             default:
-                filterStart.set(Calendar.YEAR, 2000); // Lấy tất cả từ năm 2000
+                // Không filter theo thời gian, lấy tất cả
+                filterByTime = false;
+                filterStart.set(Calendar.YEAR, 2000);
+                filterStartTime = filterStart.getTimeInMillis() / 1000;
                 break;
         }
-        
-        long filterStartTime = filterStart.getTimeInMillis() / 1000; // Convert to seconds
         
         // Filter sessions theo tab (chỉ cho tab Lịch sử và Gần đây)
         for (Session session : allSessions) {
@@ -299,28 +350,86 @@ public class WorkoutHistoryActivity extends AppCompatActivity {
                 continue;
             }
             
-            // Kiểm tra filter theo thời gian
-            if (session.getStartedAt() < filterStartTime) {
-                continue;
-            }
+            // Xác định trạng thái hoàn thành của session (dùng chung cho cả 2 tab)
+            boolean isCompleted = session.getEndedAt() > 0;
             
-            // Filter theo tab (chỉ cho tab Lịch sử và Gần đây)
+            // Filter theo tab
             switch (currentTab) {
-                case 0: // Lịch sử - hiển thị tất cả
+                case 0: // Tab Lịch sử
+                    // Kiểm tra filter theo thời gian (nếu có)
+                    if (filterByTime && session.getStartedAt() < filterStartTime) {
+                        continue;
+                    }
+                    
+                    // Kiểm tra filter theo trạng thái
+                    
+                    switch (currentFilter) {
+                        case "Đã hoàn thành":
+                            // Chỉ hiển thị sessions đã hoàn thành
+                            if (!isCompleted) {
+                                continue;
+                            }
+                            break;
+                        case "Chưa hoàn thành":
+                            // Chỉ hiển thị sessions chưa hoàn thành
+                            if (isCompleted) {
+                                continue;
+                            }
+                            break;
+                        case "Tuần này":
+                        case "Tháng này":
+                        case "Năm nay":
+                            // Filter theo thời gian: mặc định chỉ hiển thị đã hoàn thành
+                            if (!isCompleted) {
+                                continue;
+                            }
+                            break;
+                        case "Tất cả":
+                        default:
+                            // Hiển thị tất cả (cả đã hoàn thành và chưa hoàn thành)
+                            break;
+                    }
+                    
                     filteredSessions.add(session);
                     break;
-                case 1: // Gần đây - chỉ hiển thị 7 ngày gần nhất
+                    
+                case 1: // Tab Gần đây - chỉ hiển thị 7 ngày gần nhất
                     long sevenDaysAgo = (System.currentTimeMillis() / 1000) - (7 * 24 * 60 * 60);
-                    if (session.getStartedAt() >= sevenDaysAgo) {
-                        filteredSessions.add(session);
+                    if (session.getStartedAt() < sevenDaysAgo) {
+                        continue;
                     }
+                    
+                    // Filter theo trạng thái (Đã hoàn thành / Chưa hoàn thành)
+                    
+                    switch (currentFilter) {
+                        case "Đã hoàn thành":
+                            if (!isCompleted) {
+                                continue;
+                            }
+                            break;
+                        case "Chưa hoàn thành":
+                            if (isCompleted) {
+                                continue;
+                            }
+                            break;
+                        case "Tất cả":
+                        default:
+                            // Hiển thị cả đã hoàn thành và chưa hoàn thành
+                            break;
+                    }
+                    
+                    filteredSessions.add(session);
                     break;
             }
         }
         
+        // Sort lại theo thời gian (mới nhất trước) sau khi filter
+        filteredSessions.sort((s1, s2) -> Long.compare(s2.getStartedAt(), s1.getStartedAt()));
+        
         // Cập nhật UI
         if (filteredSessions.isEmpty()) {
-            showEmptyState("Không có buổi tập nào");
+            String emptyMessage = getEmptyStateMessage();
+            showEmptyState(emptyMessage);
         } else {
             showSessionsList();
         }
@@ -361,24 +470,45 @@ public class WorkoutHistoryActivity extends AppCompatActivity {
                     maxDate = session.getStartedAt();
                 }
                 
-                // Tính tổng thời gian
-                if (session.getSummary() != null && session.getSummary().getDurationSec() > 0) {
-                    totalMinutes += session.getSummary().getDurationSec() / 60;
-                } else if (session.getEndedAt() > 0 && session.getStartedAt() > 0) {
-                    long durationSec = session.getEndedAt() - session.getStartedAt();
-                    totalMinutes += (int) (durationSec / 60);
+                // Tính tổng thời gian (chỉ tính cho sessions đã hoàn thành)
+                // Sessions chưa hoàn thành (endedAt = 0) không tính vào tổng thời gian
+                if (session.getEndedAt() > 0) {
+                    if (session.getSummary() != null && session.getSummary().getDurationSec() > 0) {
+                        totalMinutes += session.getSummary().getDurationSec() / 60;
+                    } else if (session.getStartedAt() > 0) {
+                        long durationSec = session.getEndedAt() - session.getStartedAt();
+                        totalMinutes += (int) (durationSec / 60);
+                    }
                 }
             }
         }
         
         // Format date range
         if (minDate != Long.MAX_VALUE && maxDate != Long.MIN_VALUE) {
-            SimpleDateFormat dateFormat = new SimpleDateFormat("d 'Th'MM", Locale.getDefault());
             Date startDate = new Date(minDate * 1000);
             Date endDate = new Date(maxDate * 1000);
             
+            Calendar startCal = Calendar.getInstance();
+            startCal.setTime(startDate);
+            Calendar endCal = Calendar.getInstance();
+            endCal.setTime(endDate);
+            
+            // Nếu cùng tháng và cùng năm, chỉ hiển thị tháng ở đầu
+            boolean sameMonth = startCal.get(Calendar.MONTH) == endCal.get(Calendar.MONTH) &&
+                               startCal.get(Calendar.YEAR) == endCal.get(Calendar.YEAR);
+            
+            SimpleDateFormat dateFormat = new SimpleDateFormat("d 'Th'MM", Locale.getDefault());
+            SimpleDateFormat dateFormatNoMonth = new SimpleDateFormat("d", Locale.getDefault());
+            
             String startStr = dateFormat.format(startDate);
-            String endStr = dateFormat.format(endDate);
+            String endStr;
+            if (sameMonth) {
+                // Cùng tháng: "6 Th10 - 12"
+                endStr = dateFormatNoMonth.format(endDate);
+            } else {
+                // Khác tháng: "6 Th10 - 12 Th11"
+                endStr = dateFormat.format(endDate);
+            }
             
             tvDateRange.setText(startStr + " - " + endStr);
         } else {
@@ -404,6 +534,45 @@ public class WorkoutHistoryActivity extends AppCompatActivity {
         recyclerViewSessions.setVisibility(View.GONE);
         layoutEmptyState.setVisibility(View.VISIBLE);
         tvEmptyState.setText(message);
+    }
+    
+    /**
+     * Lấy message empty state phù hợp theo tab và filter hiện tại
+     */
+    private String getEmptyStateMessage() {
+        if (currentTab == 2) {
+            return "Chưa có workout nào được yêu thích";
+        }
+        
+        if (currentTab == 1) {
+            // Tab Gần đây - filter theo trạng thái
+            switch (currentFilter) {
+                case "Đã hoàn thành":
+                    return "Không có buổi tập nào đã hoàn thành trong 7 ngày gần đây";
+                case "Chưa hoàn thành":
+                    return "Không có buổi tập nào chưa hoàn thành trong 7 ngày gần đây";
+                case "Tất cả":
+                default:
+                    return "Không có buổi tập nào trong 7 ngày gần đây";
+            }
+        }
+        
+        // Tab Lịch sử - filter theo thời gian và trạng thái
+        switch (currentFilter) {
+            case "Tuần này":
+                return "Không có buổi tập nào đã hoàn thành trong tuần này";
+            case "Tháng này":
+                return "Không có buổi tập nào đã hoàn thành trong tháng này";
+            case "Năm nay":
+                return "Không có buổi tập nào đã hoàn thành trong năm nay";
+            case "Đã hoàn thành":
+                return "Không có buổi tập nào đã hoàn thành";
+            case "Chưa hoàn thành":
+                return "Không có buổi tập nào chưa hoàn thành";
+            case "Tất cả":
+            default:
+                return "Không có buổi tập nào";
+        }
     }
 
     /**

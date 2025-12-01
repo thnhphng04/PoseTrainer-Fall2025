@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -52,7 +51,6 @@ import fpt.fall2025.posetrainer.Helper.AppStateHelper;
 import fpt.fall2025.posetrainer.databinding.FragmentDailyBinding;
 
 public class DailyFragment extends Fragment {
-    private static final String TAG = "DailyFragment";
     private FragmentDailyBinding binding;
     private ArrayList<Session> sessions;
     private ArrayList<Session> filteredSessionsForSelectedDay; // Sessions for selected day
@@ -89,11 +87,9 @@ public class DailyFragment extends Fragment {
             new ActivityResultContracts.RequestPermission(),
             isGranted -> {
                 if (isGranted) {
-                    Log.d(TAG, "Quyền thông báo đã được cấp");
                     // Re-schedule alarms now that permission is granted
                     scheduleAlarms();
                 } else {
-                    Log.w(TAG, "Quyền thông báo bị từ chối");
                     Toast.makeText(getContext(), 
                         "Cần quyền thông báo để nhắc nhở tập luyện. Vui lòng cấp quyền trong cài đặt.", 
                         Toast.LENGTH_LONG).show();
@@ -138,7 +134,6 @@ public class DailyFragment extends Fragment {
         super.onResume();
         // Track DailyFragment visibility: đang visible
         AppStateHelper.setDailyFragmentVisible(true);
-        Log.d(TAG, "DailyFragment onResume: Fragment đang hiển thị - thông báo sẽ bị ẩn");
         
         // Start listening for session updates khi fragment visible
         startSessionsListener();
@@ -152,7 +147,6 @@ public class DailyFragment extends Fragment {
         super.onPause();
         // Track DailyFragment visibility: không còn visible
         AppStateHelper.setDailyFragmentVisible(false);
-        Log.d(TAG, "DailyFragment onPause: Fragment đã ẩn - thông báo sẽ được hiển thị");
         
         // Stop listening khi fragment không visible để tiết kiệm tài nguyên
         stopSessionsListener();
@@ -660,7 +654,6 @@ public class DailyFragment extends Fragment {
      */
     private void createNotificationsForScheduleItem(Schedule.ScheduleItem item, String uid) {
         if (item.getTimeLocal() == null || item.getWorkoutId() == null) {
-            Log.w(TAG, "Không thể tạo thông báo: schedule item thiếu các trường bắt buộc");
             return;
         }
 
@@ -669,7 +662,6 @@ public class DailyFragment extends Fragment {
         
         // Chỉ tạo thông báo nếu có exactDate
         if (item.getExactDate() == null || item.getExactDate().isEmpty()) {
-            Log.w(TAG, "Không thể tạo thông báo: schedule item thiếu exactDate");
             return;
         }
         
@@ -689,14 +681,8 @@ public class DailyFragment extends Fragment {
             
             // Save notification to Firestore
             FirebaseService.getInstance().saveNotification(notification, success -> {
-                if (success) {
-                    Log.d(TAG, "Đã tạo thông báo cho ngày " + item.getExactDate() + " lúc " + item.getTimeLocal());
-                } else {
-                    Log.w(TAG, "Không thể tạo thông báo cho ngày " + item.getExactDate());
-                }
+                // Notification saved
             });
-        } else {
-            Log.d(TAG, "Bỏ qua thông báo cho ngày " + item.getExactDate() + " vì đã qua");
         }
     }
 
@@ -727,7 +713,6 @@ public class DailyFragment extends Fragment {
             
             return calendar.getTimeInMillis();
         } catch (Exception e) {
-            Log.e(TAG, "Error parsing exactDate: " + exactDate, e);
             return System.currentTimeMillis();
         }
     }
@@ -747,9 +732,7 @@ public class DailyFragment extends Fragment {
         // Note: We still schedule alarms even without permission, 
         // but notifications won't show until permission is granted
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (!PermissionHelper.hasNotificationPermission(context)) {
-                Log.w(TAG, "Quyền thông báo chưa được cấp. Alarms sẽ được lên lịch nhưng thông báo sẽ không hiển thị.");
-            }
+            PermissionHelper.hasNotificationPermission(context);
         }
 
         // Initialize notification channel
@@ -757,8 +740,6 @@ public class DailyFragment extends Fragment {
 
         // Schedule alarms (will use inexact alarms if exact permission not available)
         AlarmScheduler.getInstance(context).scheduleAlarmsFromSchedule(userSchedule);
-        
-        Log.d(TAG, "Đã lên lịch alarms cho schedule: " + userSchedule.getTitle());
     }
 
     /**
@@ -786,7 +767,6 @@ public class DailyFragment extends Fragment {
         // Just show a warning if exact permission is not available
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (!PermissionHelper.canScheduleExactAlarms(getContext())) {
-                Log.w(TAG, "Quyền exact alarm chưa được cấp. Sẽ sử dụng inexact alarms (có thể có độ trễ nhỏ).");
                 // Show informational toast (not blocking)
                 Toast.makeText(getContext(), 
                     "Lưu ý: Thông báo có thể đến muộn vài phút. Để chính xác hơn, vui lòng cấp quyền trong cài đặt.", 
@@ -806,7 +786,6 @@ public class DailyFragment extends Fragment {
     private void loadUserSchedule() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser == null) {
-            Log.w(TAG, "Không có người dùng hiện tại, không thể tải schedule");
             return;
         }
 
@@ -814,11 +793,8 @@ public class DailyFragment extends Fragment {
         
         // Kiểm tra cache: Chỉ reload nếu user thay đổi hoặc chưa load lần nào
         if (cachedUserId != null && cachedUserId.equals(userId) && isScheduleLoaded && userSchedule != null) {
-            Log.d(TAG, "Schedule đã được cache, bỏ qua reload");
             return;
         }
-        
-        Log.d(TAG, "Đang tải schedule cho userId: " + userId);
 
         FirebaseService.getInstance().loadUserSchedule(userId, new FirebaseService.OnScheduleLoadedListener() {
             @Override
@@ -976,7 +952,6 @@ public class DailyFragment extends Fragment {
     private void loadSessions() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser == null) {
-            Log.w(TAG, "No current user, cannot load sessions");
             Toast.makeText(getContext(), "Vui lòng đăng nhập để xem lịch sử tập luyện", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -985,7 +960,6 @@ public class DailyFragment extends Fragment {
         
         // Kiểm tra cache: Chỉ reload nếu user thay đổi hoặc chưa load lần nào
         if (cachedUserId != null && cachedUserId.equals(uid) && isSessionsLoaded && sessions != null && !sessions.isEmpty()) {
-            Log.d(TAG, "Sessions đã được cache, bỏ qua reload");
             // Vẫn cần analyze và filter lại để đảm bảo data chính xác
             analyzeWeeklySessions();
             filterSessionsForSelectedDay();
@@ -995,7 +969,6 @@ public class DailyFragment extends Fragment {
         
         // Kiểm tra activity có tồn tại không
         if (getActivity() == null || !(getActivity() instanceof androidx.appcompat.app.AppCompatActivity)) {
-            Log.w(TAG, "Activity không tồn tại, không thể load sessions");
             return;
         }
         
@@ -1028,7 +1001,6 @@ public class DailyFragment extends Fragment {
         long currentTime = System.currentTimeMillis();
         if (currentTime - lastWeeklyStatusUpdate < WEEKLY_STATUS_UPDATE_INTERVAL && 
             weeklyWorkoutStatus != null && !weeklyWorkoutStatus.isEmpty()) {
-            Log.d(TAG, "Bỏ qua analyze weekly sessions (debounce)");
             // Vẫn update UI để đảm bảo hiển thị đúng
             updateWeeklyStatus();
             return;
@@ -1038,7 +1010,6 @@ public class DailyFragment extends Fragment {
         
         // Safety check: ensure weeklyWorkoutStatus is initialized
         if (weeklyWorkoutStatus == null) {
-            Log.w(TAG, "weeklyWorkoutStatus is null in analyzeWeeklySessions, initializing...");
             weeklyWorkoutStatus = new HashMap<>();
         }
         
@@ -1068,7 +1039,7 @@ public class DailyFragment extends Fragment {
                             }
                         }
                     } catch (Exception e) {
-                        Log.e(TAG, "Error processing session: " + e.getMessage());
+                        // Error processing session, skip
                     }
                 }
             }
@@ -1130,7 +1101,6 @@ public class DailyFragment extends Fragment {
     private void updateWeeklyStatus() {
         // Safety check: ensure weeklyWorkoutStatus is initialized
         if (weeklyWorkoutStatus == null) {
-            Log.w(TAG, "weeklyWorkoutStatus is null, initializing...");
             weeklyWorkoutStatus = new HashMap<>();
             initializeWeeklyStatus();
         }
@@ -1288,7 +1258,6 @@ public class DailyFragment extends Fragment {
         stopSessionsListener();
         
         String uid = currentUser.getUid();
-        Log.d(TAG, "Bắt đầu lắng nghe real-time updates cho sessions của user: " + uid);
         
         // Sử dụng Firestore real-time listener
         com.google.firebase.firestore.FirebaseFirestore db = com.google.firebase.firestore.FirebaseFirestore.getInstance();
@@ -1296,14 +1265,12 @@ public class DailyFragment extends Fragment {
                 .whereEqualTo("uid", uid)
                 .addSnapshotListener((querySnapshot, error) -> {
                     if (error != null) {
-                        Log.e(TAG, "Lỗi khi lắng nghe sessions updates: " + error.getMessage());
                         return;
                     }
                     
                     // Bỏ qua lần trigger đầu tiên (khi listener được khởi tạo)
                     if (!isListenerInitialized) {
                         isListenerInitialized = true;
-                        Log.d(TAG, "Listener đã được khởi tạo, bỏ qua lần trigger đầu tiên");
                         return;
                     }
                     
@@ -1313,12 +1280,10 @@ public class DailyFragment extends Fragment {
                         
                         // Debounce: chỉ update nếu đã qua 2 giây từ lần update cuối
                         if (currentTime - lastSessionUpdateTime < SESSION_UPDATE_DEBOUNCE) {
-                            Log.d(TAG, "Bỏ qua update (debounce)");
                             return;
                         }
                         
                         lastSessionUpdateTime = currentTime;
-                        Log.d(TAG, "Phát hiện thay đổi trong sessions (" + querySnapshot.size() + " sessions), đang cập nhật...");
                         
                         // Reload sessions và cập nhật UI
                         refreshSessionsData();
@@ -1334,7 +1299,6 @@ public class DailyFragment extends Fragment {
             sessionsListener.remove();
             sessionsListener = null;
             isListenerInitialized = false; // Reset flag khi dừng listener
-            Log.d(TAG, "Đã dừng lắng nghe sessions updates");
         }
     }
     
@@ -1372,10 +1336,6 @@ public class DailyFragment extends Fragment {
                 sessions = loadedSessions != null ? loadedSessions : new ArrayList<>();
                 isSessionsLoaded = true;
                 
-                if (hasNewSessions) {
-                    Log.d(TAG, "Có session mới, đang cập nhật UI...");
-                }
-                
                 // Cập nhật UI
                 analyzeWeeklySessions();
                 filterSessionsForSelectedDay();
@@ -1392,13 +1352,11 @@ public class DailyFragment extends Fragment {
         // Chỉ refresh nếu đã qua 30 giây từ lần load cuối
         long currentTime = System.currentTimeMillis();
         if (lastSessionUpdateTime > 0 && (currentTime - lastSessionUpdateTime) < 30000) {
-            Log.d(TAG, "Bỏ qua refresh (vừa mới update)");
             return;
         }
         
         // Nếu chưa load hoặc đã qua lâu, refresh lại
         if (!isSessionsLoaded || sessions == null || sessions.isEmpty()) {
-            Log.d(TAG, "Refresh sessions khi onResume");
             refreshSessionsData();
         }
     }
