@@ -16,6 +16,7 @@ import java.util.ArrayList;
 
 import fpt.fall2025.posetrainer.Activity.ExerciseDetailActivity;
 import fpt.fall2025.posetrainer.Domain.Exercise;
+import fpt.fall2025.posetrainer.Domain.UserWorkout;
 import fpt.fall2025.posetrainer.Helper.GlideImageLoader;
 import fpt.fall2025.posetrainer.R;
 
@@ -25,11 +26,18 @@ import fpt.fall2025.posetrainer.R;
  */
 public class EditWorkoutAdapter extends RecyclerView.Adapter<EditWorkoutAdapter.ExerciseViewHolder> {
     private ArrayList<Exercise> exercises;
+    private UserWorkout userWorkout;
     private OnExerciseRemovedListener listener;
     private OnExerciseReorderListener reorderListener;
 
     public EditWorkoutAdapter(ArrayList<Exercise> exercises, OnExerciseRemovedListener listener) {
         this.exercises = exercises;
+        this.listener = listener;
+    }
+    
+    public EditWorkoutAdapter(ArrayList<Exercise> exercises, UserWorkout userWorkout, OnExerciseRemovedListener listener) {
+        this.exercises = exercises;
+        this.userWorkout = userWorkout;
         this.listener = listener;
     }
     
@@ -151,11 +159,32 @@ public class EditWorkoutAdapter extends RecyclerView.Adapter<EditWorkoutAdapter.
             String levelText = convertLevelToVietnamese(exercise.getLevel());
             difficultyBtn.setText(levelText);
             
-            // Set sets and reps
-            int currentSets = exercise.getDefaultConfig().getSets();
-            int currentReps = exercise.getDefaultConfig().getReps();
+            // Set sets and reps - prioritize UserWorkout config over default config
+            int currentSets = 3;
+            int currentReps = 12;
+            
+            // Get config from UserWorkout.UserWorkoutItem if available
+            UserWorkout.UserWorkoutItem workoutItem = getUserWorkoutItemForExercise(exercise.getId());
+            
+            if (workoutItem != null && workoutItem.getConfig() != null) {
+                // Use config from UserWorkout
+                currentSets = workoutItem.getConfig().getSets();
+                currentReps = workoutItem.getConfig().getReps();
+            } else if (exercise.getDefaultConfig() != null) {
+                // Fallback to default config from Exercise
+                currentSets = exercise.getDefaultConfig().getSets();
+                currentReps = exercise.getDefaultConfig().getReps();
+            }
+            
+            // Validate values
             if (currentSets <= 0) currentSets = 3;
             if (currentReps <= 0) currentReps = 12;
+            
+            // Update exercise default config to match UserWorkout config (for consistency)
+            if (workoutItem != null && workoutItem.getConfig() != null) {
+                exercise.getDefaultConfig().setSets(currentSets);
+                exercise.getDefaultConfig().setReps(currentReps);
+            }
             
             setsTxt.setText(String.valueOf(currentSets));
             repsTxt.setText(String.valueOf(currentReps));
@@ -290,6 +319,22 @@ public class EditWorkoutAdapter extends RecyclerView.Adapter<EditWorkoutAdapter.
         }
     }
 
+    /**
+     * Get UserWorkoutItem for a specific exercise ID
+     */
+    private UserWorkout.UserWorkoutItem getUserWorkoutItemForExercise(String exerciseId) {
+        if (userWorkout == null || userWorkout.getItems() == null) {
+            return null;
+        }
+        
+        for (UserWorkout.UserWorkoutItem item : userWorkout.getItems()) {
+            if (exerciseId.equals(item.getExerciseId())) {
+                return item;
+            }
+        }
+        return null;
+    }
+    
     /**
      * Convert English level to Vietnamese for display
      */

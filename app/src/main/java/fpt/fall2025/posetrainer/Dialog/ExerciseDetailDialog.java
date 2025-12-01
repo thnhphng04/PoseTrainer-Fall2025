@@ -41,6 +41,8 @@ public class ExerciseDetailDialog extends Dialog {
     private int customSets = -1;
     private int customReps = -1;
     private String customDifficulty = null;
+    private MediaController mediaController;
+    private Runnable showMediaControllerRunnable;
 
     public ExerciseDetailDialog(@NonNull Context context, Exercise exercise) {
         super(context);

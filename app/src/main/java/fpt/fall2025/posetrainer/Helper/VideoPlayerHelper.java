@@ -33,7 +33,6 @@ public class VideoPlayerHelper {
         }
         
         if (videoUrl == null || videoUrl.isEmpty()) {
-            Log.w(TAG, "URL video rỗng hoặc null");
             if (onErrorCallback != null) {
                 onErrorCallback.onError("URL video rỗng hoặc null");
             }
@@ -44,7 +43,6 @@ public class VideoPlayerHelper {
         String sanitizedUrl = VideoUrlHelper.sanitizeVideoUrl(videoUrl);
         
         if (sanitizedUrl == null) {
-            Log.w(TAG, "URL video không hợp lệ: " + videoUrl);
             if (onErrorCallback != null) {
                 onErrorCallback.onError("URL video không hợp lệ: " + videoUrl);
             }
@@ -62,7 +60,6 @@ public class VideoPlayerHelper {
             videoView.setOnErrorListener(new OnErrorListener() {
                 @Override
                 public boolean onError(MediaPlayer mp, int what, int extra) {
-                    Log.e(TAG, "Lỗi phát video - what: " + what + ", extra: " + extra);
                     String errorMsg = "Lỗi phát video: ";
                     switch (what) {
                         case MediaPlayer.MEDIA_ERROR_UNKNOWN:
@@ -81,7 +78,7 @@ public class VideoPlayerHelper {
                     return true; // Error handled
                 }
             });
-            
+
             // Set prepared listener (video is ready to play)
             videoView.setOnPreparedListener(new OnPreparedListener() {
                 @Override
@@ -125,9 +122,7 @@ public class VideoPlayerHelper {
         if (videoView != null) {
             try {
                 videoView.start();
-                Log.d(TAG, "Đã bắt đầu phát video");
             } catch (Exception e) {
-                Log.e(TAG, "Lỗi khi bắt đầu phát video: " + e.getMessage(), e);
             }
         }
     }
@@ -139,9 +134,7 @@ public class VideoPlayerHelper {
         if (videoView != null && videoView.isPlaying()) {
             try {
                 videoView.pause();
-                Log.d(TAG, "Đã tạm dừng video");
             } catch (Exception e) {
-                Log.e(TAG, "Lỗi khi tạm dừng video: " + e.getMessage(), e);
             }
         }
     }
@@ -153,9 +146,7 @@ public class VideoPlayerHelper {
         if (videoView != null) {
             try {
                 videoView.stopPlayback();
-                Log.d(TAG, "Đã dừng video");
             } catch (Exception e) {
-                Log.e(TAG, "Lỗi khi dừng video: " + e.getMessage(), e);
             }
         }
     }
@@ -168,9 +159,7 @@ public class VideoPlayerHelper {
             try {
                 stopVideo(videoView);
                 videoView.setVideoURI(null);
-                Log.d(TAG, "Đã giải phóng tài nguyên video");
             } catch (Exception e) {
-                Log.e(TAG, "Lỗi khi giải phóng tài nguyên video: " + e.getMessage(), e);
             }
         }
     }

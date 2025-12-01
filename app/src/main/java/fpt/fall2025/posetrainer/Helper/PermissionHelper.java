@@ -5,7 +5,6 @@ import android.app.AlarmManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
-import android.util.Log;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationManagerCompat;
@@ -15,8 +14,6 @@ import androidx.core.content.ContextCompat;
  * Helper class để kiểm tra và request các permissions cần thiết cho notifications
  */
 public class PermissionHelper {
-    private static final String TAG = "PermissionHelper";
-
     /**
      * Kiểm tra xem app có quyền hiển thị notifications không
      */
@@ -75,7 +72,6 @@ public class PermissionHelper {
                 );
                 activity.startActivity(intent);
             } catch (Exception e) {
-                Log.e(TAG, "Error opening exact alarm settings", e);
                 // Fallback: open general app settings
                 openAppSettings(activity);
             }
@@ -94,7 +90,6 @@ public class PermissionHelper {
             intent.setData(uri);
             activity.startActivity(intent);
         } catch (Exception e) {
-            Log.e(TAG, "Error opening app settings", e);
         }
     }
 
@@ -104,9 +99,6 @@ public class PermissionHelper {
     public static boolean hasAllRequiredPermissions(Context context) {
         boolean hasNotification = hasNotificationPermission(context);
         boolean canScheduleExact = canScheduleExactAlarms(context);
-        
-        Log.d(TAG, "Permission check - Notification: " + hasNotification + 
-                   ", Exact Alarm: " + canScheduleExact);
         
         return hasNotification && canScheduleExact;
     }

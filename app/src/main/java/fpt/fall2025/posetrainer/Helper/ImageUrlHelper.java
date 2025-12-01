@@ -1,6 +1,5 @@
 package fpt.fall2025.posetrainer.Helper;
 
-import android.util.Log;
 import java.net.URLDecoder;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -15,8 +14,6 @@ import java.util.regex.Pattern;
  * - Bất kỳ URL nào Glide có thể load được
  */
 public class ImageUrlHelper {
-    private static final String TAG = "ImageUrlHelper";
-    
     // Pattern để extract FILE_ID từ Google Drive URL
     private static final Pattern GOOGLE_DRIVE_FILE_ID_PATTERN = 
         Pattern.compile("(?:/d/|id=)([a-zA-Z0-9_-]{25,})");
@@ -34,7 +31,6 @@ public class ImageUrlHelper {
      */
     public static String sanitizeImageUrl(String url) {
         if (url == null || url.isEmpty() || url.trim().isEmpty()) {
-            Log.w(TAG, "URL rỗng hoặc null");
             return null;
         }
         
@@ -42,7 +38,6 @@ public class ImageUrlHelper {
         
         // 1. Nếu là local drawable resource, return as is
         if (isLocalDrawable(url)) {
-            Log.d(TAG, "Tài nguyên drawable local: " + url);
             return url;
         }
         
@@ -50,10 +45,8 @@ public class ImageUrlHelper {
         if (isGoogleDriveUrl(url)) {
             String directUrl = convertGoogleDriveToDirectUrl(url);
             if (directUrl != null) {
-                Log.d(TAG, "Đã chuyển đổi Google Drive URL: " + url + " -> " + directUrl);
                 return directUrl;
             }
-            Log.w(TAG, "Không thể chuyển đổi Google Drive URL: " + url);
             return null;
         }
         
@@ -61,27 +54,22 @@ public class ImageUrlHelper {
         if (isGoogleImageSearchUrl(url)) {
             String directUrl = extractDirectUrlFromGoogleImageSearch(url);
             if (directUrl != null) {
-                Log.d(TAG, "Đã trích xuất URL trực tiếp từ Google Image Search: " + url + " -> " + directUrl);
                 return directUrl;
             }
-            Log.w(TAG, "Không thể trích xuất URL từ Google Image Search: " + url);
             return null;
         }
         
         // 4. Validate và return direct image URL (bất kỳ URL nào từ internet)
         if (isValidImageUrl(url)) {
-            Log.d(TAG, "URL ảnh hợp lệ: " + url);
             return url;
         }
         
         // 5. Nếu không match pattern nào, nhưng là HTTP/HTTPS URL, vẫn thử load
         // (Glide sẽ tự xử lý và fallback nếu không load được)
         if (isHttpUrl(url)) {
-            Log.d(TAG, "URL HTTP/HTTPS (sẽ thử tải): " + url);
             return url;
         }
         
-        Log.w(TAG, "URL ảnh không hợp lệ hoặc không được hỗ trợ: " + url);
         return null;
     }
     
@@ -133,14 +121,12 @@ public class ImageUrlHelper {
         // Extract FILE_ID từ URL
         String fileId = extractGoogleDriveFileId(googleDriveUrl);
         if (fileId == null || fileId.isEmpty()) {
-            Log.w(TAG, "Không thể trích xuất FILE_ID từ Google Drive URL: " + googleDriveUrl);
             return null;
         }
         
         // Tạo direct image URL
         // Format: https://drive.google.com/uc?export=view&id=FILE_ID
         String directUrl = "https://drive.google.com/uc?export=view&id=" + fileId;
-        Log.d(TAG, "Đã chuyển đổi Google Drive URL: " + googleDriveUrl + " -> " + directUrl);
         
         return directUrl;
     }
@@ -156,7 +142,6 @@ public class ImageUrlHelper {
         Matcher matcher = GOOGLE_DRIVE_FILE_ID_PATTERN.matcher(url);
         if (matcher.find()) {
             String fileId = matcher.group(1);
-            Log.d(TAG, "Đã trích xuất FILE_ID: " + fileId);
             return fileId;
         }
         
@@ -184,11 +169,9 @@ public class ImageUrlHelper {
                 String encodedUrl = matcher.group(1);
                 // URL decode
                 String decodedUrl = URLDecoder.decode(encodedUrl, "UTF-8");
-                Log.d(TAG, "Đã trích xuất URL trực tiếp từ Google Image Search: " + decodedUrl);
                 return decodedUrl;
             }
         } catch (Exception e) {
-            Log.e(TAG, "Lỗi khi trích xuất URL từ Google Image Search: " + e.getMessage());
         }
         
         return null;

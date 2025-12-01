@@ -2,7 +2,6 @@ package fpt.fall2025.posetrainer.Helper;
 
 import android.content.Context;
 import android.widget.ImageView;
-import android.util.Log;
 import com.bumptech.glide.Glide;
 import fpt.fall2025.posetrainer.R;
 
@@ -11,8 +10,6 @@ import fpt.fall2025.posetrainer.R;
  * Hỗ trợ tất cả các loại URL ảnh
  */
 public class GlideImageLoader {
-    private static final String TAG = "GlideImageLoader";
-    
     /**
      * Load image vào ImageView với error handling tự động
      * Hỗ trợ:
@@ -31,7 +28,6 @@ public class GlideImageLoader {
     public static void loadImage(Context context, String imageUrl, ImageView imageView, 
                                 Integer placeholderResId, Integer errorResId) {
         if (context == null || imageView == null) {
-            Log.w(TAG, "Context hoặc ImageView là null");
             return;
         }
         
@@ -44,13 +40,11 @@ public class GlideImageLoader {
         
         if (sanitizedUrl == null) {
             // URL không hợp lệ, load default image
-            Log.w(TAG, "URL không hợp lệ, đang tải ảnh mặc định: " + imageUrl);
             try {
                 Glide.with(context)
                         .load(placeholder)
                         .into(imageView);
             } catch (Exception e) {
-                Log.e(TAG, "Lỗi khi tải ảnh mặc định: " + e.getMessage());
             }
             return;
         }
@@ -69,13 +63,11 @@ public class GlideImageLoader {
                             .into(imageView);
                 } else {
                     // Drawable không tồn tại, load default
-                    Log.w(TAG, "Không tìm thấy drawable: " + sanitizedUrl);
                     Glide.with(context)
                             .load(placeholder)
                             .into(imageView);
                 }
             } catch (Exception e) {
-                Log.e(TAG, "Lỗi khi tải drawable local: " + e.getMessage());
                 Glide.with(context)
                         .load(placeholder)
                         .into(imageView);
@@ -91,17 +83,13 @@ public class GlideImageLoader {
                     .error(error)
                     .skipMemoryCache(false) // Cache để tăng performance
                     .into(imageView);
-            
-            Log.d(TAG, "Đang tải ảnh từ URL: " + sanitizedUrl);
         } catch (Exception e) {
-            Log.e(TAG, "Lỗi khi tải ảnh từ URL: " + sanitizedUrl + ", Lỗi: " + e.getMessage());
             // Fallback to error image
             try {
                 Glide.with(context)
                         .load(error)
                         .into(imageView);
             } catch (Exception ex) {
-                Log.e(TAG, "Lỗi khi tải ảnh lỗi: " + ex.getMessage());
             }
         }
     }

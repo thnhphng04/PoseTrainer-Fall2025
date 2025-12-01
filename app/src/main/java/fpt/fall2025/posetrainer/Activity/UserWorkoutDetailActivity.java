@@ -323,7 +323,7 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
             return;
         }
         
-        editWorkoutAdapter = new EditWorkoutAdapter(exercises, this);
+        editWorkoutAdapter = new EditWorkoutAdapter(exercises, userWorkout, this);
         editWorkoutAdapter.setOnExerciseReorderListener(new EditWorkoutAdapter.OnExerciseReorderListener() {
             @Override
             public void onExerciseMoved(int fromPosition, int toPosition) {
@@ -1391,10 +1391,23 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
             item.setOrder(i + 1);
             item.setExerciseId(exercise.getId());
             
-            // Create config from current exerciseSets, exerciseReps, exerciseDifficulties
+            // Create config - prioritize exercise.getDefaultConfig() (updated by EditWorkoutAdapter)
+            // Fallback to exerciseSets/exerciseReps arrays (updated by UserWorkoutExerciseAdapter)
             UserWorkout.ExerciseConfig config = new UserWorkout.ExerciseConfig();
-            config.setSets(exerciseSets[i]);
-            config.setReps(exerciseReps[i]);
+            
+            // Get sets and reps - prioritize exercise.getDefaultConfig() if available
+            int sets = exerciseSets[i];
+            int reps = exerciseReps[i];
+            if (exercise.getDefaultConfig() != null) {
+                // EditWorkoutAdapter updates exercise.getDefaultConfig(), so use those values
+                int configSets = exercise.getDefaultConfig().getSets();
+                int configReps = exercise.getDefaultConfig().getReps();
+                if (configSets > 0) sets = configSets;
+                if (configReps > 0) reps = configReps;
+            }
+            
+            config.setSets(sets);
+            config.setReps(reps);
             config.setDifficulty(exerciseDifficulties[i]);
             
             // Get restSec from original config or use default

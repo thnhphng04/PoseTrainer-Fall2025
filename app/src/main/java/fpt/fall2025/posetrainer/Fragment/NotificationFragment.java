@@ -4,7 +4,6 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.format.DateUtils;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -43,9 +42,6 @@ import fpt.fall2025.posetrainer.Service.FirebaseService;
  * Cho phép đánh dấu đã đọc, xóa thông báo
  */
 public class NotificationFragment extends Fragment {
-    
-    private static final String TAG = "NotificationFragment";
-    
     // UI Components
     private RecyclerView recyclerView;
     private ProgressBar loadingProgress;
@@ -172,30 +168,22 @@ public class NotificationFragment extends Fragment {
     private void loadNotifications() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser == null) {
-            Log.w(TAG, "⚠ User chưa đăng nhập, không thể load notifications");
             showEmptyView();
             return;
         }
         
         String uid = currentUser.getUid();
-        Log.d(TAG, "=== NOTIFICATION FRAGMENT: LOADING NOTIFICATIONS ===");
-        Log.d(TAG, "User UID: " + uid);
         
         // Hiển thị loading
         showLoading();
         
         // Load từ Firestore
         firebaseService.loadUserNotifications(uid, notifications -> {
-            Log.d(TAG, "=== NOTIFICATION FRAGMENT: CALLBACK RECEIVED ===");
-            Log.d(TAG, "Số lượng notifications nhận được: " + notifications.size());
-            
             if (notifications == null) {
-                Log.w(TAG, "⚠ Notifications list is null!");
                 notifications = new ArrayList<>();
             }
             
             allNotifications = notifications;
-            Log.d(TAG, "allNotifications.size() = " + allNotifications.size());
             
             filterNotifications();
             updateUnreadCount();
@@ -203,10 +191,8 @@ public class NotificationFragment extends Fragment {
             
             // Hiển thị empty view nếu không có thông báo
             if (allNotifications.isEmpty()) {
-                Log.d(TAG, "⚠ Không có thông báo nào, hiển thị empty view");
                 showEmptyView();
             } else {
-                Log.d(TAG, "✓ Có " + allNotifications.size() + " thông báo, hiển thị danh sách");
                 hideEmptyView();
             }
         });
@@ -257,16 +243,12 @@ public class NotificationFragment extends Fragment {
         } else {
             hideEmptyView();
         }
-        
-        Log.d(TAG, "Đã lọc: " + filteredNotifications.size() + " thông báo (filter: " + currentFilter + ")");
     }
 
     /**
      * Xử lý khi click vào thông báo - Hiển thị dialog chi tiết
      */
     private void handleNotificationClick(Notification notification) {
-        Log.d(TAG, "Click vào thông báo: " + notification.getTitle());
-        
         // Đánh dấu là đã đọc
         if (!notification.isRead()) {
             markNotificationAsRead(notification);
@@ -444,12 +426,9 @@ public class NotificationFragment extends Fragment {
     private void markNotificationAsRead(Notification notification) {
         firebaseService.markNotificationAsRead(notification.getId(), success -> {
             if (success) {
-                Log.d(TAG, "Đã đánh dấu thông báo đã đọc");
                 notification.setRead(true);
                 adapter.notifyDataSetChanged();
                 updateUnreadCount();
-            } else {
-                Log.e(TAG, "Lỗi đánh dấu thông báo");
             }
         });
     }
@@ -518,8 +497,6 @@ public class NotificationFragment extends Fragment {
         } else {
             unreadCountBadge.setVisibility(View.GONE);
         }
-        
-        Log.d(TAG, "Số thông báo chưa đọc: " + unreadCount);
     }
 
     /**
