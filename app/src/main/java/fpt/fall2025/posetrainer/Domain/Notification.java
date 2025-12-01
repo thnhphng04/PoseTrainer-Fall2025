@@ -6,7 +6,7 @@ import java.util.Map;
 public class Notification implements Serializable {
     private String id;
     private String uid;
-    private String type; // "reminder", "achievement", "social", "ai_feedback", "ai_reminder_smart", "ai_feedback_posture", "ai_feedback_consistency", "ai_achievement", "ai_plan_update"
+    private String type; // "reminder", "achievement", "social", "ai_feedback", "ai_reminder_smart", "ai_feedback_posture", "ai_feedback_consistency", "ai_achievement", "ai_plan_update", "ai_streak_reminder"
     private String title;
     private String body;
     private long sentAt;
@@ -183,6 +183,8 @@ public class Notification implements Serializable {
                 return "trophy";
             case "ai_plan_update":
                 return "plan";
+            case "ai_streak_reminder":
+                return "trophy"; // Icon cúp cho streak reminder
             case "social":
                 return "social";
             default:

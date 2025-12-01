@@ -18,6 +18,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import fpt.fall2025.posetrainer.Activity.EditWorkoutActivity;
 import fpt.fall2025.posetrainer.Activity.PlanPreviewActivity;
 import fpt.fall2025.posetrainer.Adapter.UserWorkoutCardAdapter;
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
@@ -77,6 +78,9 @@ public class MyWorkoutFragment extends Fragment {
         
         // Setup click listener for create AI workout button
         setupCreateAIWorkoutButton();
+        
+        // Setup click listener for create new workout FAB
+        setupCreateNewWorkoutButton();
         
         // Load user info and workouts
         loadUserFromFirestore();
@@ -192,6 +196,19 @@ public class MyWorkoutFragment extends Fragment {
     private void setupCreateAIWorkoutButton() {
         binding.btnCreateAiWorkout.setOnClickListener(v -> {
             Intent intent = new Intent(requireContext(), PlanPreviewActivity.class);
+            startActivity(intent);
+        });
+    }
+
+    /**
+     * Setup click listener cho nút + tạo bài tập mới
+     */
+    private void setupCreateNewWorkoutButton() {
+        binding.fabCreateWorkout.setOnClickListener(v -> {
+            // Mở EditWorkoutActivity với mode tạo mới
+            Intent intent = new Intent(requireContext(), EditWorkoutActivity.class);
+            intent.putExtra("createNew", true);
+            intent.putExtra("workoutTemplateId", "new"); // Dummy ID để tránh null
             startActivity(intent);
         });
     }
