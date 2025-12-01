@@ -550,8 +550,7 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
             Log.w(TAG, "No user logged in, using default UID");
             currentSession.setUid("uid_1"); // Fallback
         }
-        // Generate session title with format: "<Title workout> HH:MM DD-MM-YYYY"
-        currentSession.setTitle(Session.generateSessionTitle(userWorkout.getTitle()));
+        currentSession.setTitle(userWorkout.getTitle());
         currentSession.setDescription(userWorkout.getDescription());
         currentSession.setStartedAt(System.currentTimeMillis() / 1000);
         currentSession.setEndedAt(0);
