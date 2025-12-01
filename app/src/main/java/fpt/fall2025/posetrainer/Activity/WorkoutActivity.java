@@ -373,7 +373,8 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
             Log.w(TAG, "No user logged in, using default UID");
             currentSession.setUid("uid_1"); // Fallback
         }
-        currentSession.setTitle(workoutTemplate.getTitle());
+        // Generate session title with format: "<Title workout> HH:MM DD-MM-YYYY"
+        currentSession.setTitle(Session.generateSessionTitle(workoutTemplate.getTitle()));
         currentSession.setDescription(workoutTemplate.getDescription());
         currentSession.setStartedAt(System.currentTimeMillis() / 1000); // Convert to seconds
         currentSession.setEndedAt(0); // Will be set when workout is completed
