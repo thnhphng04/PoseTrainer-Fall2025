@@ -75,7 +75,6 @@ public class HomeFragment extends Fragment {
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
 
-        initBodyPartsListeners();
         workoutTemplates = new ArrayList<>();
         filteredWorkoutTemplates = new ArrayList<>();
         featuredWorkouts = new ArrayList<>();
@@ -760,17 +759,6 @@ public class HomeFragment extends Fragment {
             // Chỉ refresh notification count khi fragment hiển thị lại
             loadUnreadNotificationCount();
         }
-    }
-
-    private void initBodyPartsListeners() {
-        binding.bodyPartFullBody.setOnClickListener(v -> handleBodyPartClick("Full Body"));
-        binding.bodyPartCore.setOnClickListener(v -> handleBodyPartClick("Core"));
-        binding.bodyPartArm.setOnClickListener(v -> handleBodyPartClick("Arm"));
-        binding.bodyPartChest.setOnClickListener(v -> handleBodyPartClick("Chest"));
-        binding.bodyPartButtLeg.setOnClickListener(v -> handleBodyPartClick("Butt & Leg"));
-        binding.bodyPartBack.setOnClickListener(v -> handleBodyPartClick("Back"));
-        binding.bodyPartShoulder.setOnClickListener(v -> handleBodyPartClick("Shoulder"));
-        binding.bodyPartCustom.setOnClickListener(v -> handleBodyPartClick("Custom"));
     }
 
     private void handleBodyPartClick(String bodyPart) {

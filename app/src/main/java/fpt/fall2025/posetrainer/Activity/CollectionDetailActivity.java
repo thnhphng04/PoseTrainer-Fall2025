@@ -53,7 +53,7 @@ public class CollectionDetailActivity extends AppCompatActivity {
     }
 
     private void setupRecyclerView() {
-        binding.rvWorkouts.setLayoutManager(new GridLayoutManager(this, 2));
+        binding.rvWorkouts.setLayoutManager(new LinearLayoutManager(this));
         adapter = new WorkoutTemplateAdapter(workouts);
         binding.rvWorkouts.setAdapter(adapter);
     }

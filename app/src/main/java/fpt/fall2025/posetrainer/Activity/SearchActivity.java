@@ -11,6 +11,7 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
 
 import fpt.fall2025.posetrainer.Adapter.WorkoutTemplateAdapter;
 import fpt.fall2025.posetrainer.Domain.Exercise;
@@ -64,8 +65,7 @@ public class SearchActivity extends AppCompatActivity {
     }
 
     private void setupRecyclerView() {
-        // Grid layout với 2 cột
-        binding.rvSearchResults.setLayoutManager(new GridLayoutManager(this, 2));
+        binding.rvSearchResults.setLayoutManager(new LinearLayoutManager(this));
         adapter = new WorkoutTemplateAdapter(filteredWorkouts);
         binding.rvSearchResults.setAdapter(adapter);
     }
