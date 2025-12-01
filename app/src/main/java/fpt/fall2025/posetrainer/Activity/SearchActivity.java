@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import fpt.fall2025.posetrainer.Adapter.SearchWorkoutAdapter;
 import fpt.fall2025.posetrainer.Adapter.WorkoutTemplateAdapter;
 import fpt.fall2025.posetrainer.Domain.Exercise;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
@@ -32,8 +33,7 @@ public class SearchActivity extends AppCompatActivity {
     private ActivitySearchBinding binding;
     private ArrayList<WorkoutTemplate> allWorkouts;
     private ArrayList<WorkoutTemplate> filteredWorkouts;
-    private WorkoutTemplateAdapter adapter;
-    
+    private SearchWorkoutAdapter adapter;
     // Exercise cache
     private Map<String, Exercise> exerciseMap; // exerciseId -> Exercise
     private ArrayList<Exercise> allExercises;
@@ -66,7 +66,7 @@ public class SearchActivity extends AppCompatActivity {
 
     private void setupRecyclerView() {
         binding.rvSearchResults.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new WorkoutTemplateAdapter(filteredWorkouts);
+        adapter = new SearchWorkoutAdapter(filteredWorkouts); // ĐỔI TÊN CLASS
         binding.rvSearchResults.setAdapter(adapter);
     }
 
