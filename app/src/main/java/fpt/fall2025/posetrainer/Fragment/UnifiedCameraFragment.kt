@@ -111,6 +111,9 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
     // Error tracking
     private val currentSetErrorCounts = mutableMapOf<String, Int>()
     private var lastFeedbackList: List<String> = emptyList()
+    
+    // Set timing tracking
+    private var currentSetStartedAt: Long = 0 // Thời gian bắt đầu set hiện tại (epoch seconds)
 
     // Analyzer and overlay
     private var currentAnalyzer: ExerciseAnalyzerInterface? = null
@@ -464,6 +467,10 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         isUIReset = true
         isExerciseActive = true
         
+        // Track set start time (epoch seconds)
+        currentSetStartedAt = System.currentTimeMillis() / 1000
+        Log.d(TAG, "Set $currentSet started at: $currentSetStartedAt")
+        
         // Log.d(TAG, "Set $currentSet started - UI counts reset to 0, isExerciseActive=$isExerciseActive, isUIReset=$isUIReset")
         
         // Force UI update after a short delay to ensure it's not overridden by onResults
@@ -485,6 +492,9 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         correctCount = 0
         lastCorrectCount = 0
         
+        // Reset set timing when stopping
+        currentSetStartedAt = 0
+        
         // Reset error tracking when stopping
         resetErrorTracking()
         
@@ -504,13 +514,19 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         // Log.d(TAG, "Set $currentSet completed")
         isExerciseActive = false
         
-        // Cập nhật session với kết quả set vừa hoàn thành (bao gồm errorCounts)
+        // Track set end time (epoch seconds)
+        val currentSetEndedAt = System.currentTimeMillis() / 1000
+        Log.d(TAG, "Set $currentSet ended at: $currentSetEndedAt (duration: ${currentSetEndedAt - currentSetStartedAt}s)")
+        
+        // Cập nhật session với kết quả set vừa hoàn thành (bao gồm errorCounts và thời gian)
         (activity as? ExerciseActivity)?.updateSessionAfterSet(
             setNumber = currentSet,
             correctReps = correctCount,
             targetReps = reps,
             skipped = false,
-            errorCounts = currentSetErrorCounts.toMap() // Convert to immutable map
+            errorCounts = currentSetErrorCounts.toMap(), // Convert to immutable map
+            startedAt = currentSetStartedAt,
+            endedAt = currentSetEndedAt
         )
         
         // Force reload session to get latest data
@@ -523,6 +539,9 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         currentRep = 0
         correctCount = 0
         lastCorrectCount = 0
+        
+        // Reset set timing for next set
+        currentSetStartedAt = 0
         
         // Reset error tracking for next set
         resetErrorTracking()
@@ -585,6 +604,9 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
             correctCount = 0
             lastCorrectCount = 0
             
+            // Reset set timing for new set
+            currentSetStartedAt = 0
+            
             // Reset UI counts to 0 for new set
             binding.tvCorrectCount.text = "0"
             binding.tvIncorrectCount.text = "0"
@@ -629,13 +651,22 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
     private fun skipCurrentSet() {
         // Log.d(TAG, "Skipping current set: $currentSet")
         
-        // Cập nhật session với set bị skip (bao gồm errorCounts nếu có)
+        // Track set end time (epoch seconds) - nếu đã bắt đầu thì có startedAt
+        val currentSetEndedAt = if (currentSetStartedAt > 0) {
+            System.currentTimeMillis() / 1000
+        } else {
+            0 // Chưa bắt đầu set
+        }
+        
+        // Cập nhật session với set bị skip (bao gồm errorCounts và thời gian nếu có)
         (activity as? ExerciseActivity)?.updateSessionAfterSet(
             setNumber = currentSet,
             correctReps = correctCount,
             targetReps = reps,
             skipped = true,
-            errorCounts = currentSetErrorCounts.toMap() // Convert to immutable map
+            errorCounts = currentSetErrorCounts.toMap(), // Convert to immutable map
+            startedAt = currentSetStartedAt,
+            endedAt = currentSetEndedAt
         )
         
         // Stop current exercise if active
@@ -648,6 +679,9 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         currentRep = 0
         correctCount = 0
         lastCorrectCount = 0
+        
+        // Reset set timing for next set
+        currentSetStartedAt = 0
         
         // Reset error tracking for next set
         resetErrorTracking()

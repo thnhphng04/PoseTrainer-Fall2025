@@ -444,9 +444,10 @@ class ExerciseActivity : AppCompatActivity() {
         }
     }
     
-    fun updateSessionAfterSet(setNumber: Int, correctReps: Int, targetReps: Int, skipped: Boolean = false, errorCounts: Map<String, Int>? = null) {
+    fun updateSessionAfterSet(setNumber: Int, correctReps: Int, targetReps: Int, skipped: Boolean = false, errorCounts: Map<String, Int>? = null, startedAt: Long = 0, endedAt: Long = 0) {
         android.util.Log.d("ExerciseActivity", "=== UPDATE SESSION AFTER SET ===")
         android.util.Log.d("ExerciseActivity", "Set: $setNumber, CorrectReps: $correctReps, TargetReps: $targetReps, Skipped: $skipped")
+        android.util.Log.d("ExerciseActivity", "Set timing: startedAt=$startedAt, endedAt=$endedAt")
         if (errorCounts != null) {
             android.util.Log.d("ExerciseActivity", "ErrorCounts: $errorCounts")
         }
@@ -472,6 +473,17 @@ class ExerciseActivity : AppCompatActivity() {
                     setData.setTargetReps(targetReps)
                     // Nếu skip thì state = "skipped", nếu không skip thì state = "completed"
                     setData.setState(newState)
+                    
+                    // Cập nhật thời gian bắt đầu và kết thúc set
+                    if (startedAt > 0) {
+                        setData.setStartedAt(startedAt)
+                        android.util.Log.d("ExerciseActivity", "Set $setNumber startedAt: $startedAt")
+                    }
+                    if (endedAt > 0) {
+                        setData.setEndedAt(endedAt)
+                        val duration = endedAt - startedAt
+                        android.util.Log.d("ExerciseActivity", "Set $setNumber endedAt: $endedAt (duration: ${duration}s)")
+                    }
                     
                     // Cập nhật errorCounts nếu có
                     if (errorCounts != null && errorCounts.isNotEmpty()) {

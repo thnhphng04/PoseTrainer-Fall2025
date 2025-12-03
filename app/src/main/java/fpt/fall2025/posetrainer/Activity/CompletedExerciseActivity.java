@@ -22,11 +22,16 @@ import com.google.firebase.auth.FirebaseUser;
 
 import fpt.fall2025.posetrainer.Adapter.CompletedExerciseAdapter;
 import fpt.fall2025.posetrainer.Domain.Exercise;
+import fpt.fall2025.posetrainer.Domain.Profile;
 import fpt.fall2025.posetrainer.Domain.Session;
 import fpt.fall2025.posetrainer.Dialog.AchievementUnlockedDialog;
+import fpt.fall2025.posetrainer.Helper.CalorieCalculator;
 import fpt.fall2025.posetrainer.Manager.AchievementManager;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
+
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 /**
  * Activity hiển thị màn hình hoàn thành bài tập
@@ -49,6 +54,7 @@ public class CompletedExerciseActivity extends AppCompatActivity {
     private Session currentSession;
     private List<Exercise> exercises;
     private CompletedExerciseAdapter adapter;
+    private FirebaseFirestore db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,6 +69,9 @@ public class CompletedExerciseActivity extends AppCompatActivity {
             finish();
             return;
         }
+
+        // Initialize Firebase
+        db = FirebaseFirestore.getInstance();
 
         // Initialize UI
         initViews();
@@ -149,27 +158,38 @@ public class CompletedExerciseActivity extends AppCompatActivity {
                     currentSession.setSummary(new Session.SessionSummary());
                 }
                 
-                // Update duration và calories
+                // Update duration
                 long durationSec = currentSession.getEndedAt() - currentSession.getStartedAt();
                 currentSession.getSummary().setDurationSec((int) durationSec);
-                int estimatedKcal = (int) (durationSec * 0.1);
-                currentSession.getSummary().setEstKcal(estimatedKcal);
                 
-                // Save session với endedAt mới trước khi update streak
-                FirebaseService.getInstance().saveSession(currentSession, success -> {
-                    if (success) {
-                        Log.d(TAG, "✅ Session đã được cập nhật với endedAt trước khi update streak");
-                        updateStreakAndAchievements(uid);
-                    } else {
-                        Log.e(TAG, "❌ Lỗi khi lưu session với endedAt");
-                        Toast.makeText(CompletedExerciseActivity.this, "Lỗi khi lưu session", Toast.LENGTH_SHORT).show();
-                        btnSave.setEnabled(true);
-                        btnSave.setText("Lưu");
-                    }
+                // Load user profile để lấy weight và tính calories bằng METs formula
+                loadUserProfileAndUpdateCalories(uid, () -> {
+                    // Save session với endedAt và calories mới trước khi update streak
+                    FirebaseService.getInstance().saveSession(currentSession, success -> {
+                        if (success) {
+                            Log.d(TAG, "✅ Session đã được cập nhật với endedAt và calories trước khi update streak");
+                            updateStreakAndAchievements(uid);
+                        } else {
+                            Log.e(TAG, "❌ Lỗi khi lưu session với endedAt");
+                            Toast.makeText(CompletedExerciseActivity.this, "Lỗi khi lưu session", Toast.LENGTH_SHORT).show();
+                            btnSave.setEnabled(true);
+                            btnSave.setText("Lưu");
+                        }
+                    });
                 });
             } else {
-                // Session đã có endedAt, update streak ngay
-                updateStreakAndAchievements(uid);
+                // Session đã có endedAt, nhưng cần đảm bảo calories đã được tính đúng
+                // Load profile và update calories nếu cần
+                loadUserProfileAndUpdateCalories(uid, () -> {
+                    // Nếu calories đã được cập nhật, lưu lại session
+                    FirebaseService.getInstance().saveSession(currentSession, success -> {
+                        if (success) {
+                            Log.d(TAG, "✅ Session đã được cập nhật với calories");
+                        }
+                    });
+                    // Update streak ngay
+                    updateStreakAndAchievements(uid);
+                });
             }
         });
     }
@@ -348,15 +368,13 @@ public class CompletedExerciseActivity extends AppCompatActivity {
             tvDurationValue.setText(seconds + " giây");
         }
 
-        // Update calories
+        // Update calories - lấy từ summary.estKcal (đã được tính bằng METs formula)
         int calories = 0;
         if (session.getSummary() != null) {
             calories = session.getSummary().getEstKcal();
-        } else {
-            // Estimate calories nếu summary không có
-            calories = (int)(durationSec * 0.1);
         }
-        tvCalories.setText(calories + " kcal");
+        // Nếu calories = 0, có thể session chưa được tính calories, nhưng không hiển thị giá trị ước tính cũ
+        tvCalories.setText(calories > 0 ? calories + " kcal" : "0 kcal");
 
         // Update level - lấy từ exercise đầu tiên hoặc tính trung bình
         String averageLevel = calculateAverageLevel(session);
@@ -467,6 +485,111 @@ public class CompletedExerciseActivity extends AppCompatActivity {
         }
 
         return null;
+    }
+
+    /**
+     * Load user profile để lấy weight và tính calories bằng METs formula
+     */
+    private void loadUserProfileAndUpdateCalories(String uid, Runnable onComplete) {
+        db.collection("profiles").document(uid)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    double weightKg = 70.0; // Default weight
+                    if (documentSnapshot.exists()) {
+                        Profile profile = documentSnapshot.toObject(Profile.class);
+                        if (profile != null && profile.getWeightKg() > 0) {
+                            weightKg = profile.getWeightKg();
+                        }
+                    }
+                    
+                    // Tính calories bằng METs formula
+                    int estimatedKcal = calculateCaloriesForSession(weightKg);
+                    if (currentSession.getSummary() != null) {
+                        currentSession.getSummary().setEstKcal(estimatedKcal);
+                        Log.d(TAG, "✅ Calories đã được cập nhật: " + estimatedKcal + " kcal (weight: " + weightKg + " kg)");
+                    }
+                    
+                    if (onComplete != null) {
+                        onComplete.run();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "❌ Lỗi khi load profile, sử dụng weight mặc định", e);
+                    // Sử dụng weight mặc định
+                    double weightKg = 70.0;
+                    int estimatedKcal = calculateCaloriesForSession(weightKg);
+                    if (currentSession.getSummary() != null) {
+                        currentSession.getSummary().setEstKcal(estimatedKcal);
+                    }
+                    
+                    if (onComplete != null) {
+                        onComplete.run();
+                    }
+                });
+    }
+
+    /**
+     * Tính calories cho session bằng METs formula
+     * Ưu tiên sử dụng calculateTotalCaloriesForSession nếu có exercises, 
+     * fallback sang calculateCaloriesByDuration
+     */
+    private int calculateCaloriesForSession(double weightKg) {
+        if (currentSession == null || currentSession.getSummary() == null) {
+            return 0;
+        }
+        
+        int durationSec = currentSession.getSummary().getDurationSec();
+        if (durationSec <= 0) {
+            return 0;
+        }
+        
+        double durationMinutes = durationSec / 60.0;
+        
+        // Nếu có exercises đã load, sử dụng calculateTotalCaloriesForSession
+        if (exercises != null && !exercises.isEmpty() && currentSession.getPerExercise() != null) {
+            Exercise[] exerciseArray = exercises.toArray(new Exercise[0]);
+            int totalCalories = CalorieCalculator.calculateTotalCaloriesForSession(currentSession, weightKg, exerciseArray);
+            if (totalCalories > 0) {
+                return totalCalories;
+            }
+        }
+        
+        // Fallback: tính bằng average METs
+        double averageMets = calculateAverageMets();
+        return CalorieCalculator.calculateCaloriesByDuration(averageMets, weightKg, durationMinutes);
+    }
+
+    /**
+     * Tính average METs từ các exercises trong session
+     */
+    private double calculateAverageMets() {
+        if (currentSession == null || currentSession.getPerExercise() == null || currentSession.getPerExercise().isEmpty()) {
+            return 5.0; // Default METs for calisthenics
+        }
+        
+        double totalMets = 0.0;
+        int count = 0;
+        
+        for (Session.PerExercise perExercise : currentSession.getPerExercise()) {
+            if (!"completed".equals(perExercise.getState())) {
+                continue;
+            }
+            
+            Exercise exercise = getExerciseById(perExercise.getExerciseId());
+            if (exercise != null && exercise.getDefaultConfig() != null) {
+                double mets = exercise.getDefaultConfig().getMets();
+                if (mets > 0) {
+                    totalMets += mets;
+                    count++;
+                }
+            }
+        }
+        
+        if (count > 0) {
+            return totalMets / count;
+        }
+        
+        return 5.0; // Default METs
     }
 }
 

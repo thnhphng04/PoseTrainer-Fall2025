@@ -234,6 +234,8 @@ public class Session implements Serializable {
         private String state; // "incomplete", "completed", "skipped"
         // Note: Using Map<String, Integer> for Java compatibility, but Kotlin will use Map<String, Int>
         private Map<String, Integer> errorCounts; // Map lưu số lần mỗi lỗi xuất hiện: "Chân bị gập" -> 5
+        private long startedAt; // Thời gian bắt đầu set (epoch seconds)
+        private long endedAt; // Thời gian kết thúc set (epoch seconds)
 
         public SetData() {}
 
@@ -242,6 +244,15 @@ public class Session implements Serializable {
             this.targetReps = targetReps;
             this.correctReps = correctReps;
             this.state = state;
+        }
+
+        public SetData(int setNo, int targetReps, int correctReps, String state, long startedAt, long endedAt) {
+            this.setNo = setNo;
+            this.targetReps = targetReps;
+            this.correctReps = correctReps;
+            this.state = state;
+            this.startedAt = startedAt;
+            this.endedAt = endedAt;
         }
 
         public int getSetNo() {
@@ -283,6 +294,22 @@ public class Session implements Serializable {
 
         public void setErrorCounts(Map<String, Integer> errorCounts) {
             this.errorCounts = errorCounts;
+        }
+
+        public long getStartedAt() {
+            return startedAt;
+        }
+
+        public void setStartedAt(long startedAt) {
+            this.startedAt = startedAt;
+        }
+
+        public long getEndedAt() {
+            return endedAt;
+        }
+
+        public void setEndedAt(long endedAt) {
+            this.endedAt = endedAt;
         }
     }
 

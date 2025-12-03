@@ -16,10 +16,14 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
 import fpt.fall2025.posetrainer.Adapter.ExerciseAdapter;
 import fpt.fall2025.posetrainer.Domain.Exercise;
+import fpt.fall2025.posetrainer.Domain.Profile;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
 import fpt.fall2025.posetrainer.Domain.Session;
+import fpt.fall2025.posetrainer.Helper.CalorieCalculator;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.databinding.ActivityWorkoutBinding;
@@ -38,12 +42,16 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
     private String[] exerciseDifficulties;
     private Session currentSession;
     private boolean hasActiveSession = false;
+    private FirebaseFirestore db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         binding = ActivityWorkoutBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+        
+        // Initialize Firebase
+        db = FirebaseFirestore.getInstance();
 
 //        getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
 
@@ -583,26 +591,8 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
             Session.SessionSummary summary = currentSession.getSummary();
             summary.setDurationSec((int) durationSec);
             
-            // Estimate calories (simple calculation based on duration)
-            int estimatedKcal = (int) (durationSec * 0.1); // Rough estimate: 0.1 kcal per second
-            summary.setEstKcal(estimatedKcal);
-            
-            // Save updated session to Firebase
-            FirebaseService.getInstance().saveSession(currentSession, new FirebaseService.OnSessionSavedListener() {
-                @Override
-                public void onSessionSaved(boolean success) {
-                    if (success) {
-                        Log.d(TAG, "Workout session completed and saved successfully");
-                        Toast.makeText(WorkoutActivity.this, "Session saved successfully!", Toast.LENGTH_SHORT).show();
-                        
-                        // NOTE: Streak và achievements sẽ được cập nhật khi user bấm nút "Lưu" trong CompletedExerciseActivity
-                        // Không cập nhật ở đây nữa để user có thể xem kết quả trước khi quyết định lưu
-                    } else {
-                        Log.e(TAG, "Failed to save completed session");
-                        Toast.makeText(WorkoutActivity.this, "Failed to save session", Toast.LENGTH_SHORT).show();
-                    }
-                }
-            });
+            // Load user profile để lấy weight và tính calories bằng METs formula
+            loadUserProfileAndCalculateCalories(durationSec, summary);
         }
     }
 
@@ -991,5 +981,105 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
             exerciseDifficulties[exerciseIndex] = difficulty;
             Log.d(TAG, "Exercise " + exerciseIndex + " difficulty updated: " + difficulty);
         }
+    }
+    
+    /**
+     * Tính METs trung bình của các exercises trong workout
+     * @return METs trung bình, mặc định 5.0 nếu không có exercises
+     */
+    private double calculateAverageMets() {
+        if (exercises == null || exercises.isEmpty()) {
+            return 5.0; // Default METs for calisthenics moderate effort
+        }
+        
+        double totalMets = 0;
+        int count = 0;
+        
+        for (Exercise exercise : exercises) {
+            if (exercise != null && exercise.getDefaultConfig() != null) {
+                double mets = exercise.getDefaultConfig().getMets();
+                if (mets > 0) {
+                    totalMets += mets;
+                    count++;
+                }
+            }
+        }
+        
+        if (count > 0) {
+            return totalMets / count;
+        }
+        
+        return 5.0; // Default
+    }
+    
+    /**
+     * Load user profile để lấy weight và tính calories bằng METs formula
+     */
+    private void loadUserProfileAndCalculateCalories(long durationSec, Session.SessionSummary summary) {
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            // Không có user, dùng weight mặc định
+            calculateCaloriesWithWeight(70.0, durationSec, summary);
+            return;
+        }
+        
+        String uid = currentUser.getUid();
+        db.collection("profiles").document(uid)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    double weightKg = 70.0; // Default weight
+                    if (documentSnapshot.exists()) {
+                        Profile profile = documentSnapshot.toObject(Profile.class);
+                        if (profile != null && profile.getWeightKg() > 0) {
+                            weightKg = profile.getWeightKg();
+                        }
+                    }
+                    
+                    calculateCaloriesWithWeight(weightKg, durationSec, summary);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "❌ Lỗi khi load profile, sử dụng weight mặc định", e);
+                    // Sử dụng weight mặc định
+                    calculateCaloriesWithWeight(70.0, durationSec, summary);
+                });
+    }
+    
+    /**
+     * Tính calories với weight đã có
+     * Chỉ tính calories dựa trên exercises đã completed (calculateTotalCaloriesForSession)
+     * Nếu chưa tập (estimatedKcal == 0), giữ nguyên giá trị 0
+     */
+    private void calculateCaloriesWithWeight(double weightKg, long durationSec, Session.SessionSummary summary) {
+        int estimatedKcal = 0;
+        
+        // Nếu có exercises đã load, sử dụng calculateTotalCaloriesForSession (dựa trên thời gian thực của từng set)
+        if (exercises != null && !exercises.isEmpty() && currentSession != null && currentSession.getPerExercise() != null) {
+            Exercise[] exerciseArray = exercises.toArray(new Exercise[0]);
+            estimatedKcal = CalorieCalculator.calculateTotalCaloriesForSession(currentSession, weightKg, exerciseArray);
+            if (estimatedKcal > 0) {
+                Log.d(TAG, "✅ Calories tính bằng calculateTotalCaloriesForSession: " + estimatedKcal + " kcal (weight: " + weightKg + " kg)");
+            } else {
+                Log.d(TAG, "ℹ️ Chưa có exercises completed, estKcal = 0");
+            }
+        }
+        
+        summary.setEstKcal(estimatedKcal);
+        
+        // Save updated session to Firebase
+        FirebaseService.getInstance().saveSession(currentSession, new FirebaseService.OnSessionSavedListener() {
+            @Override
+            public void onSessionSaved(boolean success) {
+                if (success) {
+                    Log.d(TAG, "Workout session completed and saved successfully");
+                    Toast.makeText(WorkoutActivity.this, "Session saved successfully!", Toast.LENGTH_SHORT).show();
+                    
+                    // NOTE: Streak và achievements sẽ được cập nhật khi user bấm nút "Lưu" trong CompletedExerciseActivity
+                    // Không cập nhật ở đây nữa để user có thể xem kết quả trước khi quyết định lưu
+                } else {
+                    Log.e(TAG, "Failed to save completed session");
+                    Toast.makeText(WorkoutActivity.this, "Failed to save session", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
     }
 }

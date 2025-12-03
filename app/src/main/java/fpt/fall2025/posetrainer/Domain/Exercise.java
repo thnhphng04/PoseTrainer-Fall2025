@@ -211,6 +211,7 @@ public class Exercise implements Serializable {
         private int reps;
         private int restSec;
         private String difficulty;
+        private double mets; // METs (Metabolic Equivalent of Task) - dùng để tính calo: calories = METs × weight(kg) × duration(hours)
 
         public DefaultConfig() {}
 
@@ -219,6 +220,15 @@ public class Exercise implements Serializable {
             this.reps = reps;
             this.restSec = restSec;
             this.difficulty = difficulty;
+            this.mets = 5.0; // Giá trị mặc định (calisthenics moderate effort)
+        }
+
+        public DefaultConfig(int sets, int reps, int restSec, String difficulty, double mets) {
+            this.sets = sets;
+            this.reps = reps;
+            this.restSec = restSec;
+            this.difficulty = difficulty;
+            this.mets = mets;
         }
 
         public int getSets() {
@@ -251,6 +261,14 @@ public class Exercise implements Serializable {
 
         public void setDifficulty(String difficulty) {
             this.difficulty = difficulty;
+        }
+
+        public double getMets() {
+            return mets;
+        }
+
+        public void setMets(double mets) {
+            this.mets = mets;
         }
     }
 }

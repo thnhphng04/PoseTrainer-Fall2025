@@ -16,6 +16,10 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,8 +29,10 @@ import java.util.Set;
 
 import fpt.fall2025.posetrainer.Adapter.SessionExerciseAdapter;
 import fpt.fall2025.posetrainer.Domain.Exercise;
+import fpt.fall2025.posetrainer.Domain.Profile;
 import fpt.fall2025.posetrainer.Domain.Session;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
+import fpt.fall2025.posetrainer.Helper.CalorieCalculator;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.databinding.ActivitySessionBinding;
@@ -45,12 +51,16 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
     private CountDownTimer sessionTimer;
     private long sessionStartTime; // Fallback nếu startedAt không có
     private long sessionResumeTime; // Thời điểm mở màn hình lần này (để tính thời gian thực tế đã tập)
+    private FirebaseFirestore db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         binding = ActivitySessionBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+        
+        // Initialize Firebase
+        db = FirebaseFirestore.getInstance();
 
         // Get sessionId from intent
         String sessionId = getIntent().getStringExtra("sessionId");
@@ -478,12 +488,15 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
             if (currentSession.getSummary() != null) {
                 int durationSec = currentSession.getSummary().getDurationSec();
                 
-                // Estimate calories (simple calculation based on duration)
-                int estimatedKcal = (int) (durationSec * 0.1); // Rough estimate: 0.1 kcal per second
-                currentSession.getSummary().setEstKcal(estimatedKcal);
+                // Load user profile để lấy weight và tính calories bằng METs formula
+                loadUserProfileAndCalculateCalories(durationSec, currentSession.getSummary(), () -> {
+                    // Save to Firebase after calories calculated
+                    saveSessionToFirebase();
+                });
+            } else {
+                // Save to Firebase if no duration update needed
+                saveSessionToFirebase();
             }
-
-            // Save to Firebase
             FirebaseService.getInstance().saveSession(currentSession, new FirebaseService.OnSessionSavedListener() {
                 @Override
                 public void onSessionSaved(boolean success) {
@@ -529,35 +542,10 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
             }
             currentSession.getSummary().setDurationSec(durationSec);
             
-            // Estimate calories (simple calculation based on duration)
-            int estimatedKcal = (int) (durationSec * 0.1); // Rough estimate: 0.1 kcal per second
-            currentSession.getSummary().setEstKcal(estimatedKcal);
-
-            Log.d(TAG, "Finishing workout - Duration: " + durationSec + "s (from display), Calories: " + estimatedKcal);
-
-            // Save to Firebase and then navigate
-            FirebaseService.getInstance().saveSession(currentSession, new FirebaseService.OnSessionSavedListener() {
-                @Override
-                public void onSessionSaved(boolean success) {
-                    if (success) {
-                        Log.d(TAG, "Session saved successfully, navigating to CompletedExerciseActivity");
-                        
-                        // Navigate to CompletedExerciseActivity
-                        Intent intent = new Intent(SessionActivity.this, CompletedExerciseActivity.class);
-                        intent.putExtra("sessionId", currentSession.getId());
-                        startActivity(intent);
-                        
-                        // Finish this activity
-                        finish();
-                    } else {
-                        Log.e(TAG, "Failed to save session");
-                        // Still navigate even if save failed
-                        Intent intent = new Intent(SessionActivity.this, CompletedExerciseActivity.class);
-                        intent.putExtra("sessionId", currentSession.getId());
-                        startActivity(intent);
-                        finish();
-                    }
-                }
+            // Load user profile để lấy weight và tính calories bằng METs formula
+            loadUserProfileAndCalculateCalories(durationSec, currentSession.getSummary(), () -> {
+                // Save to Firebase and then navigate after calories calculated
+                saveSessionAndNavigate();
             });
         } else {
             Log.e(TAG, "Cannot finish workout: currentSession is null");
@@ -807,5 +795,142 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
             endSession();
         }
         super.onBackPressed();
+    }
+    
+    /**
+     * Tính METs trung bình của các exercises trong workout
+     * @return METs trung bình, mặc định 5.0 nếu không có exercises
+     */
+    private double calculateAverageMets() {
+        if (exercises == null || exercises.isEmpty()) {
+            return 5.0; // Default METs for calisthenics moderate effort
+        }
+        
+        double totalMets = 0;
+        int count = 0;
+        
+        for (Exercise exercise : exercises) {
+            if (exercise != null && exercise.getDefaultConfig() != null) {
+                double mets = exercise.getDefaultConfig().getMets();
+                if (mets > 0) {
+                    totalMets += mets;
+                    count++;
+                }
+            }
+        }
+        
+        if (count > 0) {
+            return totalMets / count;
+        }
+        
+        return 5.0; // Default
+    }
+    
+    /**
+     * Load user profile để lấy weight và tính calories bằng METs formula
+     */
+    private void loadUserProfileAndCalculateCalories(long durationSec, Session.SessionSummary summary, Runnable onComplete) {
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            // Không có user, dùng weight mặc định
+            calculateCaloriesWithWeight(70.0, durationSec, summary, onComplete);
+            return;
+        }
+        
+        String uid = currentUser.getUid();
+        db.collection("profiles").document(uid)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    double weightKg = 70.0; // Default weight
+                    if (documentSnapshot.exists()) {
+                        Profile profile = documentSnapshot.toObject(Profile.class);
+                        if (profile != null && profile.getWeightKg() > 0) {
+                            weightKg = profile.getWeightKg();
+                        }
+                    }
+                    
+                    calculateCaloriesWithWeight(weightKg, durationSec, summary, onComplete);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "❌ Lỗi khi load profile, sử dụng weight mặc định", e);
+                    // Sử dụng weight mặc định
+                    calculateCaloriesWithWeight(70.0, durationSec, summary, onComplete);
+                });
+    }
+    
+    /**
+     * Tính calories với weight đã có
+     * Chỉ tính calories dựa trên exercises đã completed (calculateTotalCaloriesForSession)
+     * Nếu chưa tập (estimatedKcal == 0), giữ nguyên giá trị 0
+     */
+    private void calculateCaloriesWithWeight(double weightKg, long durationSec, Session.SessionSummary summary, Runnable onComplete) {
+        int estimatedKcal = 0;
+        
+        // Nếu có exercises đã load, sử dụng calculateTotalCaloriesForSession (dựa trên thời gian thực của từng set)
+        if (exercises != null && !exercises.isEmpty() && currentSession != null && currentSession.getPerExercise() != null) {
+            Exercise[] exerciseArray = exercises.toArray(new Exercise[0]);
+            estimatedKcal = CalorieCalculator.calculateTotalCaloriesForSession(currentSession, weightKg, exerciseArray);
+            if (estimatedKcal > 0) {
+                Log.d(TAG, "✅ Calories tính bằng calculateTotalCaloriesForSession: " + estimatedKcal + " kcal (weight: " + weightKg + " kg)");
+            } else {
+                Log.d(TAG, "ℹ️ Chưa có exercises completed, estKcal = 0");
+            }
+        }
+        
+        summary.setEstKcal(estimatedKcal);
+        
+        if (onComplete != null) {
+            onComplete.run();
+        }
+    }
+    
+    /**
+     * Save session to Firebase
+     */
+    private void saveSessionToFirebase() {
+        if (currentSession != null) {
+            FirebaseService.getInstance().saveSession(currentSession, new FirebaseService.OnSessionSavedListener() {
+                @Override
+                public void onSessionSaved(boolean success) {
+                    Log.d(TAG, "Session ended and saved: " + success);
+                }
+            });
+        }
+    }
+    
+    /**
+     * Save session to Firebase and navigate to CompletedExerciseActivity
+     */
+    private void saveSessionAndNavigate() {
+        if (currentSession != null) {
+            int durationSec = currentSession.getSummary() != null ? currentSession.getSummary().getDurationSec() : 0;
+            int estimatedKcal = currentSession.getSummary() != null ? currentSession.getSummary().getEstKcal() : 0;
+            
+            Log.d(TAG, "Finishing workout - Duration: " + durationSec + "s (from display), Calories: " + estimatedKcal);
+            
+            FirebaseService.getInstance().saveSession(currentSession, new FirebaseService.OnSessionSavedListener() {
+                @Override
+                public void onSessionSaved(boolean success) {
+                    if (success) {
+                        Log.d(TAG, "Session saved successfully, navigating to CompletedExerciseActivity");
+                        
+                        // Navigate to CompletedExerciseActivity
+                        Intent intent = new Intent(SessionActivity.this, CompletedExerciseActivity.class);
+                        intent.putExtra("sessionId", currentSession.getId());
+                        startActivity(intent);
+                        
+                        // Finish this activity
+                        finish();
+                    } else {
+                        Log.e(TAG, "Failed to save session");
+                        // Still navigate even if save failed
+                        Intent intent = new Intent(SessionActivity.this, CompletedExerciseActivity.class);
+                        intent.putExtra("sessionId", currentSession.getId());
+                        startActivity(intent);
+                        finish();
+                    }
+                }
+            });
+        }
     }
 }
