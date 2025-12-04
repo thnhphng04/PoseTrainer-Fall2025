@@ -8,12 +8,18 @@ import androidx.annotation.Nullable;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import fpt.fall2025.posetrainer.Domain.Notification;
 import fpt.fall2025.posetrainer.FirebaseContext.FirebaseFirestoreContext;
@@ -190,6 +196,183 @@ public class NotificationDAO {
     public ListenerRegistration addSnapshotListener(@NonNull Query query,
                                                    @NonNull com.google.firebase.firestore.EventListener<com.google.firebase.firestore.QuerySnapshot> listener) {
         return query.addSnapshotListener(listener);
+    }
+    
+    /**
+     * Tạo notification cho chủ bài viết khi có người like bài viết của họ
+     * @param postId ID của bài viết
+     * @param postOwnerUid UID của người đăng bài viết
+     * @param likerUid UID của người like bài viết
+     * @param listener Callback để xử lý kết quả
+     */
+    public void createLikeNotification(@NonNull String postId, @NonNull String postOwnerUid, 
+                                      @NonNull String likerUid,
+                                      @Nullable OnCompleteListener<Void> listener) {
+        Log.d(TAG, "Đang tạo notification cho like bài viết: " + postId);
+        
+        // Lấy thông tin người like để hiển thị trong notification
+        firestoreContext.getDocument("users", likerUid)
+            .get()
+            .addOnSuccessListener(documentSnapshot -> {
+                final String likerName;
+                if (documentSnapshot.exists() && documentSnapshot.getData() != null) {
+                    Map<String, Object> userData = documentSnapshot.getData();
+                    if (userData.containsKey("displayName")) {
+                        likerName = userData.get("displayName").toString();
+                    } else {
+                        likerName = "Ai đó";
+                    }
+                } else {
+                    likerName = "Ai đó";
+                }
+                
+                // Tạo notification document
+                Map<String, Object> notificationData = new HashMap<>();
+                notificationData.put("uid", postOwnerUid); // Gửi cho chủ bài viết
+                notificationData.put("type", "social_like"); // Loại thông báo: like xã hội
+                notificationData.put("title", "Có người thích bài viết của bạn");
+                notificationData.put("body", likerName + " đã thích bài viết của bạn");
+                notificationData.put("sentAt", System.currentTimeMillis()); // Timestamp hiện tại
+                notificationData.put("read", false); // Chưa đọc
+                notificationData.put("isAiGenerated", false); // Không phải AI
+                notificationData.put("actionType", "open_post"); // Khi click vào sẽ mở post
+                notificationData.put("actionData", postId); // ID của post cần mở
+                
+                // Metadata để lưu thông tin bổ sung
+                Map<String, Object> metadata = new HashMap<>();
+                metadata.put("postId", postId);
+                metadata.put("likerUid", likerUid);
+                metadata.put("likerName", likerName);
+                notificationData.put("metadata", metadata);
+                
+                // Lưu vào Firestore collection "notifications"
+                firestoreContext.getCollection(COLLECTION_NAME)
+                    .add(notificationData)
+                    .addOnSuccessListener(docRef -> {
+                        String notificationId = docRef.getId();
+                        Log.d(TAG, "✓ Đã tạo notification cho like bài viết: " + postId);
+                        Log.d(TAG, "  - Notification ID: " + notificationId);
+                        Log.d(TAG, "  - Post Owner UID: " + postOwnerUid);
+                        Log.d(TAG, "  - Liker UID: " + likerUid);
+                        Log.d(TAG, "  - Liker Name: " + likerName);
+                        if (listener != null) {
+                            listener.onComplete(Tasks.forResult(null));
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "✗ Lỗi tạo notification cho like: " + e.getMessage(), e);
+                        if (listener != null) {
+                            listener.onComplete(Tasks.<Void>forException(e));
+                        }
+                    });
+            })
+            .addOnFailureListener(e -> {
+                Log.w(TAG, "Không thể lấy thông tin user like, dùng thông tin mặc định", e);
+                // Vẫn tạo notification với tên mặc định
+                createLikeNotificationWithName(postId, postOwnerUid, likerUid, "Ai đó", listener);
+            });
+    }
+    
+    /**
+     * Helper method để tạo like notification với tên đã biết
+     */
+    private void createLikeNotificationWithName(@NonNull String postId, @NonNull String postOwnerUid,
+                                               @NonNull String likerUid, @NonNull String likerName,
+                                               @Nullable OnCompleteListener<Void> listener) {
+        Map<String, Object> notificationData = new HashMap<>();
+        notificationData.put("uid", postOwnerUid);
+        notificationData.put("type", "social_like");
+        notificationData.put("title", "Có người thích bài viết của bạn");
+        notificationData.put("body", likerName + " đã thích bài viết của bạn");
+        notificationData.put("sentAt", System.currentTimeMillis());
+        notificationData.put("read", false);
+        notificationData.put("isAiGenerated", false);
+        notificationData.put("actionType", "open_post");
+        notificationData.put("actionData", postId);
+        
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("postId", postId);
+        metadata.put("likerUid", likerUid);
+        metadata.put("likerName", likerName);
+        notificationData.put("metadata", metadata);
+        
+        firestoreContext.getCollection(COLLECTION_NAME)
+            .add(notificationData)
+            .addOnSuccessListener(docRef -> {
+                Log.d(TAG, "✓ Đã tạo notification cho like bài viết: " + postId);
+                if (listener != null) {
+                    listener.onComplete(Tasks.forResult(null));
+                }
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "✗ Lỗi tạo notification cho like: " + e.getMessage(), e);
+                if (listener != null) {
+                    listener.onComplete(Tasks.<Void>forException(e));
+                }
+            });
+    }
+    
+    /**
+     * Tạo notification cho chủ bài viết khi có người comment bài viết của họ
+     * @param postId ID của bài viết
+     * @param postOwnerUid UID của người đăng bài viết
+     * @param commenterUid UID của người comment
+     * @param commenterName Tên của người comment
+     * @param commentText Nội dung comment
+     * @param listener Callback để xử lý kết quả
+     */
+    public void createCommentNotification(@NonNull String postId, @NonNull String postOwnerUid,
+                                        @NonNull String commenterUid, @NonNull String commenterName,
+                                        @NonNull String commentText,
+                                        @Nullable OnCompleteListener<Void> listener) {
+        Log.d(TAG, "Đang tạo notification cho comment bài viết: " + postId);
+        
+        // Rút ngắn nội dung comment nếu quá dài
+        String previewText = commentText;
+        if (commentText.length() > 50) {
+            previewText = commentText.substring(0, 50) + "...";
+        }
+        
+        // Tạo notification document
+        Map<String, Object> notificationData = new HashMap<>();
+        notificationData.put("uid", postOwnerUid); // Gửi cho chủ bài viết
+        notificationData.put("type", "social_comment"); // Loại thông báo: comment xã hội
+        notificationData.put("title", "Có người bình luận bài viết của bạn");
+        notificationData.put("body", commenterName + " đã bình luận: \"" + previewText + "\"");
+        notificationData.put("sentAt", System.currentTimeMillis()); // Timestamp hiện tại
+        notificationData.put("read", false); // Chưa đọc
+        notificationData.put("isAiGenerated", false); // Không phải AI
+        notificationData.put("actionType", "open_post"); // Khi click vào sẽ mở post
+        notificationData.put("actionData", postId); // ID của post cần mở
+        
+        // Metadata để lưu thông tin bổ sung
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("postId", postId);
+        metadata.put("commenterUid", commenterUid);
+        metadata.put("commenterName", commenterName);
+        metadata.put("commentText", commentText);
+        notificationData.put("metadata", metadata);
+        
+        // Lưu vào Firestore collection "notifications"
+        firestoreContext.getCollection(COLLECTION_NAME)
+            .add(notificationData)
+            .addOnSuccessListener(docRef -> {
+                String notificationId = docRef.getId();
+                Log.d(TAG, "✓ Đã tạo notification cho comment bài viết: " + postId);
+                Log.d(TAG, "  - Notification ID: " + notificationId);
+                Log.d(TAG, "  - Post Owner UID: " + postOwnerUid);
+                Log.d(TAG, "  - Commenter UID: " + commenterUid);
+                Log.d(TAG, "  - Commenter Name: " + commenterName);
+                if (listener != null) {
+                    listener.onComplete(Tasks.forResult(null));
+                }
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "✗ Lỗi tạo notification cho comment: " + e.getMessage(), e);
+                if (listener != null) {
+                    listener.onComplete(Tasks.<Void>forException(e));
+                }
+            });
     }
 }
 

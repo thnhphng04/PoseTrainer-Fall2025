@@ -10,8 +10,11 @@ import android.net.Uri;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -19,7 +22,9 @@ import com.google.firebase.storage.StorageMetadata;
 import com.google.firebase.storage.StorageReference;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import fpt.fall2025.posetrainer.Domain.Community;
 import fpt.fall2025.posetrainer.FirebaseContext.FirebaseFirestoreContext;
@@ -35,10 +40,14 @@ public class CommunityDAO {
     
     private FirebaseFirestoreContext firestoreContext;
     private FirebaseStorageContext storageContext;
+    private FirebaseAuth auth;
+    private NotificationDAO notificationDAO;
     
     public CommunityDAO() {
         this.firestoreContext = FirebaseFirestoreContext.getInstance();
         this.storageContext = FirebaseStorageContext.getInstance();
+        this.auth = FirebaseAuth.getInstance();
+        this.notificationDAO = new NotificationDAO();
     }
     
     /**
@@ -305,6 +314,220 @@ public class CommunityDAO {
     @NonNull
     public com.google.firebase.firestore.CollectionReference getCommentsCollection(@NonNull String postId) {
         return getDocument(postId).collection("comments");
+    }
+    
+    /**
+     * Toggle like cho post (like/unlike)
+     * @param postId ID của post
+     * @param listener Callback để xử lý kết quả
+     */
+    public void toggleLike(@NonNull String postId, @Nullable OnCompleteListener<Void> listener) {
+        FirebaseUser currentUser = auth.getCurrentUser();
+        if (currentUser == null) {
+            Log.e(TAG, "User chưa đăng nhập, không thể like");
+            if (listener != null) {
+                listener.onComplete(Tasks.<Void>forException(new Exception("Not signed in")));
+            }
+            return;
+        }
+        
+        String uid = currentUser.getUid();
+        Log.d(TAG, "Đang toggle like cho post: " + postId);
+        
+        DocumentReference likeRef = getDocument(postId).collection("likes").document(uid);
+        DocumentReference pRef = getDocument(postId);
+        
+        // Thực hiện transaction để toggle like
+        firestoreContext.getFirestore().runTransaction(transaction -> {
+            DocumentSnapshot likeSnap = transaction.get(likeRef);
+            DocumentSnapshot postSnap = transaction.get(pRef);
+            
+            if (!postSnap.exists()) {
+                throw new RuntimeException("Post không tồn tại");
+            }
+            
+            long likes = postSnap.contains("likesCount") ? postSnap.getLong("likesCount") : 0L;
+            
+            // Lấy danh sách likedBy hiện tại và tạo ArrayList mới để đảm bảo tính nhất quán
+            List<String> currentLikedBy = (List<String>) postSnap.get("likedBy");
+            List<String> likedBy = new ArrayList<>();
+            if (currentLikedBy != null) {
+                likedBy.addAll(currentLikedBy);
+            }
+            
+            Map<String, Object> updates = new HashMap<>();
+            boolean isNewLike = !likeSnap.exists(); // true nếu đang like (chưa tồn tại)
+            String postOwnerUid = postSnap.getString("uid");
+            
+            if (likeSnap.exists()) {
+                // Unlike: xóa khỏi subcollection và likedBy array
+                transaction.delete(likeRef);
+                likedBy.remove(uid); // Xóa uid khỏi array
+                updates.put("likesCount", Math.max(0, likes - 1));
+            } else {
+                // Like: thêm vào subcollection và likedBy array
+                Map<String, Object> like = new HashMap<>();
+                like.put("uid", uid);
+                like.put("createdAt", FieldValue.serverTimestamp());
+                transaction.set(likeRef, like);
+                if (!likedBy.contains(uid)) {
+                    likedBy.add(uid); // Thêm uid vào array
+                }
+                updates.put("likesCount", likes + 1);
+            }
+            
+            // Cập nhật field likedBy array trong document chính
+            updates.put("likedBy", likedBy);
+            // ⚠️ Rule yêu cầu có updatedAt
+            updates.put("updatedAt", FieldValue.serverTimestamp());
+            transaction.update(pRef, updates);
+            
+            // Trả về Map chứa thông tin để tạo notification sau
+            Map<String, Object> result = new HashMap<>();
+            result.put("postUid", postOwnerUid);
+            result.put("isNewLike", isNewLike);
+            return result;
+        })
+        .addOnSuccessListener(result -> {
+            Log.d(TAG, "✅ Toggle like thành công cho post: " + postId);
+            
+            // Sau khi transaction thành công, tạo notification nếu cần
+            if (result != null) {
+                String postUid = (String) result.get("postUid");
+                Boolean isNewLike = (Boolean) result.get("isNewLike");
+                
+                // Chỉ tạo notification khi like mới (không phải unlike) và không phải chính mình
+                if (Boolean.TRUE.equals(isNewLike) && postUid != null && !postUid.equals(uid)) {
+                    // Không tạo notification cho chính mình
+                    notificationDAO.createLikeNotification(postId, postUid, uid, null);
+                }
+            }
+            
+            if (listener != null) {
+                listener.onComplete(Tasks.forResult(null));
+            }
+        })
+        .addOnFailureListener(e -> {
+            Log.e(TAG, "❌ Lỗi toggle like cho post: " + postId, e);
+            if (listener != null) {
+                listener.onComplete(Tasks.<Void>forException(e));
+            }
+        });
+    }
+    
+    /**
+     * Kiểm tra user hiện tại đã like post chưa
+     * @param postId ID của post
+     * @param listener Callback trả về true nếu đã like, false nếu chưa
+     */
+    public void isLikedByMe(@NonNull String postId, @Nullable OnCompleteListener<Boolean> listener) {
+        FirebaseUser user = auth.getCurrentUser();
+        if (user == null) {
+            if (listener != null) {
+                listener.onComplete(Tasks.forResult(false));
+            }
+            return;
+        }
+        
+        String uid = user.getUid();
+        Log.d(TAG, "Đang kiểm tra like status cho post: " + postId);
+        
+        getDocument(postId)
+            .get()
+            .addOnSuccessListener(documentSnapshot -> {
+                if (!documentSnapshot.exists()) {
+                    if (listener != null) {
+                        listener.onComplete(Tasks.forResult(false));
+                    }
+                    return;
+                }
+                
+                List<String> likedBy = (List<String>) documentSnapshot.get("likedBy");
+                boolean isLiked = likedBy != null && likedBy.contains(uid);
+                Log.d(TAG, "✅ Kiểm tra like status thành công: " + isLiked);
+                
+                if (listener != null) {
+                    listener.onComplete(Tasks.forResult(isLiked));
+                }
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "❌ Lỗi kiểm tra like status cho post: " + postId, e);
+                if (listener != null) {
+                    listener.onComplete(Tasks.<Boolean>forException(e));
+                }
+            });
+    }
+    
+    /**
+     * Thêm comment vào post
+     * @param postId ID của post
+     * @param text Nội dung comment
+     * @param listener Callback để xử lý kết quả
+     */
+    public void addComment(@NonNull String postId, @NonNull String text, 
+                          @Nullable OnCompleteListener<Void> listener) {
+        FirebaseUser user = auth.getCurrentUser();
+        if (user == null) {
+            Log.e(TAG, "User chưa đăng nhập, không thể comment");
+            if (listener != null) {
+                listener.onComplete(Tasks.<Void>forException(new Exception("Not signed in")));
+            }
+            return;
+        }
+        
+        String uid = user.getUid();
+        String displayName = user.getDisplayName() != null ? user.getDisplayName()
+                : (user.getEmail() != null ? user.getEmail() : "User");
+        String photoURL = user.getPhotoUrl() != null ? user.getPhotoUrl().toString() : "";
+        
+        Log.d(TAG, "Đang thêm comment cho post: " + postId);
+        
+        DocumentReference pRef = getDocument(postId);
+        DocumentReference cRef = getCommentsCollection(postId).document();
+        
+        Map<String, Object> cmt = new HashMap<>();
+        cmt.put("id", cRef.getId());
+        cmt.put("postId", postId);
+        cmt.put("uid", uid);
+        cmt.put("displayName", displayName);
+        cmt.put("photoURL", photoURL);
+        cmt.put("text", text.trim());
+        cmt.put("createdAt", FieldValue.serverTimestamp());
+        
+        firestoreContext.getFirestore().runTransaction(transaction -> {
+            DocumentSnapshot postSnap = transaction.get(pRef);
+            
+            if (!postSnap.exists()) {
+                throw new RuntimeException("Post không tồn tại");
+            }
+            
+            Long count = postSnap.getLong("commentsCount");
+            if (count == null) count = 0L;
+            transaction.set(cRef, cmt);
+            transaction.update(pRef, "commentsCount", count + 1);
+            
+            // Trả về postUid để tạo notification sau transaction
+            return postSnap.getString("uid");
+        })
+        .addOnSuccessListener(postUid -> {
+            Log.d(TAG, "✅ Thêm comment thành công cho post: " + postId);
+            
+            // Sau khi transaction thành công, tạo notification nếu cần
+            if (postUid != null && !postUid.equals(uid)) {
+                // Không tạo notification cho chính mình
+                notificationDAO.createCommentNotification(postId, postUid, uid, displayName, text.trim(), null);
+            }
+            
+            if (listener != null) {
+                listener.onComplete(Tasks.forResult(null));
+            }
+        })
+        .addOnFailureListener(e -> {
+            Log.e(TAG, "❌ Lỗi thêm comment cho post: " + postId, e);
+            if (listener != null) {
+                listener.onComplete(Tasks.<Void>forException(e));
+            }
+        });
     }
 }
 

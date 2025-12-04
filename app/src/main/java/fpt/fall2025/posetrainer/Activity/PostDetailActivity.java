@@ -17,7 +17,6 @@ import com.firebase.ui.firestore.FirestoreRecyclerOptions;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.*;
 
-import fpt.fall2025.posetrainer.Data.CommunityRepository;
 import fpt.fall2025.posetrainer.Domain.Community;
 import fpt.fall2025.posetrainer.Service.AuthService;
 import fpt.fall2025.posetrainer.DAL.CommunityDAO;
@@ -34,7 +33,6 @@ public class PostDetailActivity extends AppCompatActivity {
     private View btnSend;
     private boolean likedByMe = false;
 
-    private CommunityRepository repo;
     private AuthService authService;
     private CommunityDAO communityDAO;
     private ListenerRegistration postListener;
@@ -49,7 +47,6 @@ public class PostDetailActivity extends AppCompatActivity {
         postId = getIntent().getStringExtra(EXTRA_POST_ID);
         if (postId == null) { finish(); return; }
 
-        repo = new CommunityRepository();
         authService = new AuthService();
         communityDAO = new CommunityDAO();
 
@@ -85,16 +82,20 @@ public class PostDetailActivity extends AppCompatActivity {
 
 
         // --- 2) Initial like state ---
-        repo.isLikedByMe(postId).addOnSuccessListener(b -> {
-            likedByMe = b;
-            renderLikeIcon();
+        communityDAO.isLikedByMe(postId, task -> {
+            if (task.isSuccessful() && task.getResult() != null) {
+                likedByMe = task.getResult();
+                renderLikeIcon();
+            }
         });
 
         // --- 3) Like toggle ---
         btnLike.setOnClickListener(v -> {
-            repo.toggleLike(postId)
-                    .addOnFailureListener(err ->
-                            Toast.makeText(this, "Lỗi khi like: " + err.getMessage(), Toast.LENGTH_SHORT).show());
+            communityDAO.toggleLike(postId, task -> {
+                if (!task.isSuccessful()) {
+                    Toast.makeText(this, "Lỗi khi like: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
         });
 
         // --- 4) Comments list ---
@@ -132,9 +133,13 @@ public class PostDetailActivity extends AppCompatActivity {
         btnSend.setOnClickListener(v -> {
             String text = edtComment.getText().toString().trim();
             if (TextUtils.isEmpty(text)) return;
-            repo.addComment(postId, text)
-                    .addOnSuccessListener(x -> edtComment.setText(""))
-                    .addOnFailureListener(err -> Toast.makeText(this, err.getMessage(), Toast.LENGTH_SHORT).show());
+            communityDAO.addComment(postId, text, task -> {
+                if (task.isSuccessful()) {
+                    edtComment.setText("");
+                } else {
+                    Toast.makeText(this, task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
         });
         //Nút back
         ImageView btnBack = findViewById(R.id.btnBack);

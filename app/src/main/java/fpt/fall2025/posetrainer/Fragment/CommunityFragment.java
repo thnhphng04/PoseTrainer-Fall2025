@@ -37,7 +37,6 @@ import fpt.fall2025.posetrainer.Activity.ImageGalleryActivity;
 import fpt.fall2025.posetrainer.Activity.MainActivity;
 import fpt.fall2025.posetrainer.Activity.PostDetailActivity;
 import fpt.fall2025.posetrainer.Activity.UserProfileActivity;
-import fpt.fall2025.posetrainer.Data.CommunityRepository;
 import fpt.fall2025.posetrainer.Dialog.LikeListDialog;
 import fpt.fall2025.posetrainer.Domain.Community;
 import fpt.fall2025.posetrainer.Domain.User;
@@ -787,18 +786,19 @@ public class CommunityFragment extends Fragment {
                     }
                 }
 
-                new CommunityRepository()
-                        .toggleLike(currentPostId)
-                        .addOnFailureListener(e -> {
-                            isLiked = previousLiked;
-                            currentLikesCount = previousLikesCount;
-                            renderLike(isLiked);
-                            tvCounts.setText("💬 " + currentCommentsCount);
-                            if (tvLikesCount != null) {
-                                tvLikesCount.setText("❤ " + currentLikesCount);
-                            }
-                            // Error toggling like
-                        });
+                CommunityDAO communityDAO = new CommunityDAO();
+                communityDAO.toggleLike(currentPostId, task -> {
+                    if (!task.isSuccessful()) {
+                        isLiked = previousLiked;
+                        currentLikesCount = previousLikesCount;
+                        renderLike(isLiked);
+                        tvCounts.setText("💬 " + currentCommentsCount);
+                        if (tvLikesCount != null) {
+                            tvLikesCount.setText("❤ " + currentLikesCount);
+                        }
+                        // Error toggling like
+                    }
+                });
             });
 
             // Comment button
