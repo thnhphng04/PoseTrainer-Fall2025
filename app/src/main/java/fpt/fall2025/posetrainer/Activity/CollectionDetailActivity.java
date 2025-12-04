@@ -16,8 +16,8 @@ import fpt.fall2025.posetrainer.Domain.Collection;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
+import fpt.fall2025.posetrainer.DAL.CollectionDAO;
 import fpt.fall2025.posetrainer.databinding.ActivityCollectionDetailBinding;
-import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 
@@ -29,6 +29,7 @@ public class CollectionDetailActivity extends AppCompatActivity {
     private Collection collection;
     private ArrayList<WorkoutTemplate> workouts;
     private WorkoutTemplateAdapter adapter;
+    private CollectionDAO collectionDAO;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,6 +47,7 @@ public class CollectionDetailActivity extends AppCompatActivity {
         }
 
         workouts = new ArrayList<>();
+        collectionDAO = new CollectionDAO();
 
         setupRecyclerView();
         setupBackButton();
@@ -65,9 +67,7 @@ public class CollectionDetailActivity extends AppCompatActivity {
     private void loadCollection() {
         Log.d(TAG, "Loading collection: " + collectionId);
         
-        FirebaseFirestore.getInstance()
-                .collection("collections")
-                .document(collectionId)
+        collectionDAO.getDocument(collectionId)
                 .get()
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {

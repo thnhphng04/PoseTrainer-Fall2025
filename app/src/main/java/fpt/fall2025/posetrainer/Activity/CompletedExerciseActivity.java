@@ -17,7 +17,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
 import fpt.fall2025.posetrainer.Adapter.CompletedExerciseAdapter;
@@ -29,9 +28,10 @@ import fpt.fall2025.posetrainer.Helper.CalorieCalculator;
 import fpt.fall2025.posetrainer.Manager.AchievementManager;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
+import fpt.fall2025.posetrainer.Service.AuthService;
+import fpt.fall2025.posetrainer.DAL.ProfileDAO;
 
 import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.FirebaseFirestore;
 
 /**
  * Activity hiển thị màn hình hoàn thành bài tập
@@ -54,7 +54,8 @@ public class CompletedExerciseActivity extends AppCompatActivity {
     private Session currentSession;
     private List<Exercise> exercises;
     private CompletedExerciseAdapter adapter;
-    private FirebaseFirestore db;
+    private AuthService authService;
+    private ProfileDAO profileDAO;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,7 +72,8 @@ public class CompletedExerciseActivity extends AppCompatActivity {
         }
 
         // Initialize Firebase
-        db = FirebaseFirestore.getInstance();
+        authService = new AuthService();
+        profileDAO = new ProfileDAO();
 
         // Initialize UI
         initViews();
@@ -119,7 +121,7 @@ public class CompletedExerciseActivity extends AppCompatActivity {
             btnSave.setText("Đang lưu...");
 
             // Get current user
-            FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+            FirebaseUser currentUser = authService.getCurrentUser();
             if (currentUser == null) {
                 Toast.makeText(this, "Vui lòng đăng nhập để lưu kết quả", Toast.LENGTH_SHORT).show();
                 btnSave.setEnabled(true);
@@ -491,7 +493,7 @@ public class CompletedExerciseActivity extends AppCompatActivity {
      * Load user profile để lấy weight và tính calories bằng METs formula
      */
     private void loadUserProfileAndUpdateCalories(String uid, Runnable onComplete) {
-        db.collection("profiles").document(uid)
+        profileDAO.getDocument(uid)
                 .get()
                 .addOnSuccessListener(documentSnapshot -> {
                     double weightKg = 70.0; // Default weight

@@ -17,10 +17,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.FirebaseFirestore;
 import fpt.fall2025.posetrainer.Adapter.UserWorkoutExerciseAdapter;
 import fpt.fall2025.posetrainer.Adapter.EditWorkoutAdapter;
 import fpt.fall2025.posetrainer.Helper.CalorieCalculator;
@@ -32,6 +30,8 @@ import fpt.fall2025.posetrainer.Domain.UserWorkout;
 import fpt.fall2025.posetrainer.Domain.Session;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
+import fpt.fall2025.posetrainer.Service.AuthService;
+import fpt.fall2025.posetrainer.DAL.ProfileDAO;
 import fpt.fall2025.posetrainer.databinding.ActivityUserWorkoutDetailBinding;
 import androidx.fragment.app.FragmentManager;
 import androidx.recyclerview.widget.ItemTouchHelper;
@@ -53,7 +53,8 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
     private boolean isEditMode = false;
     private UserWorkoutExerciseAdapter userWorkoutExerciseAdapter;
     private EditWorkoutAdapter editWorkoutAdapter;
-    private FirebaseFirestore db;
+    private AuthService authService;
+    private ProfileDAO profileDAO;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,7 +65,8 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
         
         // Initialize Firebase
-        db = FirebaseFirestore.getInstance();
+        authService = new AuthService();
+        profileDAO = new ProfileDAO();
 
         // Initialize data
         exercises = new ArrayList<>();
@@ -139,7 +141,7 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
      * Lưu ý: UserWorkout được yêu thích bằng cách lưu userWorkoutId vào favorites
      */
     private void checkFavoriteStatus() {
-        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null || userWorkout == null) {
             // Nếu chưa đăng nhập hoặc chưa có user workout, hiển thị icon mặc định
             updateFavoriteIcon(false);
@@ -164,7 +166,7 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
      * Toggle favorite (thêm hoặc xóa khỏi yêu thích)
      */
     private void toggleFavorite() {
-        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) {
             Toast.makeText(this, "Vui lòng đăng nhập để sử dụng tính năng yêu thích", Toast.LENGTH_SHORT).show();
             return;
@@ -551,7 +553,7 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
         currentSession = new Session();
         currentSession.setId(sessionId);
         // Get current user ID
-        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser != null) {
             currentSession.setUid(currentUser.getUid());
         } else {
@@ -1507,7 +1509,7 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
      * Load user profile để lấy weight và tính calories bằng METs formula
      */
     private void loadUserProfileAndCalculateCalories(long durationSec, Session.SessionSummary summary) {
-        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) {
             // Không có user, dùng weight mặc định
             calculateCaloriesWithWeight(70.0, durationSec, summary);
@@ -1515,7 +1517,7 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
         }
         
         String uid = currentUser.getUid();
-        db.collection("profiles").document(uid)
+        profileDAO.getDocument(uid)
                 .get()
                 .addOnSuccessListener(documentSnapshot -> {
                     double weightKg = 70.0; // Default weight

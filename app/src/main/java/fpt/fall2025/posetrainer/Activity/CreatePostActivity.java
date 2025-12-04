@@ -22,12 +22,10 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
-import com.google.android.gms.tasks.Tasks;
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.*;
-import com.google.firebase.storage.*;
+import com.google.firebase.firestore.FieldValue;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -35,6 +33,9 @@ import java.util.List;
 import java.util.Map;
 
 import fpt.fall2025.posetrainer.R;
+import fpt.fall2025.posetrainer.Service.AuthService;
+import fpt.fall2025.posetrainer.DAL.CommunityDAO;
+import fpt.fall2025.posetrainer.Domain.Community;
 
 public class CreatePostActivity extends AppCompatActivity {
 
@@ -52,9 +53,8 @@ public class CreatePostActivity extends AppCompatActivity {
     private List<Uri> selectedImages = new ArrayList<>();
     private SelectedImagesAdapter adapter;
 
-    private FirebaseAuth auth;
-    private FirebaseFirestore db;
-    private FirebaseStorage storage;
+    private AuthService authService;
+    private CommunityDAO communityDAO;
 
     private final ActivityResultLauncher<String> pickMultipleImages =
             registerForActivityResult(new ActivityResultContracts.GetMultipleContents(),
@@ -81,9 +81,8 @@ public class CreatePostActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_create_post);
 
-        auth = FirebaseAuth.getInstance();
-        db = FirebaseFirestore.getInstance();
-        storage = FirebaseStorage.getInstance();
+        authService = new AuthService();
+        communityDAO = new CommunityDAO();
 
         initViews();
         setupUserInfo();
@@ -106,12 +105,14 @@ public class CreatePostActivity extends AppCompatActivity {
     }
 
     private void setupUserInfo() {
-        FirebaseUser user = auth.getCurrentUser();
+        FirebaseUser user = authService.getCurrentUser();
         if (user != null) {
-            tvUserName.setText(user.getDisplayName() != null ? user.getDisplayName()
-                    : (user.getEmail() != null ? user.getEmail() : "Người dùng"));
-            if (user.getPhotoUrl() != null) {
-                Glide.with(this).load(user.getPhotoUrl()).into(ivUserAvatar);
+            String displayName = authService.getCurrentUserDisplayName();
+            String email = authService.getCurrentUserEmail();
+            tvUserName.setText(displayName != null ? displayName : (email != null ? email : "Người dùng"));
+            String photoUrl = authService.getCurrentUserPhotoUrl();
+            if (photoUrl != null) {
+                Glide.with(this).load(photoUrl).into(ivUserAvatar);
             }
         }
     }
@@ -154,7 +155,7 @@ public class CreatePostActivity extends AppCompatActivity {
     }
 
     private void createPost() {
-        FirebaseUser user = auth.getCurrentUser();
+        FirebaseUser user = authService.getCurrentUser();
         if (user == null) {
             Toast.makeText(this, "Bạn cần đăng nhập!", Toast.LENGTH_SHORT).show();
             return;
@@ -168,95 +169,80 @@ public class CreatePostActivity extends AppCompatActivity {
         setUiEnabled(false);
         progress.setVisibility(ProgressBar.VISIBLE);
 
-        DocumentReference postRef = db.collection("community").document();
-        String postId = postRef.getId();
+        String uid = user.getUid();
+        String postId = java.util.UUID.randomUUID().toString();
 
-        Map<String, Object> author = new HashMap<>();
-        author.put("uid", user.getUid());
-        author.put("displayName", user.getDisplayName() != null ? user.getDisplayName()
-                : (user.getEmail() != null ? user.getEmail() : "User"));
-        author.put("photoURL", user.getPhotoUrl() != null ? user.getPhotoUrl().toString() : "");
+        // Tạo Community object
+        String displayName = authService.getCurrentUserDisplayName() != null ? authService.getCurrentUserDisplayName()
+                : (authService.getCurrentUserEmail() != null ? authService.getCurrentUserEmail() : "User");
+        String photoURL = authService.getCurrentUserPhotoUrl() != null ? authService.getCurrentUserPhotoUrl() : "";
+        Community.Author author = new Community.Author(uid, displayName, photoURL);
 
-        Map<String, Object> post = new HashMap<>();
-        post.put("id", postId);
-        post.put("uid", user.getUid());
-        post.put("author", author);
-        post.put("content", content);
-        post.put("imageUrl", ""); // Backward compatibility
-        post.put("imagePath", ""); // Backward compatibility
-        post.put("imageUrls", new ArrayList<String>()); // Danh sách ảnh mới
-        post.put("imagePaths", new ArrayList<String>()); // Danh sách đường dẫn
-        post.put("likesCount", 0L);
-        post.put("commentsCount", 0L);
-        post.put("likedBy", new ArrayList<String>());
-        post.put("createdAt", FieldValue.serverTimestamp());
-        post.put("updatedAt", FieldValue.serverTimestamp());
+        Community post = new Community();
+        post.id = postId;
+        post.uid = uid;
+        post.author = author;
+        post.content = content;
+        post.imageUrl = ""; // Backward compatibility
+        post.imagePath = ""; // Backward compatibility
+        post.imageUrls = new ArrayList<>(); // Danh sách ảnh mới
+        post.imagePaths = new ArrayList<>(); // Danh sách đường dẫn
+        post.likesCount = 0L;
+        post.commentsCount = 0L;
+        post.likedBy = new ArrayList<>();
+        post.createdAt = new com.google.firebase.Timestamp(new java.util.Date());
+        post.updatedAt = new com.google.firebase.Timestamp(new java.util.Date());
 
-        // Tạo post trước
-        postRef.set(post).continueWithTask(task -> {
-            if (!task.isSuccessful()) {
-                throw task.getException();
-            }
-
-            // Upload tất cả ảnh
-            if (selectedImages.isEmpty()) {
-                return Tasks.forResult(null);
-            }
-
-            List<Task<Uri>> uploadTasks = new ArrayList<>();
-            List<String> imageUrls = new ArrayList<>();
-            List<String> imagePaths = new ArrayList<>();
-
-            for (int i = 0; i < selectedImages.size(); i++) {
-                Uri imageUri = selectedImages.get(i);
-                String fileName = "image_" + i + ".jpg";
-                String path = "community/" + user.getUid() + "/" + postId + "/" + fileName;
-                StorageReference ref = storage.getReference().child(path);
-
-                StorageMetadata metadata = new StorageMetadata.Builder()
-                        .setContentType("image/jpeg")
-                        .build();
-
-                Task<Uri> uploadTask = ref.putFile(imageUri, metadata)
-                        .continueWithTask(t -> {
-                            if (!t.isSuccessful()) {
-                                throw t.getException();
-                            }
-                            return ref.getDownloadUrl();
-                        })
-                        .addOnSuccessListener(uri -> {
-                            imageUrls.add(uri.toString());
-                            imagePaths.add(path);
-                        });
-
-                uploadTasks.add(uploadTask);
-            }
-
-            // Đợi tất cả ảnh upload xong
-            return Tasks.whenAllComplete(uploadTasks).continueWithTask(allTasks -> {
-                // Cập nhật post với danh sách ảnh
-                Map<String, Object> updates = new HashMap<>();
-                updates.put("imageUrls", imageUrls);
-                updates.put("imagePaths", imagePaths);
-                
-                // Backward compatibility: set ảnh đầu tiên vào imageUrl
-                if (!imageUrls.isEmpty()) {
-                    updates.put("imageUrl", imageUrls.get(0));
-                    updates.put("imagePath", imagePaths.get(0));
+        // Upload ảnh trước (nếu có)
+        if (selectedImages.isEmpty()) {
+            // Không có ảnh, lưu post luôn
+            communityDAO.save(post, task -> {
+                if (task.isSuccessful()) {
+                    Toast.makeText(this, "Đăng bài thành công!", Toast.LENGTH_SHORT).show();
+                    finish();
+                } else {
+                    Log.e(TAG, "Error creating post: " + task.getException().getMessage(), task.getException());
+                    Toast.makeText(this, "Lỗi đăng bài: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
+                    setUiEnabled(true);
+                    progress.setVisibility(ProgressBar.GONE);
                 }
-                
-                updates.put("updatedAt", FieldValue.serverTimestamp());
-                return postRef.update(updates);
             });
-        }).addOnSuccessListener(v -> {
-            Toast.makeText(this, "Đăng bài thành công!", Toast.LENGTH_SHORT).show();
-            finish();
-        }).addOnFailureListener(e -> {
-            Log.e(TAG, "Error creating post: " + e.getMessage(), e);
-            Toast.makeText(this, "Lỗi đăng bài: " + e.getMessage(), Toast.LENGTH_LONG).show();
-            setUiEnabled(true);
-            progress.setVisibility(ProgressBar.GONE);
-        });
+        } else {
+            // Upload ảnh trước
+            communityDAO.uploadPostImages(uid, postId, selectedImages, uploadTask -> {
+                if (uploadTask.isSuccessful()) {
+                    CommunityDAO.UploadResult result = uploadTask.getResult();
+                    post.imageUrls = result.imageUrls;
+                    post.imagePaths = result.imagePaths;
+                    
+                    // Backward compatibility: set ảnh đầu tiên vào imageUrl
+                    if (!result.imageUrls.isEmpty()) {
+                        post.imageUrl = result.imageUrls.get(0);
+                        post.imagePath = result.imagePaths.get(0);
+                    }
+                    
+                    post.updatedAt = new com.google.firebase.Timestamp(new java.util.Date());
+                    
+                    // Lưu post với ảnh
+                    communityDAO.save(post, saveTask -> {
+                        if (saveTask.isSuccessful()) {
+                            Toast.makeText(this, "Đăng bài thành công!", Toast.LENGTH_SHORT).show();
+                            finish();
+                        } else {
+                            Log.e(TAG, "Error creating post: " + saveTask.getException().getMessage(), saveTask.getException());
+                            Toast.makeText(this, "Lỗi đăng bài: " + saveTask.getException().getMessage(), Toast.LENGTH_LONG).show();
+                            setUiEnabled(true);
+                            progress.setVisibility(ProgressBar.GONE);
+                        }
+                    });
+                } else {
+                    Log.e(TAG, "Error uploading images: " + uploadTask.getException().getMessage(), uploadTask.getException());
+                    Toast.makeText(this, "Lỗi upload ảnh: " + uploadTask.getException().getMessage(), Toast.LENGTH_LONG).show();
+                    setUiEnabled(true);
+                    progress.setVisibility(ProgressBar.GONE);
+                }
+            });
+        }
     }
 
     // Adapter cho RecyclerView hiển thị ảnh đã chọn

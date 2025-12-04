@@ -16,10 +16,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -35,6 +33,8 @@ import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
 import fpt.fall2025.posetrainer.Helper.CalorieCalculator;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
+import fpt.fall2025.posetrainer.Service.AuthService;
+import fpt.fall2025.posetrainer.DAL.ProfileDAO;
 import fpt.fall2025.posetrainer.databinding.ActivitySessionBinding;
 
 public class SessionActivity extends AppCompatActivity implements SessionExerciseAdapter.OnExerciseClickListener {
@@ -51,7 +51,8 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
     private CountDownTimer sessionTimer;
     private long sessionStartTime; // Fallback nếu startedAt không có
     private long sessionResumeTime; // Thời điểm mở màn hình lần này (để tính thời gian thực tế đã tập)
-    private FirebaseFirestore db;
+    private AuthService authService;
+    private ProfileDAO profileDAO;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,7 +61,8 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
         setContentView(binding.getRoot());
         
         // Initialize Firebase
-        db = FirebaseFirestore.getInstance();
+        authService = new AuthService();
+        profileDAO = new ProfileDAO();
 
         // Get sessionId from intent
         String sessionId = getIntent().getStringExtra("sessionId");
@@ -830,7 +832,7 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
      * Load user profile để lấy weight và tính calories bằng METs formula
      */
     private void loadUserProfileAndCalculateCalories(long durationSec, Session.SessionSummary summary, Runnable onComplete) {
-        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) {
             // Không có user, dùng weight mặc định
             calculateCaloriesWithWeight(70.0, durationSec, summary, onComplete);
@@ -838,7 +840,7 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
         }
         
         String uid = currentUser.getUid();
-        db.collection("profiles").document(uid)
+        profileDAO.getDocument(uid)
                 .get()
                 .addOnSuccessListener(documentSnapshot -> {
                     double weightKg = 70.0; // Default weight

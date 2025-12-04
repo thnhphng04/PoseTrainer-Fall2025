@@ -7,9 +7,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.FirebaseFirestore;
 import com.bumptech.glide.Glide;
 
 import androidx.annotation.NonNull;
@@ -23,6 +21,8 @@ import fpt.fall2025.posetrainer.Adapter.UserWorkoutCardAdapter;
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
+import fpt.fall2025.posetrainer.Service.AuthService;
+import fpt.fall2025.posetrainer.DAL.UserDAO;
 import fpt.fall2025.posetrainer.databinding.FragmentMyworkoutBinding;
 
 import java.util.ArrayList;
@@ -37,8 +37,8 @@ public class MyWorkoutFragment extends Fragment {
     private ArrayList<UserWorkout> aiWorkouts; // Workouts từ AI
     private UserWorkoutCardAdapter userWorkoutAdapter; // Adapter cho user workouts
     private UserWorkoutCardAdapter aiWorkoutAdapter; // Adapter cho AI workouts
-    private FirebaseAuth mAuth;
-    private FirebaseFirestore db;
+    private AuthService authService;
+    private UserDAO userDAO;
     
     // Cache để tránh reload không cần thiết
     private String cachedUserId = null;
@@ -54,8 +54,8 @@ public class MyWorkoutFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        mAuth = FirebaseAuth.getInstance();
-        db = FirebaseFirestore.getInstance();
+        authService = new AuthService();
+        userDAO = new UserDAO();
 
         // Initialize data
         userWorkouts = new ArrayList<>();
@@ -90,7 +90,7 @@ public class MyWorkoutFragment extends Fragment {
      * Đã tối ưu với cache để tránh reload không cần thiết
      */
     private void loadUserFromFirestore() {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) {
             // Show empty state with login message
             showEmptyState("Vui lòng đăng nhập để xem bài tập của bạn");
@@ -113,7 +113,7 @@ public class MyWorkoutFragment extends Fragment {
         
         cachedUserId = uid;
         
-        db.collection("users").document(uid).get()
+        userDAO.getDocument(uid).get()
                 .addOnSuccessListener(doc -> {
                     // Kiểm tra lại fragment view trước khi update UI
                     if (!isAdded() || binding == null) {
@@ -215,7 +215,7 @@ public class MyWorkoutFragment extends Fragment {
             userWorkoutAdapter.setOnUserWorkoutDeletedListener(() -> {
                 // Refresh the list when an item is deleted
                 isWorkoutsLoaded = false;
-                FirebaseUser currentUser = mAuth.getCurrentUser();
+                FirebaseUser currentUser = authService.getCurrentUser();
                 if (currentUser != null) {
                     loadUserWorkouts(currentUser.getUid());
                 }
@@ -226,7 +226,7 @@ public class MyWorkoutFragment extends Fragment {
             aiWorkoutAdapter.setOnUserWorkoutDeletedListener(() -> {
                 // Refresh the list when an item is deleted
                 isWorkoutsLoaded = false;
-                FirebaseUser currentUser = mAuth.getCurrentUser();
+                FirebaseUser currentUser = authService.getCurrentUser();
                 if (currentUser != null) {
                     loadUserWorkouts(currentUser.getUid());
                 }
@@ -344,7 +344,7 @@ public class MyWorkoutFragment extends Fragment {
                 isDataLoaded = true;
             } else {
                 // Reload workouts mỗi khi fragment resume để đảm bảo data mới nhất
-                FirebaseUser currentUser = mAuth.getCurrentUser();
+                FirebaseUser currentUser = authService.getCurrentUser();
                 if (currentUser != null) {
                     isWorkoutsLoaded = false; // Reset flag để force reload
                     loadUserWorkouts(currentUser.getUid());
@@ -358,7 +358,7 @@ public class MyWorkoutFragment extends Fragment {
         super.onHiddenChanged(hidden);
         // Reload workouts khi fragment được show lại từ hidden state
         if (!hidden && isAdded() && isResumed()) {
-            FirebaseUser currentUser = mAuth.getCurrentUser();
+            FirebaseUser currentUser = authService.getCurrentUser();
             if (currentUser != null) {
                 isWorkoutsLoaded = false; // Reset flag để force reload
                 loadUserWorkouts(currentUser.getUid());
@@ -371,7 +371,7 @@ public class MyWorkoutFragment extends Fragment {
      */
     public void refreshWorkouts() {
         if (isAdded() && isResumed()) {
-            FirebaseUser currentUser = mAuth.getCurrentUser();
+            FirebaseUser currentUser = authService.getCurrentUser();
             if (currentUser != null) {
                 isWorkoutsLoaded = false; // Reset flag để force reload
                 loadUserWorkouts(currentUser.getUid());

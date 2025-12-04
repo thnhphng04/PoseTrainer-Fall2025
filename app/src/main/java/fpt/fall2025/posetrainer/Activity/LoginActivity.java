@@ -13,21 +13,20 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import fpt.fall2025.posetrainer.R;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.AuthResult;
-import com.google.firebase.auth.GoogleAuthProvider;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
-import com.google.firebase.firestore.FirebaseFirestore;
 
 import com.google.android.material.textfield.TextInputEditText;
 import fpt.fall2025.posetrainer.Domain.User;
+import fpt.fall2025.posetrainer.Service.AuthService;
+import fpt.fall2025.posetrainer.DAL.UserDAO;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -35,7 +34,8 @@ public class LoginActivity extends AppCompatActivity {
     Button buttonLogin, buttonGoogleSignIn;
     TextView textViewRegister, textViewForgotPassword;
 
-    private FirebaseAuth mAuth;
+    private AuthService authService;
+    private UserDAO userDAO;
     private GoogleSignInClient googleSignInClient;
     private static final int RC_SIGN_IN = 9001;
 
@@ -43,7 +43,7 @@ public class LoginActivity extends AppCompatActivity {
     @Override
     public void onStart() {
         super.onStart();
-        mAuth = FirebaseAuth.getInstance();
+        authService = new AuthService();
         // Check if user is already logged in
         checkCurrentUser();
     }
@@ -53,7 +53,8 @@ public class LoginActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        mAuth = FirebaseAuth.getInstance();
+        authService = new AuthService();
+        userDAO = new UserDAO();
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken(getString(R.string.default_web_client_id))
                 .requestEmail()
@@ -93,21 +94,20 @@ public class LoginActivity extends AppCompatActivity {
 
             buttonLogin.setEnabled(false);
 
-            mAuth.signInWithEmailAndPassword(email, password)
-                    .addOnCompleteListener(task -> {
-                        buttonLogin.setEnabled(true);
-                        if (task.isSuccessful()) {
-                            Toast.makeText(LoginActivity.this, "Đăng nhập thành công", Toast.LENGTH_SHORT).show();
-                            startActivity(new Intent(getApplicationContext(), MainActivity.class));
-                            finish();
-                        } else {
-                            String errorMessage = task.getException() != null
-                                    ? task.getException().getMessage()
-                                    : "Xác thực thất bại";
-                            Toast.makeText(LoginActivity.this, "Đăng nhập thất bại: " + errorMessage, Toast.LENGTH_LONG).show();
-                            Log.e("FIREBASE_AUTH", "Sign-in error: " + errorMessage);
-                        }
-                    });
+            authService.signInWithEmailPassword(email, password, task -> {
+                buttonLogin.setEnabled(true);
+                if (task.isSuccessful()) {
+                    Toast.makeText(LoginActivity.this, "Đăng nhập thành công", Toast.LENGTH_SHORT).show();
+                    startActivity(new Intent(getApplicationContext(), MainActivity.class));
+                    finish();
+                } else {
+                    String errorMessage = task.getException() != null
+                            ? task.getException().getMessage()
+                            : "Xác thực thất bại";
+                    Toast.makeText(LoginActivity.this, "Đăng nhập thất bại: " + errorMessage, Toast.LENGTH_LONG).show();
+                    Log.e("FIREBASE_AUTH", "Sign-in error: " + errorMessage);
+                }
+            });
         });
 
         buttonGoogleSignIn.setOnClickListener(v -> {
@@ -139,117 +139,78 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void firebaseAuthWithGoogle(String idToken) {
-        AuthCredential credential = GoogleAuthProvider.getCredential(idToken, null);
-        mAuth.signInWithCredential(credential)
-                .addOnCompleteListener(this, task -> {
-                    buttonGoogleSignIn.setEnabled(true);
-                    if (task.isSuccessful()) {
-                        AuthResult result = task.getResult();
-                        boolean isNewUser = result != null && result.getAdditionalUserInfo() != null && result.getAdditionalUserInfo().isNewUser();
-                        FirebaseUser firebaseUser = mAuth.getCurrentUser();
-                        if (firebaseUser != null) {
-                            Log.d("GOOGLE_AUTH", "Firebase user authenticated: " + firebaseUser.getUid());
-                            Log.d("GOOGLE_AUTH", "Is new user: " + isNewUser);
+        authService.signInWithGoogle(idToken, task -> {
+            buttonGoogleSignIn.setEnabled(true);
+            if (task.isSuccessful()) {
+                AuthResult result = task.getResult();
+                boolean isNewUser = result != null && result.getAdditionalUserInfo() != null && result.getAdditionalUserInfo().isNewUser();
+                FirebaseUser firebaseUser = authService.getCurrentUser();
+                if (firebaseUser != null) {
+                    Log.d("GOOGLE_AUTH", "Firebase user authenticated: " + firebaseUser.getUid());
+                    Log.d("GOOGLE_AUTH", "Is new user: " + isNewUser);
 
-                            if (isNewUser) {
-                                Log.d("GOOGLE_AUTH", "Creating new user document");
-                                createUserDocumentForGoogle(firebaseUser);
-                            } else {
-                                Log.d("GOOGLE_AUTH", "Updating existing user login time");
-                                updateLastLoginAndProceed(firebaseUser);
-                            }
-                        } else {
-                            Log.e("GOOGLE_AUTH", "Firebase user is null after authentication");
-                            Toast.makeText(LoginActivity.this, "Xác thực thất bại", Toast.LENGTH_SHORT).show();
-                        }
+                    if (isNewUser) {
+                        Log.d("GOOGLE_AUTH", "Creating new user document");
+                        createUserDocumentForGoogle(firebaseUser);
                     } else {
-                        Exception e = task.getException();
-                        Log.e("FIREBASE_AUTH", "Google credential sign-in error", e);
-                        Toast.makeText(LoginActivity.this, "Xác thực thất bại: " + (e != null ? e.getMessage() : "unknown"), Toast.LENGTH_LONG).show();
+                        Log.d("GOOGLE_AUTH", "Updating existing user login time");
+                        updateLastLoginAndProceed(firebaseUser);
                     }
-                });
+                } else {
+                    Log.e("GOOGLE_AUTH", "Firebase user is null after authentication");
+                    Toast.makeText(LoginActivity.this, "Xác thực thất bại", Toast.LENGTH_SHORT).show();
+                }
+            } else {
+                Exception e = task.getException();
+                Log.e("FIREBASE_AUTH", "Google credential sign-in error", e);
+                Toast.makeText(LoginActivity.this, "Xác thực thất bại: " + (e != null ? e.getMessage() : "unknown"), Toast.LENGTH_LONG).show();
+            }
+        });
     }
 
     private void createUserDocumentForGoogle(FirebaseUser firebaseUser) {
-        String uid = firebaseUser.getUid();
-        String email = firebaseUser.getEmail() != null ? firebaseUser.getEmail() : "";
-        String displayName = firebaseUser.getDisplayName() != null ? firebaseUser.getDisplayName() : "";
-        String photoUrl = firebaseUser.getPhotoUrl() != null ? firebaseUser.getPhotoUrl().toString() : "";
-
-        Log.d("GOOGLE_AUTH", "Creating user document for UID: " + uid);
-        Log.d("GOOGLE_AUTH", "Email: " + email);
-        Log.d("GOOGLE_AUTH", "Display Name: " + displayName);
-        Log.d("GOOGLE_AUTH", "Photo URL: " + photoUrl);
-
-        long now = System.currentTimeMillis() / 1000;
-        User.NotificationSettings notification = new User.NotificationSettings(null, true);
-        User newUser = new User(
-                uid,
-                email,
-                displayName,
-                photoUrl,
-                java.util.Arrays.asList("google.com"),
-                now,
-                now,
-                notification,
-                java.util.Arrays.asList("user")
-        );
-
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
-        Log.d("FIRESTORE", "Attempting to save user to Firestore...");
-        db.collection("users").document(uid).set(newUser)
-                .addOnSuccessListener(unused -> {
-                    Log.d("FIRESTORE", "User document saved successfully");
-                    Toast.makeText(LoginActivity.this, "Đăng ký Google thành công", Toast.LENGTH_SHORT).show();
-                    startActivity(new Intent(getApplicationContext(), MainActivity.class));
-                    finish();
-                })
-                .addOnFailureListener(e -> {
-                    Log.e("FIRESTORE", "Failed to save user", e);
-                    Toast.makeText(LoginActivity.this, "Lưu thông tin người dùng thất bại: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                    // Still proceed to MainActivity even if save fails
-                    startActivity(new Intent(getApplicationContext(), MainActivity.class));
-                    finish();
-                });
+        Log.d("GOOGLE_AUTH", "Creating user document for UID: " + firebaseUser.getUid());
+        
+        authService.createUserDocument(firebaseUser, java.util.Arrays.asList("google.com"), task -> {
+            if (task.isSuccessful()) {
+                Log.d("FIRESTORE", "User document saved successfully");
+                Toast.makeText(LoginActivity.this, "Đăng ký Google thành công", Toast.LENGTH_SHORT).show();
+                startActivity(new Intent(getApplicationContext(), MainActivity.class));
+                finish();
+            } else {
+                Log.e("FIRESTORE", "Failed to save user", task.getException());
+                Toast.makeText(LoginActivity.this, "Lưu thông tin người dùng thất bại: " + 
+                    (task.getException() != null ? task.getException().getMessage() : "Unknown error"), 
+                    Toast.LENGTH_LONG).show();
+                // Still proceed to MainActivity even if save fails
+                startActivity(new Intent(getApplicationContext(), MainActivity.class));
+                finish();
+            }
+        });
     }
 
     private void updateLastLoginAndProceed(FirebaseUser firebaseUser) {
-        long now = System.currentTimeMillis() / 1000;
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
         String uid = firebaseUser.getUid();
+        Log.d("GOOGLE_AUTH", "Updating last login time for UID: " + uid);
 
-        Log.d("GOOGLE_AUTH", "Checking if user document exists for UID: " + uid);
-
-        db.collection("users").document(uid).get()
-                .addOnSuccessListener(documentSnapshot -> {
-                    if (documentSnapshot.exists()) {
-                        Log.d("GOOGLE_AUTH", "User document exists, updating lastLoginAt");
-                        // Update last login time
-                        db.collection("users").document(uid)
-                                .update("lastLoginAt", now)
-                                .addOnCompleteListener(unused -> {
-                                    Log.d("GOOGLE_AUTH", "Last login time updated successfully");
-                                    startActivity(new Intent(getApplicationContext(), MainActivity.class));
-                                    finish();
-                                });
-                    } else {
-                        Log.w("GOOGLE_AUTH", "User document not found, creating new one");
-                        // Create user document if it doesn't exist
-                        createUserDocumentForGoogle(firebaseUser);
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    Log.e("GOOGLE_AUTH", "Failed to check user document", e);
-                    // If check fails, try to create user document
-                    createUserDocumentForGoogle(firebaseUser);
-                });
+        authService.updateLastLogin(uid, task -> {
+            if (task.isSuccessful()) {
+                Log.d("GOOGLE_AUTH", "Last login time updated successfully");
+                startActivity(new Intent(getApplicationContext(), MainActivity.class));
+                finish();
+            } else {
+                Log.w("GOOGLE_AUTH", "Failed to update last login, creating new user document");
+                // If update fails, try to create user document
+                createUserDocumentForGoogle(firebaseUser);
+            }
+        });
     }
 
     /**
      * Check if user is already logged in and navigate to MainActivity if true
      */
     private void checkCurrentUser() {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser != null) {
             // User is already logged in, navigate to MainActivity
             Log.d("FIREBASE_AUTH", "User already logged in: " + currentUser.getUid());

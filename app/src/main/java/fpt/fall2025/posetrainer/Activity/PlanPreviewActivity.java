@@ -14,11 +14,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.functions.FirebaseFunctions;
-import com.google.firebase.functions.FirebaseFunctionsException;
 import com.google.firebase.functions.HttpsCallableResult;
 
 import java.util.ArrayList;
@@ -31,6 +27,11 @@ import java.util.Map;
 import fpt.fall2025.posetrainer.Domain.Schedule;
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
+import fpt.fall2025.posetrainer.Service.AuthService;
+import fpt.fall2025.posetrainer.Service.FunctionsService;
+import fpt.fall2025.posetrainer.DAL.ProfileDAO;
+import fpt.fall2025.posetrainer.DAL.UserWorkoutDAO;
+import fpt.fall2025.posetrainer.DAL.ScheduleDAO;
 import fpt.fall2025.posetrainer.R;
 
 public class PlanPreviewActivity extends AppCompatActivity {
@@ -43,7 +44,11 @@ public class PlanPreviewActivity extends AppCompatActivity {
     private EditText etDesiredDays;
     private PlanModels.Plan currentPlan;
     private String uid;
-    private FirebaseFirestore db;
+    private AuthService authService;
+    private FunctionsService functionsService;
+    private ProfileDAO profileDAO;
+    private UserWorkoutDAO userWorkoutDAO;
+    private ScheduleDAO scheduleDAO;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -59,8 +64,15 @@ public class PlanPreviewActivity extends AppCompatActivity {
         tvSub = findViewById(R.id.tvSub);
         etDesiredDays = findViewById(R.id.etDesiredDays);
 
+        // Initialize services
+        authService = new AuthService();
+        functionsService = new FunctionsService();
+        profileDAO = new ProfileDAO();
+        userWorkoutDAO = new UserWorkoutDAO();
+        scheduleDAO = new ScheduleDAO();
+        
         // Check if user is logged in
-        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) {
             Toast.makeText(this, "Vui lòng đăng nhập để sử dụng tính năng này", Toast.LENGTH_LONG).show();
             finish();
@@ -68,7 +80,6 @@ public class PlanPreviewActivity extends AppCompatActivity {
         }
 
         uid = currentUser.getUid();
-        db = FirebaseFirestore.getInstance();
         rvDays.setLayoutManager(new LinearLayoutManager(this));
 
         // Set initial state
@@ -112,8 +123,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
         tvSub.setText("Đang kiểm tra hồ sơ...");
 
         // Kiểm tra profile có tồn tại không
-        db.collection("profiles").document(uid)
-                .get()
+        profileDAO.getDocumentSnapshot(uid)
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {
                         // Profile tồn tại, tiếp tục generate plan
@@ -160,22 +170,19 @@ public class PlanPreviewActivity extends AppCompatActivity {
             }
         }
 
-        Map<String, Object> data = new HashMap<>();
-        data.put("uid", uid);
-        if (force) {
-            data.put("force", true);
-        }
-        if (desiredDays != null) {
-            data.put("desiredDays", desiredDays);
-            Log.d(TAG, "Sending desiredDays: " + desiredDays);
-        }
-
         Log.d(TAG, "Gọi generatePlan với uid: " + uid + ", force: " + force);
 
-        FirebaseFunctions.getInstance("us-central1")
-                .getHttpsCallable("generatePlan")
-                .call(data)
-                .addOnSuccessListener((HttpsCallableResult r) -> {
+        functionsService.callGeneratePlan(uid, force, desiredDays, task -> {
+                    if (!task.isSuccessful()) {
+                        setLoading(false);
+                        Log.e(TAG, "generatePlan failed", task.getException());
+                        String errorMsg = functionsService.getErrorMessage(task.getException());
+                        tvSub.setText(errorMsg);
+                        Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    
+                    HttpsCallableResult r = task.getResult();
                     try {
                         Object obj = r.getData();
                         if (!(obj instanceof Map)) {
@@ -262,14 +269,6 @@ public class PlanPreviewActivity extends AppCompatActivity {
                         Toast.makeText(this, errorMsg, Toast.LENGTH_SHORT).show();
                         Log.e(TAG, "Error processing response", e);
                     }
-                })
-                .addOnFailureListener(e -> {
-                    setLoading(false);
-                    Log.e(TAG, "generatePlan failed", e);
-                    
-                    String errorMsg = getErrorMessage(e);
-                    tvSub.setText(errorMsg);
-                    Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
                 });
     }
 
@@ -284,7 +283,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
         }
 
         // Load profile để lấy trainingStartTime và trainingEndTime
-        db.collection("profiles").document(uid)
+        profileDAO.getDocument(uid)
                 .get()
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {
@@ -516,7 +515,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
         tvSub.setText("Đang tìm và xóa kế hoạch cũ...");
         
         // Query tất cả workouts có source="ai" của user này
-        db.collection("user_workouts")
+        userWorkoutDAO.getCollection()
                 .whereEqualTo("uid", uid)
                 .whereEqualTo("source", "ai")
                 .get()
@@ -536,8 +535,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
                         String workoutId = doc.getId();
                         Log.d(TAG, "Đang xóa workout cũ: " + workoutId);
                         
-                        db.collection("user_workouts")
-                                .document(workoutId)
+                        userWorkoutDAO.getDocument(workoutId)
                                 .delete()
                                 .addOnSuccessListener(aVoid -> {
                                     deletedCount[0]++;
@@ -571,7 +569,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
     private void deleteOldSchedule() {
         tvSub.setText("Đang xóa lịch tập cũ...");
         
-        db.collection("schedules")
+        scheduleDAO.getCollection()
                 .whereEqualTo("uid", uid)
                 .whereEqualTo("title", "Kế hoạch tập luyện AI")
                 .limit(1)
@@ -582,8 +580,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
                         String scheduleId = doc.getId();
                         Log.d(TAG, "Đang xóa schedule cũ: " + scheduleId);
                         
-                        db.collection("schedules")
-                                .document(scheduleId)
+                        scheduleDAO.getDocument(scheduleId)
                                 .delete()
                                 .addOnSuccessListener(aVoid -> {
                                     Log.d(TAG, "Đã xóa schedule cũ");
@@ -614,7 +611,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
         tvSub.setText("Đang tạo kế hoạch mới...");
         
         // ✅ Load profile để lấy trainingStartTime và weeklyGoal trước khi tạo Schedule
-        db.collection("profiles").document(uid)
+        profileDAO.getDocument(uid)
                 .get()
                 .addOnSuccessListener(documentSnapshot -> {
                     String trainingStartTime = "08:00"; // Default fallback
@@ -989,78 +986,4 @@ public class PlanPreviewActivity extends AppCompatActivity {
         return str.substring(0, 1).toUpperCase() + str.substring(1).toLowerCase();
     }
 
-    /**
-     * Parse Firebase Functions error and return user-friendly message
-     */
-    private String getErrorMessage(Exception e) {
-        if (e instanceof FirebaseFunctionsException) {
-            FirebaseFunctionsException ffe = (FirebaseFunctionsException) e;
-            String code = ffe.getCode().name();
-            String message = ffe.getMessage();
-            
-            Log.d(TAG, "FirebaseFunctionsException - Code: " + code + ", Message: " + message);
-            
-            switch (ffe.getCode()) {
-                case INTERNAL:
-                    return "Lỗi nội bộ server. Vui lòng thử lại sau hoặc kiểm tra Firebase Functions logs.";
-                    
-                case NOT_FOUND:
-                    return "Không tìm thấy function. Vui lòng kiểm tra cấu hình Firebase Functions.";
-                    
-                case PERMISSION_DENIED:
-                    return "Không có quyền truy cập. Vui lòng đăng nhập lại.";
-                    
-                case UNAUTHENTICATED:
-                    return "Chưa xác thực. Vui lòng đăng nhập lại.";
-                    
-                case INVALID_ARGUMENT:
-                    return "Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin.";
-                    
-                case DEADLINE_EXCEEDED:
-                    return "Yêu cầu mất quá nhiều thời gian. Vui lòng thử lại.";
-                    
-                case RESOURCE_EXHAUSTED:
-                    return "Tài nguyên đã hết. Vui lòng thử lại sau.";
-                    
-                case FAILED_PRECONDITION:
-                    // ✅ Cải thiện error message cho trường hợp profile not found
-                    if (message != null && message.contains("Profile not found")) {
-                        return "Chưa có hồ sơ. Vui lòng hoàn thành questionnaire trước khi tạo kế hoạch tập luyện.";
-                    }
-                    if (message != null && message.contains("No suitable exercises")) {
-                        return "Không tìm thấy bài tập phù hợp. Vui lòng kiểm tra collection 'exercises' trong Firestore.";
-                    }
-                    return "Điều kiện không đáp ứng. " + (message != null ? message : "Vui lòng kiểm tra profile của bạn.");
-                    
-                case ABORTED:
-                    return "Yêu cầu bị hủy. Vui lòng thử lại.";
-                    
-                case OUT_OF_RANGE:
-                    return "Dữ liệu vượt quá giới hạn.";
-                    
-                case UNIMPLEMENTED:
-                    return "Tính năng chưa được triển khai.";
-                    
-                case UNAVAILABLE:
-                    return "Dịch vụ tạm thời không khả dụng. Vui lòng thử lại sau.";
-                    
-                case DATA_LOSS:
-                    return "Mất dữ liệu. Vui lòng thử lại.";
-                    
-                default:
-                    if (message != null && !message.isEmpty()) {
-                        return "Lỗi: " + message;
-                    }
-                    return "Không thể tạo kế hoạch. Vui lòng thử lại sau.";
-            }
-        }
-        
-        // Generic error message
-        String errorMsg = e.getMessage();
-        if (errorMsg != null && !errorMsg.isEmpty()) {
-            return "Lỗi: " + errorMsg;
-        }
-        
-        return "Không thể tạo kế hoạch. Vui lòng thử lại sau.";
-    }
 }

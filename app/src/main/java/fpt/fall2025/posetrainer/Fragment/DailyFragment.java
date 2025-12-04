@@ -20,7 +20,6 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.ListenerRegistration;
 
@@ -47,6 +46,8 @@ import fpt.fall2025.posetrainer.Helper.PermissionHelper;
 import fpt.fall2025.posetrainer.Service.AlarmScheduler;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.Service.NotificationHelper;
+import fpt.fall2025.posetrainer.Service.AuthService;
+import fpt.fall2025.posetrainer.DAL.SessionDAO;
 import fpt.fall2025.posetrainer.Helper.AppStateHelper;
 import fpt.fall2025.posetrainer.databinding.FragmentDailyBinding;
 
@@ -59,7 +60,8 @@ public class DailyFragment extends Fragment {
     private Calendar calendar;
     private Calendar selectedDayCalendar; // Calendar for selected day
     private Map<String, Boolean> weeklyWorkoutStatus; // Track workout status for each day
-    private FirebaseAuth mAuth;
+    private AuthService authService;
+    private SessionDAO sessionDAO;
     private SessionAdapter sessionAdapter;
     
     // ActivityResultLauncher for notification permission (Android 13+)
@@ -105,7 +107,8 @@ public class DailyFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         // Initialize Firebase Auth
-        mAuth = FirebaseAuth.getInstance();
+        authService = new AuthService();
+        sessionDAO = new SessionDAO();
 
         // Initialize data
         sessions = new ArrayList<>();
@@ -496,7 +499,7 @@ public class DailyFragment extends Fragment {
      * Show dialog to view scheduled workouts
      */
     private void showViewScheduleDialog() {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) {
             Toast.makeText(getContext(), "Vui lòng đăng nhập", Toast.LENGTH_SHORT).show();
             return;
@@ -510,7 +513,7 @@ public class DailyFragment extends Fragment {
      * Show dialog to create new workout schedule
      */
     private void showCreateScheduleDialog() {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) {
             Toast.makeText(getContext(), "Vui lòng đăng nhập", Toast.LENGTH_SHORT).show();
             return;
@@ -531,7 +534,7 @@ public class DailyFragment extends Fragment {
      * Add schedule item to user's schedule
      */
     private void addScheduleItemToSchedule(Schedule.ScheduleItem newItem) {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) {
             return;
         }
@@ -560,7 +563,7 @@ public class DailyFragment extends Fragment {
      * Create new schedule with first item
      */
     private void createNewSchedule(Schedule.ScheduleItem item) {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) {
             return;
         }
@@ -638,7 +641,7 @@ public class DailyFragment extends Fragment {
                 // Schedule alarms
                 scheduleAlarms();
                 // Create notification records for this schedule item
-                FirebaseUser currentUser = mAuth.getCurrentUser();
+                FirebaseUser currentUser = authService.getCurrentUser();
                 if (currentUser != null) {
                     createNotificationsForScheduleItem(newItem, currentUser.getUid());
                 }
@@ -784,7 +787,7 @@ public class DailyFragment extends Fragment {
      * Đã tối ưu với cache để tránh reload không cần thiết
      */
     private void loadUserSchedule() {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) {
             return;
         }
@@ -950,7 +953,7 @@ public class DailyFragment extends Fragment {
      * Đã tối ưu với cache để tránh reload không cần thiết
      */
     private void loadSessions() {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) {
             Toast.makeText(getContext(), "Vui lòng đăng nhập để xem lịch sử tập luyện", Toast.LENGTH_SHORT).show();
             return;
@@ -1249,7 +1252,7 @@ public class DailyFragment extends Fragment {
      * Tối ưu: chỉ lắng nghe khi fragment visible
      */
     private void startSessionsListener() {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null || getContext() == null) {
             return;
         }
@@ -1260,8 +1263,7 @@ public class DailyFragment extends Fragment {
         String uid = currentUser.getUid();
         
         // Sử dụng Firestore real-time listener
-        com.google.firebase.firestore.FirebaseFirestore db = com.google.firebase.firestore.FirebaseFirestore.getInstance();
-        sessionsListener = db.collection("sessions")
+        sessionsListener = sessionDAO.getCollection()
                 .whereEqualTo("uid", uid)
                 .addSnapshotListener((querySnapshot, error) -> {
                     if (error != null) {
@@ -1307,7 +1309,7 @@ public class DailyFragment extends Fragment {
      * Tối ưu: chỉ reload sessions mới, không reload toàn bộ
      */
     private void refreshSessionsData() {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null || getActivity() == null) {
             return;
         }

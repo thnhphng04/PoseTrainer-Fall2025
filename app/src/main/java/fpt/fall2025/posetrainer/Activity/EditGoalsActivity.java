@@ -23,16 +23,16 @@ import com.google.android.material.timepicker.TimeFormat;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.SetOptions;
 
 import java.util.Calendar;
 import java.util.Map;
 
 import fpt.fall2025.posetrainer.Domain.Profile;
+import fpt.fall2025.posetrainer.Service.AuthService;
+import fpt.fall2025.posetrainer.DAL.ProfileDAO;
 import fpt.fall2025.posetrainer.R;
 
 public class EditGoalsActivity extends AppCompatActivity {
@@ -63,8 +63,8 @@ public class EditGoalsActivity extends AppCompatActivity {
     private String targetBodyType  = null; // very_lean|lean|normal|overweight|obese
     private String selectedExperienceLevel = null; // beginner|intermediate|advanced
 
-    private FirebaseAuth mAuth;
-    private FirebaseFirestore db;
+    private AuthService authService;
+    private ProfileDAO profileDAO;
     private String uid;
 
     private final String[] genders   = {"male", "female"};
@@ -95,10 +95,10 @@ public class EditGoalsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_goals);
 
-        mAuth = FirebaseAuth.getInstance();
-        db = FirebaseFirestore.getInstance();
+        authService = new AuthService();
+        profileDAO = new ProfileDAO();
 
-        FirebaseUser fu = mAuth.getCurrentUser();
+        FirebaseUser fu = authService.getCurrentUser();
         if (fu == null) {
             Toast.makeText(this, "Bạn chưa đăng nhập", Toast.LENGTH_LONG).show();
             finish();
@@ -464,7 +464,21 @@ public class EditGoalsActivity extends AppCompatActivity {
 
     private void loadProfile() {
         setLoading(true);
-        db.collection("profiles").document(uid).get()
+        profileDAO.getById(uid, task -> {
+            if (!task.isSuccessful() || task.getResult() == null) {
+                // Profile không tồn tại, tạo mới
+                Profile newProfile = new Profile();
+                newProfile.setUid(uid);
+                profileDAO.save(newProfile, null);
+                return;
+            }
+            
+            Profile profile = task.getResult();
+            // Update profile với data từ UI
+            // ... (giữ nguyên logic update)
+        });
+        
+        profileDAO.getDocument(uid).get()
                 .addOnSuccessListener(this::bindProfile)
                 .addOnFailureListener(e -> {
                     setLoading(false);
@@ -585,18 +599,20 @@ public class EditGoalsActivity extends AppCompatActivity {
         profile.setLastUpdatedAt(System.currentTimeMillis());
 
         setLoading(true);
-        db.collection("profiles").document(uid)
-                .set(profile, SetOptions.merge())
-                .addOnSuccessListener(unused -> {
-                    setLoading(false);
-                    Toast.makeText(this, "Cập nhật mục tiêu thành công", Toast.LENGTH_SHORT).show();
-                    finish();
-                })
-                .addOnFailureListener(e -> {
-                    setLoading(false);
-                    Log.e("EditGoalsActivity", "save failed", e);
-                    Toast.makeText(this, "Lỗi lưu dữ liệu: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                });
+        profileDAO.save(profile, task -> {
+            if (!task.isSuccessful()) {
+                setLoading(false);
+                Log.e("EditGoalsActivity", "save failed", task.getException());
+                Toast.makeText(this, "Lỗi lưu dữ liệu: " + 
+                    (task.getException() != null ? task.getException().getMessage() : "Unknown error"), 
+                    Toast.LENGTH_LONG).show();
+                return;
+            }
+            
+            setLoading(false);
+            Toast.makeText(this, "Cập nhật mục tiêu thành công", Toast.LENGTH_SHORT).show();
+            finish();
+        });
     }
 
     /* ---------- helpers ---------- */

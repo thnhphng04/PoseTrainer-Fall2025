@@ -13,12 +13,11 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.google.firebase.auth.FirebaseAuth;
-
 import java.util.List;
 import java.util.Locale;
 
 import fpt.fall2025.posetrainer.R;
+import fpt.fall2025.posetrainer.Service.AuthService;
 
 public class ForgotPasswordActivity extends AppCompatActivity {
 
@@ -26,7 +25,7 @@ public class ForgotPasswordActivity extends AppCompatActivity {
     private Button btnReset, btnOpenGmail, btnBackLogin;
     private ProgressBar progress;
     private LinearLayout postActions;
-    private FirebaseAuth mAuth;
+    private AuthService authService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,7 +38,7 @@ public class ForgotPasswordActivity extends AppCompatActivity {
         btnBackLogin = findViewById(R.id.btnBackLogin);
         progress     = findViewById(R.id.progress);
         postActions  = findViewById(R.id.postActions);
-        mAuth        = FirebaseAuth.getInstance();
+        authService  = new AuthService();
 
         btnReset.setOnClickListener(v -> onSendClicked());
         btnOpenGmail.setOnClickListener(v -> openEmailApp());
@@ -63,7 +62,7 @@ public class ForgotPasswordActivity extends AppCompatActivity {
         setLoading(true);
 
         // Thử đọc provider nhưng không chặn UX
-        mAuth.fetchSignInMethodsForEmail(email)
+        authService.getAuth().fetchSignInMethodsForEmail(email)
                 .addOnSuccessListener(result -> {
                     List<String> methods = result.getSignInMethods();
                     Log.d("FORGOT", "signInMethods=" + methods);
@@ -92,9 +91,9 @@ public class ForgotPasswordActivity extends AppCompatActivity {
     }
 
     private void sendResetEmail(String email) {
-        mAuth.setLanguageCode("vi");
+        authService.getAuth().setLanguageCode("vi");
 
-        mAuth.sendPasswordResetEmail(email)
+        authService.getAuth().sendPasswordResetEmail(email)
                 .addOnSuccessListener(v -> {
                     setLoading(false);
                     Toast.makeText(this,

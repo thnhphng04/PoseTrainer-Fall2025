@@ -17,24 +17,25 @@ import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.api.ApiException;
 import com.google.firebase.auth.AuthResult;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
-import com.google.firebase.auth.AuthCredential;
-import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.auth.GoogleAuthProvider;
-import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 import fpt.fall2025.posetrainer.Domain.User;
+import fpt.fall2025.posetrainer.Service.AuthService;
+import fpt.fall2025.posetrainer.DAL.UserDAO;
+import fpt.fall2025.posetrainer.DAL.ProfileDAO;
 import fpt.fall2025.posetrainer.R;
 
 public class RegisterAccountActivity extends AppCompatActivity {
@@ -46,7 +47,9 @@ public class RegisterAccountActivity extends AppCompatActivity {
     private Button buttonReg, buttonGoogleSignIn;
     private TextView textViewBackToLogin;
 
-    private FirebaseAuth mAuth;
+    private AuthService authService;
+    private UserDAO userDAO;
+    private ProfileDAO profileDAO;
     private GoogleSignInClient googleSignInClient;
     private static final int RC_SIGN_IN = 9001;
 
@@ -55,7 +58,9 @@ public class RegisterAccountActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_register);
 
-        mAuth = FirebaseAuth.getInstance();
+        authService = new AuthService();
+        userDAO = new UserDAO();
+        profileDAO = new ProfileDAO();
 
         // Google Sign-In config
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -133,7 +138,7 @@ public class RegisterAccountActivity extends AppCompatActivity {
             buttonReg.setEnabled(false);
 
             // 1) Pre-check: email đã tồn tại trên Firebase Auth chưa?
-            mAuth.fetchSignInMethodsForEmail(email).addOnCompleteListener(checkTask -> {
+            authService.getAuth().fetchSignInMethodsForEmail(email).addOnCompleteListener(checkTask -> {
                 if (!checkTask.isSuccessful()) {
                     buttonReg.setEnabled(true);
                     Toast.makeText(this, "Không kiểm tra được email: " +
@@ -151,10 +156,10 @@ public class RegisterAccountActivity extends AppCompatActivity {
                 }
 
                 // 2) Tạo tài khoản
-                mAuth.createUserWithEmailAndPassword(email, password).addOnCompleteListener(createTask -> {
+                authService.createUserWithEmailPassword(email, password, createTask -> {
                     buttonReg.setEnabled(true);
                     if (createTask.isSuccessful()) {
-                        FirebaseUser firebaseUser = mAuth.getCurrentUser();
+                        FirebaseUser firebaseUser = authService.getCurrentUser();
                         if (firebaseUser != null) {
                             String uid = firebaseUser.getUid();
 
@@ -211,15 +216,14 @@ public class RegisterAccountActivity extends AppCompatActivity {
     }
 
     private void firebaseAuthWithGoogle(String idToken) {
-        AuthCredential credential = GoogleAuthProvider.getCredential(idToken, null);
-        mAuth.signInWithCredential(credential).addOnCompleteListener(this, task -> {
+        authService.signInWithGoogle(idToken, task -> {
             buttonGoogleSignIn.setEnabled(true);
             if (task.isSuccessful()) {
                 AuthResult result = task.getResult();
                 boolean isNewUser = result != null
                         && result.getAdditionalUserInfo() != null
                         && result.getAdditionalUserInfo().isNewUser();
-                FirebaseUser firebaseUser = mAuth.getCurrentUser();
+                FirebaseUser firebaseUser = authService.getCurrentUser();
                 if (firebaseUser != null) {
                     routeAfterAuth(firebaseUser, isNewUser);
                 } else {
@@ -248,17 +252,16 @@ public class RegisterAccountActivity extends AppCompatActivity {
     }
 
     private void createUserDoc(String uid, String email, String displayName, String photoUrl,
-                               java.util.List<String> providers) {
+                               List<String> providers) {
         long now = System.currentTimeMillis() / 1000;
         User.NotificationSettings notification = new User.NotificationSettings(null, true);
         User newUser = new User(uid, email, displayName, photoUrl, providers, now, now, notification, Arrays.asList("user"));
-        FirebaseFirestore.getInstance().collection("users").document(uid).set(newUser);
+        userDAO.save(newUser, null); // Fire and forget
     }
 
     /** Tạo profiles/{uid} nếu chưa có: rỗng + defaults */
-    private com.google.android.gms.tasks.Task<Void> ensureEmptyProfile(String uid) {
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
-        DocumentReference docRef = db.collection("profiles").document(uid);
+    private Task<Void> ensureEmptyProfile(String uid) {
+        com.google.firebase.firestore.DocumentReference docRef = profileDAO.getDocument(uid);
 
         Map<String, Object> init = new HashMap<>();
         init.put("uid", uid);
@@ -293,7 +296,7 @@ public class RegisterAccountActivity extends AppCompatActivity {
             });
         } else {
             // Nếu đã có profile → vào Main, chưa có → vào Questionnaire
-            FirebaseFirestore.getInstance().collection("profiles").document(uid).get()
+            profileDAO.getDocument(uid).get()
                     .addOnSuccessListener(snap -> {
                         if (snap.exists()) {
                             Toast.makeText(this, "Đăng nhập thành công", Toast.LENGTH_SHORT).show();

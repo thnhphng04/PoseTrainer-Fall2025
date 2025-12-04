@@ -18,12 +18,10 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.bumptech.glide.Glide;
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.UserProfileChangeRequest;
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.storage.FirebaseStorage;
-import com.google.firebase.storage.StorageReference;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 
 import android.os.Handler;
 import android.os.Looper;
@@ -34,6 +32,8 @@ import java.util.UUID;
 
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
+import fpt.fall2025.posetrainer.Service.AuthService;
+import fpt.fall2025.posetrainer.DAL.UserDAO;
 
 public class EditProfileActivity extends AppCompatActivity {
     private static final String TAG = "EditProfileActivity";
@@ -61,8 +61,8 @@ public class EditProfileActivity extends AppCompatActivity {
 
     private Uri selectedImageUri;
     private FirebaseUser user;
-    private FirebaseFirestore db;
-    private StorageReference storageRef;
+    private AuthService authService;
+    private UserDAO userDAO;
     
     // Current notification settings
     private boolean allowNotification = true;
@@ -107,8 +107,9 @@ public class EditProfileActivity extends AppCompatActivity {
         switchSessionFeedback = findViewById(R.id.switchSessionFeedback);
         switchStreakReminder = findViewById(R.id.switchStreakReminder);
 
-        user = FirebaseAuth.getInstance().getCurrentUser();
-        db = FirebaseFirestore.getInstance();
+        authService = new AuthService();
+        userDAO = new UserDAO();
+        user = authService.getCurrentUser();
 
         if (user != null) {
             etName.setText(user.getDisplayName());
@@ -260,8 +261,7 @@ public class EditProfileActivity extends AppCompatActivity {
         String uid = user.getUid();
         Log.d(TAG, "Đang load notification settings cho user: " + uid);
         
-        db.collection("users")
-            .document(uid)
+        userDAO.getDocument(uid)
             .get()
             .addOnSuccessListener(documentSnapshot -> {
                 if (documentSnapshot.exists()) {
@@ -463,48 +463,51 @@ public class EditProfileActivity extends AppCompatActivity {
         }
 
         if (selectedImageUri != null) {
-            // ✅ Upload ảnh đúng theo Storage Rules (/avatars/{uid}/{filename})
-            FirebaseStorage storage = FirebaseStorage.getInstance();
-            String fileName = "avatar_" + UUID.randomUUID().toString() + ".jpg";
-            StorageReference storageRef = storage.getReference()
-                    .child("avatars/" + user.getUid() + "/" + fileName);
+            // Upload ảnh sử dụng UserDAO
+            userDAO.uploadAvatar(user.getUid(), selectedImageUri, task -> {
+                if (!task.isSuccessful()) {
+                    Toast.makeText(this, "❌ Lỗi upload ảnh: " + 
+                        (task.getException() != null ? task.getException().getMessage() : "Unknown error"), 
+                        Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                
+                String photoUrl = task.getResult();
+                
+                UserProfileChangeRequest profileUpdates =
+                        new UserProfileChangeRequest.Builder()
+                                .setDisplayName(newName)
+                                .setPhotoUri(android.net.Uri.parse(photoUrl))
+                                .build();
 
-            storageRef.putFile(selectedImageUri)
-                    .addOnSuccessListener(taskSnapshot -> storageRef.getDownloadUrl()
-                            .addOnSuccessListener(uri -> {
-                                String photoUrl = uri.toString();
-
-                                UserProfileChangeRequest profileUpdates =
-                                        new UserProfileChangeRequest.Builder()
-                                                .setDisplayName(newName)
-                                                .setPhotoUri(uri)
-                                                .build();
-
-                                user.updateProfile(profileUpdates)
-                                        .addOnCompleteListener(task -> {
-                                            if (task.isSuccessful()) {
-                                                user.reload().addOnCompleteListener(t -> {
-                                                    FirebaseUser refreshedUser = FirebaseAuth.getInstance().getCurrentUser();
-                                                    FirebaseFirestore db = FirebaseFirestore.getInstance();
-
-                                                    db.collection("users")
-                                                            .document(refreshedUser.getUid())
-                                                            .update("displayName", newName,
-                                                                    "photoUrl", photoUrl)
-                                                            .addOnSuccessListener(aVoid -> {
-                                                                Toast.makeText(this, "✅ Cập nhật hồ sơ thành công!", Toast.LENGTH_SHORT).show();
-                                                                finish();
-                                                            })
-                                                            .addOnFailureListener(e ->
-                                                                    Toast.makeText(this, "❌ Lỗi Firestore: " + e.getMessage(), Toast.LENGTH_SHORT).show());
-                                                });
-                                            } else {
-                                                Toast.makeText(this, "❌ Lỗi Auth: " + task.getException(), Toast.LENGTH_SHORT).show();
-                                            }
-                                        });
-                            }))
-                    .addOnFailureListener(e ->
-                            Toast.makeText(this, "❌ Lỗi upload ảnh: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                user.updateProfile(profileUpdates)
+                        .addOnCompleteListener(updateTask -> {
+                            if (updateTask.isSuccessful()) {
+                                user.reload().addOnCompleteListener(reloadTask -> {
+                                    FirebaseUser refreshedUser = authService.getCurrentUser();
+                                    if (refreshedUser != null) {
+                                        // Update User document trong Firestore
+                                        Map<String, Object> updates = new HashMap<>();
+                                        updates.put("displayName", newName);
+                                        updates.put("photoUrl", photoUrl);
+                                        
+                                        userDAO.getDocument(refreshedUser.getUid())
+                                                .update(updates)
+                                                .addOnSuccessListener(aVoid -> {
+                                                    Toast.makeText(this, "✅ Cập nhật hồ sơ thành công!", Toast.LENGTH_SHORT).show();
+                                                    finish();
+                                                })
+                                                .addOnFailureListener(e ->
+                                                        Toast.makeText(this, "❌ Lỗi Firestore: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                                    }
+                                });
+                            } else {
+                                Toast.makeText(this, "❌ Lỗi Auth: " + 
+                                    (updateTask.getException() != null ? updateTask.getException().getMessage() : "Unknown error"), 
+                                    Toast.LENGTH_SHORT).show();
+                            }
+                        });
+            });
         } else {
             // Không đổi ảnh, chỉ đổi tên
             UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest.Builder()
@@ -515,13 +518,17 @@ public class EditProfileActivity extends AppCompatActivity {
                     .addOnCompleteListener(task -> {
                         if (task.isSuccessful()) {
                             user.reload().addOnCompleteListener(t -> {
-                                db.collection("users")
-                                        .document(user.getUid())
-                                        .update("displayName", newName)
+                                Map<String, Object> updates = new HashMap<>();
+                                updates.put("displayName", newName);
+                                
+                                userDAO.getDocument(user.getUid())
+                                        .update(updates)
                                         .addOnSuccessListener(aVoid -> {
                                             Toast.makeText(this, "✅ Lưu thay đổi thành công!", Toast.LENGTH_SHORT).show();
                                             finish();
-                                        });
+                                        })
+                                        .addOnFailureListener(e ->
+                                                Toast.makeText(this, "❌ Lỗi Firestore: " + e.getMessage(), Toast.LENGTH_SHORT).show());
                             });
                         }
                     });

@@ -17,15 +17,16 @@ import fpt.fall2025.posetrainer.Fragment.NotificationFragment;
 import fpt.fall2025.posetrainer.Helper.AppStateHelper;
 import fpt.fall2025.posetrainer.databinding.ActivityMainBinding;
 
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentChange;
-import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
-import com.google.firebase.messaging.FirebaseMessaging;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.Service.NotificationHelper;
+import fpt.fall2025.posetrainer.Service.AuthService;
+import fpt.fall2025.posetrainer.Service.MessagingService;
+import fpt.fall2025.posetrainer.DAL.UserDAO;
+import fpt.fall2025.posetrainer.DAL.NotificationDAO;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -345,7 +346,10 @@ public class MainActivity extends AppCompatActivity {
      * Được gọi khi app khởi động để đảm bảo user có token và settings đúng
      */
     private void setupUserNotificationSettings() {
-        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        AuthService authService = new AuthService();
+        MessagingService messagingService = new MessagingService();
+        
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) {
             Log.w(TAG, "User chưa đăng nhập, không thể setup notification settings");
             return;
@@ -355,33 +359,29 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "Đang setup notification settings cho user: " + uid);
         
         // Lấy FCM token và lưu lên Firestore
-        FirebaseMessaging.getInstance().getToken()
-            .addOnCompleteListener(task -> {
-                if (task.isSuccessful()) {
-                    String token = task.getResult();
-                    Log.d(TAG, "✓ FCM Token: " + token);
-                    
-                    // Lưu token lên Firestore
-                    FirebaseService.getInstance().updateFcmToken(
-                        uid, 
-                        token, 
-                        success -> {
-                            if (success) {
-                                Log.d(TAG, "✓ Đã lưu FCM token lên Firestore");
-                            } else {
-                                Log.e(TAG, "✗ Lỗi lưu FCM token");
-                            }
-                        }
-                    );
-                    
-                    // Sau khi có token, setup notification settings
-                    setupNotificationSettings(uid);
+        messagingService.getFcmToken(task -> {
+            if (!task.isSuccessful()) {
+                Log.e(TAG, "✗ Lỗi lấy FCM token", task.getException());
+                // Vẫn thử setup settings dù không có token
+                setupNotificationSettings(uid);
+                return;
+            }
+            
+            String token = task.getResult();
+            Log.d(TAG, "✓ FCM Token: " + token);
+            
+            // Lưu token lên Firestore
+            messagingService.updateFcmToken(uid, token, updateTask -> {
+                if (updateTask.isSuccessful()) {
+                    Log.d(TAG, "✓ Đã lưu FCM token lên Firestore");
                 } else {
-                    Log.e(TAG, "✗ Lỗi lấy FCM token", task.getException());
-                    // Vẫn thử setup settings dù không có token
-                    setupNotificationSettings(uid);
+                    Log.e(TAG, "✗ Lỗi lưu FCM token");
                 }
             });
+            
+            // Sau khi có token, setup notification settings
+            setupNotificationSettings(uid);
+        });
     }
     
     /**
@@ -391,9 +391,8 @@ public class MainActivity extends AppCompatActivity {
      */
     private void setupNotificationSettings(String uid) {
         // Kiểm tra xem user đã có notification settings chưa
-        FirebaseFirestore.getInstance()
-            .collection("users")
-            .document(uid)
+        UserDAO userDAO = new UserDAO();
+        userDAO.getDocument(uid)
             .get()
             .addOnSuccessListener(documentSnapshot -> {
                 Map<String, Object> notificationSettings = new HashMap<>();
@@ -496,7 +495,9 @@ public class MainActivity extends AppCompatActivity {
      * sẽ hiển thị notification trên thiết bị giống như thông báo lịch tập
      */
     private void setupSocialNotificationListener() {
-        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        AuthService authService = new AuthService();
+        
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) {
             Log.w(TAG, "User chưa đăng nhập, không thể setup social notification listener");
             return;
@@ -507,8 +508,9 @@ public class MainActivity extends AppCompatActivity {
         
         // Lắng nghe notification mới cho user hiện tại
         // Query tất cả notification của user, filter type trong code
-        Query query = FirebaseFirestore.getInstance()
-                .collection("notifications")
+        // Sử dụng NotificationDAO nếu có, hoặc tạo query trực tiếp
+        NotificationDAO notificationDAO = new NotificationDAO();
+        Query query = notificationDAO.getCollection()
                 .whereEqualTo("uid", uid)
                 .orderBy("sentAt", Query.Direction.DESCENDING)
                 .limit(10); // Lắng nghe 10 notification mới nhất

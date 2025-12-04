@@ -6,7 +6,6 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
 import androidx.appcompat.app.AlertDialog;
@@ -28,6 +27,7 @@ import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
+import fpt.fall2025.posetrainer.Service.AuthService;
 import fpt.fall2025.posetrainer.databinding.ActivityEditWorkoutBinding;
 
 /**
@@ -91,11 +91,14 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
         }
     }
 
+    private AuthService authService;
+    
     /**
      * Get current user UID from Firebase Authentication
      */
     private void getCurrentUserId() {
-        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        authService = new AuthService();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser != null) {
             userId = currentUser.getUid();
             Log.d(TAG, "UID người dùng hiện tại: " + userId);

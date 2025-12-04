@@ -9,18 +9,18 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
 import fpt.fall2025.posetrainer.Adapter.AchievementAdapter;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
+import fpt.fall2025.posetrainer.Service.AuthService;
 import fpt.fall2025.posetrainer.databinding.ActivityAchievementsBinding;
 
 public class AchievementsActivity extends AppCompatActivity {
     private static final String TAG = "AchievementsActivity";
     private ActivityAchievementsBinding binding;
-    private FirebaseAuth mAuth;
+    private AuthService authService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -28,7 +28,7 @@ public class AchievementsActivity extends AppCompatActivity {
         binding = ActivityAchievementsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        mAuth = FirebaseAuth.getInstance();
+        authService = new AuthService();
 
         setupToolbar();
         loadUserAchievements();
@@ -43,7 +43,7 @@ public class AchievementsActivity extends AppCompatActivity {
      * Load user achievements and display
      */
     private void loadUserAchievements() {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) {
             return;
         }
@@ -74,7 +74,7 @@ public class AchievementsActivity extends AppCompatActivity {
      * Load user progress (calendar heatmap)
      */
     private void loadUserProgress() {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) {
             return;
         }

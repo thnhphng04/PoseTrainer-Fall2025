@@ -26,7 +26,6 @@ import com.bumptech.glide.Glide;
 import com.firebase.ui.firestore.FirestoreRecyclerAdapter;
 import com.firebase.ui.firestore.FirestoreRecyclerOptions;
 import com.google.android.material.tabs.TabLayout;
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.*;
 
@@ -44,11 +43,15 @@ import fpt.fall2025.posetrainer.Domain.Community;
 import fpt.fall2025.posetrainer.Domain.User;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
+import fpt.fall2025.posetrainer.Service.AuthService;
+import fpt.fall2025.posetrainer.DAL.CommunityDAO;
+import fpt.fall2025.posetrainer.DAL.UserDAO;
 import fpt.fall2025.posetrainer.View.CommunityViewModel;
 
 public class CommunityFragment extends Fragment {
-    private FirebaseAuth mAuth;
-    private FirebaseFirestore db;
+    private AuthService authService;
+    private CommunityDAO communityDAO;
+    private UserDAO userDAO;
     private ImageView imgAvatar;
     private FirestoreRecyclerAdapter<Community, PostVH> adapter;
     private LinearLayoutManager layoutManager;
@@ -88,8 +91,9 @@ public class CommunityFragment extends Fragment {
     public void onViewCreated(@NonNull View v, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(v, savedInstanceState);
 
-        mAuth = FirebaseAuth.getInstance();
-        db = FirebaseFirestore.getInstance();
+        authService = new AuthService();
+        communityDAO = new CommunityDAO();
+        userDAO = new UserDAO();
         imgAvatar = v.findViewById(R.id.profile_image);
 
         // ViewModel để lưu vị trí scroll
@@ -270,7 +274,7 @@ public class CommunityFragment extends Fragment {
      * Đã tối ưu với debounce để tránh load quá nhiều lần
      */
     private void loadUnreadNotificationCount() {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) {
             return;
         }
@@ -319,7 +323,7 @@ public class CommunityFragment extends Fragment {
     private void loadFeed() {
         showLoading(true);
         
-        Query baseQuery = db.collection("community");
+        Query baseQuery = communityDAO.getCollection();
         
         // Apply search filter
         if (!TextUtils.isEmpty(currentSearchQuery)) {
@@ -343,7 +347,7 @@ public class CommunityFragment extends Fragment {
                 baseQuery = baseQuery.orderBy("createdAt", Query.Direction.DESCENDING);
                 break;
             case 3: // Theo dõi
-                FirebaseUser currentUser = mAuth.getCurrentUser();
+                FirebaseUser currentUser = authService.getCurrentUser();
                 if (currentUser == null) {
                     showEmptyState("Bạn cần đăng nhập để xem bài viết từ người đang theo dõi");
                     return;
@@ -404,8 +408,7 @@ public class CommunityFragment extends Fragment {
     }
 
     private void loadFollowingFeed(String currentUserId) {
-        db.collection("users").document(currentUserId)
-                .collection("following")
+        userDAO.getFollowingCollection(currentUserId)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     List<String> followingIds = new ArrayList<>();
@@ -418,7 +421,7 @@ public class CommunityFragment extends Fragment {
                         return;
                     }
                     
-                    Query query = db.collection("community")
+                    Query query = communityDAO.getCollection()
                             .whereIn("uid", followingIds)
                             .orderBy("createdAt", Query.Direction.DESCENDING)
                             .limit(50);
@@ -502,7 +505,7 @@ public class CommunityFragment extends Fragment {
 
     // ===================== LOAD USER AVATAR =====================
     private void loadUserFromFirestore() {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) {
             Toast.makeText(requireContext(), "Chưa đăng nhập", Toast.LENGTH_SHORT).show();
             return;
@@ -521,7 +524,7 @@ public class CommunityFragment extends Fragment {
 
         cachedUserId = uid;
         
-        db.collection("users").document(uid)
+        userDAO.getDocument(uid)
                 .get()
                 .addOnSuccessListener(doc -> {
                     if (!isAdded() || getView() == null || imgAvatar == null) {
@@ -652,7 +655,8 @@ public class CommunityFragment extends Fragment {
         }
 
         public void bind(Community p) {
-            FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+            AuthService authService = new AuthService();
+            FirebaseUser currentUser = authService.getCurrentUser();
 
             // Author info
             String authorName = (p.author != null && p.author.displayName != null) ? p.author.displayName : "User";

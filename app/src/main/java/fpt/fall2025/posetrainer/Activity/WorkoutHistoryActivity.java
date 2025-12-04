@@ -18,7 +18,6 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.tabs.TabLayout;
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
 import java.text.SimpleDateFormat;
@@ -36,6 +35,7 @@ import fpt.fall2025.posetrainer.Domain.UserWorkout;
 import fpt.fall2025.posetrainer.Domain.FavoriteWorkoutItem;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
+import fpt.fall2025.posetrainer.Service.AuthService;
 
 /**
  * Activity hiển thị lịch sử tập luyện với tabs: Lịch sử, Gần đây, Yêu thích
@@ -71,7 +71,7 @@ public class WorkoutHistoryActivity extends AppCompatActivity {
     private List<String> timeFilterOptions; // Filter cho tab Lịch sử
     private List<String> statusFilterOptions; // Filter cho tab Gần đây
     
-    private FirebaseAuth mAuth;
+    private AuthService authService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,7 +79,7 @@ public class WorkoutHistoryActivity extends AppCompatActivity {
         setContentView(R.layout.activity_workout_history);
         
         // Initialize Firebase Auth
-        mAuth = FirebaseAuth.getInstance();
+        authService = new AuthService();
         
         // Initialize UI
         initViews();
@@ -258,7 +258,7 @@ public class WorkoutHistoryActivity extends AppCompatActivity {
      * Load sessions từ Firebase Firestore
      */
     private void loadSessions() {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) {
             Log.w(TAG, "Không có người dùng đăng nhập, không thể tải sessions");
             Toast.makeText(this, "Vui lòng đăng nhập để xem lịch sử tập luyện", Toast.LENGTH_SHORT).show();
@@ -579,7 +579,7 @@ public class WorkoutHistoryActivity extends AppCompatActivity {
      * Load favorite workout templates và user workouts cho tab Yêu thích
      */
     private void loadFavoriteWorkoutTemplates() {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) {
             Log.w(TAG, "Không có người dùng đăng nhập, không thể tải favorite workouts");
             Toast.makeText(this, "Vui lòng đăng nhập để xem workout yêu thích", Toast.LENGTH_SHORT).show();

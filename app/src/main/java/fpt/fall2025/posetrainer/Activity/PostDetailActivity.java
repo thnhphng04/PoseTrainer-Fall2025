@@ -14,12 +14,13 @@ import androidx.annotation.NonNull;
 
 import com.firebase.ui.firestore.FirestoreRecyclerAdapter;
 import com.firebase.ui.firestore.FirestoreRecyclerOptions;
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.*;
 
 import fpt.fall2025.posetrainer.Data.CommunityRepository;
 import fpt.fall2025.posetrainer.Domain.Community;
+import fpt.fall2025.posetrainer.Service.AuthService;
+import fpt.fall2025.posetrainer.DAL.CommunityDAO;
 import fpt.fall2025.posetrainer.R;
 
 public class PostDetailActivity extends AppCompatActivity {
@@ -34,7 +35,8 @@ public class PostDetailActivity extends AppCompatActivity {
     private boolean likedByMe = false;
 
     private CommunityRepository repo;
-    private FirebaseFirestore db;
+    private AuthService authService;
+    private CommunityDAO communityDAO;
     private ListenerRegistration postListener;
 
     private FirestoreRecyclerAdapter<Community.Comment, CmtVH> cmtAdapter;
@@ -48,7 +50,8 @@ public class PostDetailActivity extends AppCompatActivity {
         if (postId == null) { finish(); return; }
 
         repo = new CommunityRepository();
-        db = FirebaseFirestore.getInstance();
+        authService = new AuthService();
+        communityDAO = new CommunityDAO();
 
         ivImage         = findViewById(R.id.ivImage);
         btnLike         = findViewById(R.id.btnLike);
@@ -61,8 +64,8 @@ public class PostDetailActivity extends AppCompatActivity {
         btnSend         = findViewById(R.id.btnSend);
 
         // --- 1) Listen Post realtime ---
-        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        postListener = db.collection("community").document(postId)
+        FirebaseUser currentUser = authService.getCurrentUser();
+        postListener = communityDAO.getDocument(postId)
                 .addSnapshotListener((snap, e) -> {
                     if (e != null || snap == null || !snap.exists()) return;
                     Community p = snap.toObject(Community.class);
@@ -99,9 +102,7 @@ public class PostDetailActivity extends AppCompatActivity {
         RecyclerView rv = findViewById(R.id.rvComments);
         rv.setLayoutManager(new LinearLayoutManager(this));
 
-        Query q = FirebaseFirestore.getInstance()
-                .collection("community").document(postId)
-                .collection("comments")
+        Query q = communityDAO.getCommentsCollection(postId)
                 .orderBy("createdAt", Query.Direction.ASCENDING);
 
         FirestoreRecyclerOptions<Community.Comment> opts =

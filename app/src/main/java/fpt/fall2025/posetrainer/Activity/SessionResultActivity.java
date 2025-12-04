@@ -14,7 +14,6 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
 import java.text.SimpleDateFormat;
@@ -31,6 +30,7 @@ import fpt.fall2025.posetrainer.Domain.Exercise;
 import fpt.fall2025.posetrainer.Domain.Session;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
+import fpt.fall2025.posetrainer.Service.AuthService;
 
 /**
  * Activity hiển thị kết quả của session đã hoàn thành
@@ -56,7 +56,7 @@ public class SessionResultActivity extends AppCompatActivity {
     private List<Exercise> exercises;
     private SessionResultExerciseAdapter adapter;
 
-    private FirebaseAuth mAuth;
+    private AuthService authService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,7 +64,7 @@ public class SessionResultActivity extends AppCompatActivity {
         setContentView(R.layout.activity_session_result);
 
         // Initialize Firebase Auth
-        mAuth = FirebaseAuth.getInstance();
+        authService = new AuthService();
 
         // Get sessionId from intent
         String sessionId = getIntent().getStringExtra("sessionId");

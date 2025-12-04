@@ -22,7 +22,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.tabs.TabLayout;
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
 import java.util.ArrayList;
@@ -35,6 +34,7 @@ import fpt.fall2025.posetrainer.Adapter.NotificationAdapter;
 import fpt.fall2025.posetrainer.Domain.Notification;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
+import fpt.fall2025.posetrainer.Service.AuthService;
 
 /**
  * Fragment hiển thị danh sách thông báo
@@ -56,7 +56,7 @@ public class NotificationFragment extends Fragment {
     private NotificationAdapter adapter;
     
     // Firebase
-    private FirebaseAuth mAuth;
+    private AuthService authService;
     private FirebaseService firebaseService;
     
     // Filter type
@@ -68,7 +68,7 @@ public class NotificationFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_notification, container, false);
         
         // Khởi tạo Firebase
-        mAuth = FirebaseAuth.getInstance();
+        authService = new AuthService();
         firebaseService = FirebaseService.getInstance();
         
         // Khởi tạo views
@@ -166,7 +166,7 @@ public class NotificationFragment extends Fragment {
      * Load danh sách thông báo từ Firestore
      */
     private void loadNotifications() {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) {
             showEmptyView();
             return;
@@ -437,7 +437,7 @@ public class NotificationFragment extends Fragment {
      * Đánh dấu tất cả thông báo là đã đọc
      */
     private void markAllNotificationsAsRead() {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) return;
         
         String uid = currentUser.getUid();

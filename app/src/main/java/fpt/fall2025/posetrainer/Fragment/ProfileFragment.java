@@ -11,9 +11,7 @@ import androidx.fragment.app.Fragment;
 
 import com.bumptech.glide.Glide;
 import com.google.android.gms.auth.api.signin.*;
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import fpt.fall2025.posetrainer.Activity.AchievementsActivity;
@@ -23,14 +21,18 @@ import fpt.fall2025.posetrainer.Activity.LoginActivity;
 import fpt.fall2025.posetrainer.Activity.WorkoutHistoryActivity;
 import fpt.fall2025.posetrainer.Domain.Session;
 import fpt.fall2025.posetrainer.Domain.User;
+import fpt.fall2025.posetrainer.Service.AuthService;
+import fpt.fall2025.posetrainer.DAL.UserDAO;
+import fpt.fall2025.posetrainer.DAL.SessionDAO;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.databinding.FragmentProfileBinding;
 
 public class ProfileFragment extends Fragment {
     private FragmentProfileBinding binding;
-    private FirebaseAuth mAuth;
-    private FirebaseFirestore db;
+    private AuthService authService;
+    private UserDAO userDAO;
+    private SessionDAO sessionDAO;
     private GoogleSignInClient googleClient;
     
     // Cache để tránh reload không cần thiết
@@ -49,8 +51,9 @@ public class ProfileFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        mAuth = FirebaseAuth.getInstance();
-        db = FirebaseFirestore.getInstance();
+        authService = new AuthService();
+        userDAO = new UserDAO();
+        sessionDAO = new SessionDAO();
 
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken(getString(R.string.default_web_client_id))
@@ -106,7 +109,7 @@ public class ProfileFragment extends Fragment {
      * Đã tối ưu với cache để tránh reload không cần thiết
      */
     private void loadUserFromFirestore() {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) {
             Toast.makeText(requireContext(), "Chưa đăng nhập", Toast.LENGTH_SHORT).show();
             return;
@@ -127,47 +130,54 @@ public class ProfileFragment extends Fragment {
         cachedUserId = uid;
         setLoading(true);
 
-        db.collection("users").document(uid)
-                .get()
-                .addOnSuccessListener(doc -> {
-                    // Check if fragment view is still attached
-                    if (binding == null || !isAdded()) {
-                        return;
-                    }
-                    
-                    setLoading(false);
-                    isUserDataLoaded = true;
-                    
-                    if (doc.exists()) {
-                        User user = doc.toObject(User.class);
-                        if (user != null) {
-                            String name = user.getDisplayName() != null ? user.getDisplayName() : "User";
-                            String email = user.getEmail() != null ? user.getEmail() : currentUser.getEmail();
-                            String photoUrl = doc.contains("photoUrl") ? doc.getString("photoUrl") : null;
+        userDAO.getById(uid, task -> {
+            if (!task.isSuccessful() || task.getResult() == null) {
+                if (binding == null || !isAdded()) {
+                    return;
+                }
+                setLoading(false);
+                Toast.makeText(requireContext(), "Không thể tải thông tin người dùng", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
+            User user = task.getResult();
+            if (binding == null || !isAdded()) {
+                return;
+            }
+            
+            setLoading(false);
+            isUserDataLoaded = true;
+            
+            String name = user.getDisplayName() != null ? user.getDisplayName() : "User";
+            String email = user.getEmail() != null ? user.getEmail() : currentUser.getEmail();
+            String photoUrl = user.getPhotoURL() != null ? user.getPhotoURL() : null;
 
-                            // Nếu chưa có photoUrl thì fallback sang FirebaseAuth
-                            if (photoUrl == null || photoUrl.isEmpty()) {
-                                if (currentUser.getPhotoUrl() != null) {
-                                    photoUrl = currentUser.getPhotoUrl().toString();
-                                }
-                            }
+            // Nếu chưa có photoUrl thì fallback sang FirebaseAuth
+            if (photoUrl == null || photoUrl.isEmpty()) {
+                String authPhotoUrl = authService.getCurrentUserPhotoUrl();
+                if (authPhotoUrl != null && !authPhotoUrl.isEmpty()) {
+                    photoUrl = authPhotoUrl;
+                }
+            }
 
-                            bindUser(name, email, photoUrl);
-                        }
-                    } else {
-                        bindFromAuth(currentUser);
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    // Check if fragment view is still attached
-                    if (binding == null || !isAdded()) {
-                        return;
-                    }
-                    
-                    setLoading(false);
-                    isUserDataLoaded = true;
-                    bindFromAuth(currentUser);
-                });
+            if (binding.profileName != null) {
+                binding.profileName.setText(name);
+            }
+            if (binding.profileEmail != null) {
+                binding.profileEmail.setText(email != null ? email : "");
+            }
+
+            if (photoUrl != null && !photoUrl.isEmpty()) {
+                Glide.with(requireContext())
+                        .load(photoUrl)
+                        .circleCrop()
+                        .into(binding.profileImage);
+            } else {
+                if (binding.profileImage != null) {
+                    binding.profileImage.setImageResource(R.drawable.profile);
+                }
+            }
+        });
     }
 
     private void bindFromAuth(FirebaseUser user) {
@@ -212,7 +222,7 @@ public class ProfileFragment extends Fragment {
      * Đã tối ưu với cache để tránh reload không cần thiết
      */
     private void loadUserStats() {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) return;
 
         String uid = currentUser.getUid();
@@ -228,7 +238,7 @@ public class ProfileFragment extends Fragment {
         }
 
         // Query sessions của user đã hoàn thành (endedAt > 0)
-        db.collection("sessions")
+        sessionDAO.getCollection()
                 .whereEqualTo("uid", uid)
                 .whereGreaterThan("endedAt", 0)
                 .get()
@@ -322,7 +332,7 @@ public class ProfileFragment extends Fragment {
      * Load user streak and display
      */
     private void loadUserStreak() {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) {
             return;
         }
@@ -406,7 +416,7 @@ public class ProfileFragment extends Fragment {
 
     private void safeFirebaseSignOut() {
         try {
-            FirebaseAuth.getInstance().signOut();
+            authService.signOut();
         } catch (Exception e) {
             // Error during sign out
         }

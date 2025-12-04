@@ -20,12 +20,14 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.firebase.ui.firestore.FirestoreRecyclerAdapter;
 import com.firebase.ui.firestore.FirestoreRecyclerOptions;
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.*;
 
 import fpt.fall2025.posetrainer.Domain.Community;
 import fpt.fall2025.posetrainer.Domain.User;
+import fpt.fall2025.posetrainer.Service.AuthService;
+import fpt.fall2025.posetrainer.DAL.UserDAO;
+import fpt.fall2025.posetrainer.DAL.CommunityDAO;
 import fpt.fall2025.posetrainer.R;
 
 public class UserProfileActivity extends AppCompatActivity {
@@ -38,8 +40,9 @@ public class UserProfileActivity extends AppCompatActivity {
     private RecyclerView rvPosts;
     private LinearLayout emptyState;
     private FirestoreRecyclerAdapter<Community, PostVH> adapter;
-    private FirebaseFirestore db;
-    private FirebaseAuth auth;
+    private AuthService authService;
+    private UserDAO userDAO;
+    private CommunityDAO communityDAO;
     private boolean isFollowing = false;
 
     @Override
@@ -53,8 +56,9 @@ public class UserProfileActivity extends AppCompatActivity {
             return;
         }
 
-        auth = FirebaseAuth.getInstance();
-        db = FirebaseFirestore.getInstance();
+        authService = new AuthService();
+        userDAO = new UserDAO();
+        communityDAO = new CommunityDAO();
 
         ivAvatar = findViewById(R.id.ivAvatar);
         tvName = findViewById(R.id.tvName);
@@ -68,7 +72,7 @@ public class UserProfileActivity extends AppCompatActivity {
 
         rvPosts.setLayoutManager(new LinearLayoutManager(this));
 
-        FirebaseUser currentUser = auth.getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser != null && currentUser.getUid().equals(userId)) {
             btnFollow.setVisibility(View.GONE);
         } else {
@@ -82,40 +86,37 @@ public class UserProfileActivity extends AppCompatActivity {
     }
 
     private void loadUserInfo() {
-        db.collection("users").document(userId)
-                .get()
-                .addOnSuccessListener(doc -> {
-                    if (doc.exists()) {
-                        User user = doc.toObject(User.class);
-                        if (user != null) {
-                            tvName.setText(user.getDisplayName() != null ? user.getDisplayName() : "Người dùng");
-                            tvEmail.setText(user.getEmail() != null ? user.getEmail() : "");
+        userDAO.getById(userId, task -> {
+            if (!task.isSuccessful() || task.getResult() == null) {
+                Toast.makeText(this, "Lỗi tải thông tin: " + 
+                    (task.getException() != null ? task.getException().getMessage() : "Unknown error"), 
+                    Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
+            User user = task.getResult();
+            tvName.setText(user.getDisplayName() != null ? user.getDisplayName() : "Người dùng");
+            tvEmail.setText(user.getEmail() != null ? user.getEmail() : "");
 
-                            String photoUrl = user.getPhotoURL();
-                            if (photoUrl != null && !photoUrl.isEmpty()) {
-                                Glide.with(this)
-                                        .load(photoUrl)
-                                        .placeholder(R.drawable.ic_person)
-                                        .error(R.drawable.ic_person)
-                                        .circleCrop()
-                                        .into(ivAvatar);
-                            } else {
-                                ivAvatar.setImageResource(R.drawable.ic_person);
-                            }
-                        }
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Lỗi tải thông tin: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                });
+            String photoUrl = user.getPhotoURL();
+            if (photoUrl != null && !photoUrl.isEmpty()) {
+                Glide.with(this)
+                        .load(photoUrl)
+                        .placeholder(R.drawable.ic_person)
+                        .error(R.drawable.ic_person)
+                        .circleCrop()
+                        .into(ivAvatar);
+            } else {
+                ivAvatar.setImageResource(R.drawable.ic_person);
+            }
+        });
     }
 
     private void checkFollowStatus() {
-        FirebaseUser currentUser = auth.getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) return;
 
-        db.collection("users").document(currentUser.getUid())
-                .collection("following").document(userId)
+        userDAO.getFollowingCollection(currentUser.getUid()).document(userId)
                 .get()
                 .addOnSuccessListener(doc -> {
                     isFollowing = doc.exists();
@@ -124,15 +125,14 @@ public class UserProfileActivity extends AppCompatActivity {
     }
 
     private void toggleFollow() {
-        FirebaseUser currentUser = auth.getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) {
             Toast.makeText(this, "Bạn cần đăng nhập", Toast.LENGTH_SHORT).show();
             return;
         }
 
         String currentUserId = currentUser.getUid();
-        DocumentReference followRef = db.collection("users").document(currentUserId)
-                .collection("following").document(userId);
+        DocumentReference followRef = userDAO.getFollowingCollection(currentUserId).document(userId);
 
         if (isFollowing) {
             // Unfollow
@@ -141,8 +141,7 @@ public class UserProfileActivity extends AppCompatActivity {
                         isFollowing = false;
                         updateFollowButton();
                         // Xóa khỏi followers của user
-                        db.collection("users").document(userId)
-                                .collection("followers").document(currentUserId)
+                        userDAO.getFollowersCollection(userId).document(currentUserId)
                                 .delete();
                     });
         } else {
@@ -152,8 +151,7 @@ public class UserProfileActivity extends AppCompatActivity {
                         isFollowing = true;
                         updateFollowButton();
                         // Thêm vào followers của user
-                        db.collection("users").document(userId)
-                                .collection("followers").document(currentUserId)
+                        userDAO.getFollowersCollection(userId).document(currentUserId)
                                 .set(new java.util.HashMap<>());
                     });
         }
@@ -170,7 +168,7 @@ public class UserProfileActivity extends AppCompatActivity {
     }
 
     private void setupPosts() {
-        Query query = db.collection("community")
+        Query query = communityDAO.getCollection()
                 .whereEqualTo("uid", userId)
                 .orderBy("createdAt", Query.Direction.DESCENDING)
                 .limit(50);

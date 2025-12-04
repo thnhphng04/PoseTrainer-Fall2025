@@ -15,9 +15,7 @@ import androidx.fragment.app.Fragment;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.google.android.material.button.MaterialButton;
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.SetOptions;
 
 import fpt.fall2025.posetrainer.Adapter.RegistrationViewPagerAdapter;
@@ -26,6 +24,8 @@ import fpt.fall2025.posetrainer.Fragment.Registration.BasicInfoFragment;
 import fpt.fall2025.posetrainer.Fragment.Registration.CurrentBodyFragment;
 import fpt.fall2025.posetrainer.Fragment.Registration.ExperienceFragment;
 import fpt.fall2025.posetrainer.Fragment.Registration.TargetBodyFragment;
+import fpt.fall2025.posetrainer.Service.AuthService;
+import fpt.fall2025.posetrainer.DAL.ProfileDAO;
 import fpt.fall2025.posetrainer.R;
 
 public class RegistrationInfoActivity extends AppCompatActivity implements
@@ -52,8 +52,8 @@ public class RegistrationInfoActivity extends AppCompatActivity implements
     private String currentBodyType;
     private String targetBodyType, targetWeight;
 
-    private FirebaseAuth mAuth;
-    private FirebaseFirestore db;
+    private AuthService authService;
+    private ProfileDAO profileDAO;
     private String uid;
 
     @Override
@@ -61,10 +61,10 @@ public class RegistrationInfoActivity extends AppCompatActivity implements
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_registration_info);
 
-        mAuth = FirebaseAuth.getInstance();
-        db = FirebaseFirestore.getInstance();
+        authService = new AuthService();
+        profileDAO = new ProfileDAO();
 
-        FirebaseUser firebaseUser = mAuth.getCurrentUser();
+        FirebaseUser firebaseUser = authService.getCurrentUser();
         if (firebaseUser == null) {
             Toast.makeText(this, "Bạn chưa đăng nhập", Toast.LENGTH_LONG).show();
             finish();
@@ -324,7 +324,7 @@ public class RegistrationInfoActivity extends AppCompatActivity implements
         }
         
         // Save to Firestore
-        db.collection("profiles").document(uid)
+        profileDAO.getDocument(uid)
                 .set(profile, SetOptions.merge())
                 .addOnSuccessListener(unused -> {
                     setLoading(false);
@@ -449,19 +449,22 @@ public class RegistrationInfoActivity extends AppCompatActivity implements
         profile.setGoals(goals);
         profile.setLastUpdatedAt(System.currentTimeMillis());
 
-        db.collection("profiles").document(uid)
-                .set(profile, SetOptions.merge())
-                .addOnSuccessListener(unused -> {
-                    setLoading(false);
-                    Toast.makeText(this, "Đăng ký thành công", Toast.LENGTH_SHORT).show();
-                    startActivity(new android.content.Intent(this, MainActivity.class));
-                    finish();
-                })
-                .addOnFailureListener(e -> {
-                    setLoading(false);
-                    Log.e("RegistrationInfoActivity", "save failed", e);
-                    Toast.makeText(this, "Lỗi lưu dữ liệu: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                });
+        // Save profile to Firestore
+        profileDAO.save(profile, task -> {
+            if (!task.isSuccessful()) {
+                setLoading(false);
+                Log.e("RegistrationInfoActivity", "save failed", task.getException());
+                Toast.makeText(this, "Lỗi lưu dữ liệu: " + 
+                    (task.getException() != null ? task.getException().getMessage() : "Unknown error"), 
+                    Toast.LENGTH_LONG).show();
+                return;
+            }
+            
+            setLoading(false);
+            Toast.makeText(this, "Đăng ký thành công", Toast.LENGTH_SHORT).show();
+            startActivity(new android.content.Intent(this, MainActivity.class));
+            finish();
+        });
     }
 
     private void collectAllData() {

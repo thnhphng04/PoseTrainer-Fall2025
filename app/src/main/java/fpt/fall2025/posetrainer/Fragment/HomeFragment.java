@@ -21,11 +21,12 @@ import fpt.fall2025.posetrainer.Domain.Collection;
 import fpt.fall2025.posetrainer.Domain.User;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.FirebaseService;
+import fpt.fall2025.posetrainer.Service.AuthService;
+import fpt.fall2025.posetrainer.DAL.SessionDAO;
+import fpt.fall2025.posetrainer.DAL.UserDAO;
 import fpt.fall2025.posetrainer.Activity.MainActivity;
 import fpt.fall2025.posetrainer.databinding.FragmentHomeBinding;
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.FirebaseFirestore;
 import com.bumptech.glide.Glide;
 
 import java.util.ArrayList;
@@ -36,8 +37,9 @@ public class HomeFragment extends Fragment {
     private ArrayList<WorkoutTemplate> filteredWorkoutTemplates;
     private ArrayList<WorkoutTemplate> featuredWorkouts; // Featured/Recommended workouts
     private ArrayList<WorkoutTemplate> personalizedWorkouts; // Personalized workouts
-    private FirebaseAuth mAuth;
-    private FirebaseFirestore db;
+    private AuthService authService;
+    private SessionDAO sessionDAO;
+    private UserDAO userDAO;
     private WorkoutTemplateAdapter adapter; // Reuse adapter thay vì tạo mới mỗi lần
     private WorkoutTemplateAdapter featuredAdapter; // Adapter cho featured workouts
     private WorkoutTemplateAdapter personalizedAdapter; // Adapter cho personalized workouts
@@ -66,8 +68,9 @@ public class HomeFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        mAuth = FirebaseAuth.getInstance();
-        db = FirebaseFirestore.getInstance();
+        authService = new AuthService();
+        sessionDAO = new SessionDAO();
+        userDAO = new UserDAO();
 
         workoutTemplates = new ArrayList<>();
         filteredWorkoutTemplates = new ArrayList<>();
@@ -194,7 +197,7 @@ public class HomeFragment extends Fragment {
      * Đã tối ưu với debounce để tránh load quá nhiều lần
      */
     private void loadUnreadNotificationCount() {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) {
             return;
         }
@@ -219,7 +222,7 @@ public class HomeFragment extends Fragment {
      * Load user streak and display
      */
     private void loadUserStreak() {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) {
             return;
         }
@@ -285,7 +288,7 @@ public class HomeFragment extends Fragment {
      * Load và hiển thị Recent Activity (sessions gần đây)
      */
     private void loadRecentActivity() {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) {
             recentSessions.clear();
             if (recentActivityAdapter != null) {
@@ -297,7 +300,7 @@ public class HomeFragment extends Fragment {
         String uid = currentUser.getUid();
 
         // Query 4 sessions gần đây nhất
-        db.collection("sessions")
+        sessionDAO.getCollection()
                 .whereEqualTo("uid", uid)
                 .orderBy("startedAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
                 .limit(4)
@@ -501,7 +504,7 @@ public class HomeFragment extends Fragment {
         }
 
         personalizedWorkouts.clear();
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+        FirebaseUser currentUser = authService.getCurrentUser();
         
         // Strategy: Lấy workouts phù hợp với level của user
         // Nếu chưa có user level, lấy beginner workouts
@@ -608,7 +611,7 @@ public class HomeFragment extends Fragment {
      * Đã tối ưu với cache để tránh reload không cần thiết
      */
     private void loadCurrentUserInfo() {
-        FirebaseUser current = mAuth.getCurrentUser();
+        FirebaseUser current = authService.getCurrentUser();
         if (current == null) {
             return;
         }
@@ -627,7 +630,7 @@ public class HomeFragment extends Fragment {
             return;
         }
         
-        db.collection("users").document(uid).get()
+        userDAO.getDocument(uid).get()
                 .addOnSuccessListener(doc -> {
                     // Kiểm tra lại fragment view trước khi update UI
                     if (!isAdded() || getView() == null || binding == null) {
