@@ -609,10 +609,10 @@ public class EditGoalsActivity extends AppCompatActivity {
                 return;
             }
             
-            setLoading(false);
-            Toast.makeText(this, "Cập nhật mục tiêu thành công", Toast.LENGTH_SHORT).show();
-            finish();
-        });
+                    setLoading(false);
+                    Toast.makeText(this, "Cập nhật mục tiêu thành công", Toast.LENGTH_SHORT).show();
+                    finish();
+                });
     }
 
     /* ---------- helpers ---------- */

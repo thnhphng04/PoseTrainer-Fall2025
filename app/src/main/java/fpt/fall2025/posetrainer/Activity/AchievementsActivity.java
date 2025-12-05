@@ -13,14 +13,17 @@ import com.google.firebase.auth.FirebaseUser;
 
 import fpt.fall2025.posetrainer.Adapter.AchievementAdapter;
 import fpt.fall2025.posetrainer.R;
-import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.Service.AuthService;
+import fpt.fall2025.posetrainer.DAL.AchievementDAO;
+import fpt.fall2025.posetrainer.DAL.UserProgressDAO;
 import fpt.fall2025.posetrainer.databinding.ActivityAchievementsBinding;
 
 public class AchievementsActivity extends AppCompatActivity {
     private static final String TAG = "AchievementsActivity";
     private ActivityAchievementsBinding binding;
     private AuthService authService;
+    private AchievementDAO achievementDAO;
+    private UserProgressDAO userProgressDAO;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,6 +32,8 @@ public class AchievementsActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         authService = new AuthService();
+        achievementDAO = new AchievementDAO();
+        userProgressDAO = new UserProgressDAO();
 
         setupToolbar();
         loadUserAchievements();
@@ -58,7 +63,7 @@ public class AchievementsActivity extends AppCompatActivity {
         binding.rvAchievements.setAdapter(adapter);
 
         // Load achievements
-        FirebaseService.getInstance().loadUserAchievements(currentUser.getUid(), achievement -> {
+        achievementDAO.loadUserAchievements(currentUser.getUid(), achievement -> {
             if (achievement != null) {
                 adapter.setAchievements(achievement);
             } else {
@@ -83,7 +88,7 @@ public class AchievementsActivity extends AppCompatActivity {
             return;
         }
 
-        FirebaseService.getInstance().loadUserProgress(currentUser.getUid(), progress -> {
+        userProgressDAO.loadUserProgress(currentUser.getUid(), progress -> {
             if (progress != null && progress.getCalendar() != null) {
                 binding.calendarHeatmap.setWorkoutDatesFromProgress(progress.getCalendar());
             }

@@ -10,7 +10,7 @@ import com.google.firebase.auth.FirebaseUser;
 
 import fpt.fall2025.posetrainer.Domain.Notification;
 import fpt.fall2025.posetrainer.Helper.AppStateHelper;
-import fpt.fall2025.posetrainer.Service.FirebaseService;
+import fpt.fall2025.posetrainer.DAL.NotificationDAO;
 import fpt.fall2025.posetrainer.Service.NotificationHelper;
 
 /**
@@ -18,6 +18,7 @@ import fpt.fall2025.posetrainer.Service.NotificationHelper;
  */
 public class WorkoutReminderReceiver extends BroadcastReceiver {
     private static final String TAG = "WorkoutReminderReceiver";
+    private NotificationDAO notificationDAO;
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -76,7 +77,8 @@ public class WorkoutReminderReceiver extends BroadcastReceiver {
             false // read
         );
 
-        FirebaseService.getInstance().saveNotification(notification, success -> {
+        NotificationDAO notificationDAO = new NotificationDAO();
+        notificationDAO.saveNotification(notification, success -> {
             if (success) {
                 Log.d(TAG, "Đã lưu thông báo vào Firestore thành công");
             } else {

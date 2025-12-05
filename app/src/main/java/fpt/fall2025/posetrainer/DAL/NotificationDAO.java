@@ -8,18 +8,12 @@ import androidx.annotation.Nullable;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.DocumentReference;
-import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import fpt.fall2025.posetrainer.Domain.Notification;
 import fpt.fall2025.posetrainer.FirebaseContext.FirebaseFirestoreContext;
@@ -42,29 +36,60 @@ public class NotificationDAO {
      * Lưu notification vào Firestore
      */
     public void save(@NonNull Notification notification, @Nullable OnCompleteListener<Void> listener) {
-        if (notification == null || notification.getId() == null) {
-            Log.e(TAG, "Notification hoặc ID không hợp lệ");
+        if (notification == null) {
+            Log.e(TAG, "Notification không hợp lệ");
             if (listener != null) {
-                listener.onComplete(Tasks.<Void>forException(new IllegalArgumentException("Notification hoặc ID không hợp lệ")));
+                listener.onComplete(Tasks.<Void>forException(new IllegalArgumentException("Notification không hợp lệ")));
             }
             return;
         }
         
-        Log.d(TAG, "Đang lưu notification: " + notification.getId());
-        firestoreContext.getDocument(COLLECTION_NAME, notification.getId())
-            .set(notification)
-            .addOnSuccessListener(aVoid -> {
-                Log.d(TAG, "✅ Lưu notification thành công: " + notification.getId());
-                if (listener != null) {
-                    listener.onComplete(Tasks.forResult(null));
-                }
-            })
-            .addOnFailureListener(e -> {
-                Log.e(TAG, "❌ Lỗi lưu notification: " + notification.getId(), e);
-                if (listener != null) {
-                    listener.onComplete(Tasks.<Void>forException(e));
-                }
-            });
+        // Nếu ID null hoặc empty, tạo mới
+        if (notification.getId() == null || notification.getId().isEmpty()) {
+            Log.d(TAG, "Tạo notification mới (ID trống)");
+            firestoreContext.getCollection(COLLECTION_NAME)
+                .add(notification)
+                .addOnSuccessListener(documentReference -> {
+                    Log.d(TAG, "✅ Notification saved successfully: " + documentReference.getId());
+                    notification.setId(documentReference.getId());
+                    if (listener != null) {
+                        listener.onComplete(Tasks.forResult(null));
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "❌ Lỗi tạo notification mới", e);
+                    if (listener != null) {
+                        listener.onComplete(Tasks.<Void>forException(e));
+                    }
+                });
+        } else {
+            Log.d(TAG, "Đang lưu notification: " + notification.getId());
+            firestoreContext.getDocument(COLLECTION_NAME, notification.getId())
+                .set(notification)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "✅ Lưu notification thành công: " + notification.getId());
+                    if (listener != null) {
+                        listener.onComplete(Tasks.forResult(null));
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "❌ Lỗi lưu notification: " + notification.getId(), e);
+                    if (listener != null) {
+                        listener.onComplete(Tasks.<Void>forException(e));
+                    }
+                });
+        }
+    }
+    
+    /**
+     * Save notification với callback interface tương thích FirebaseService
+     */
+    public void saveNotification(@NonNull Notification notification, @Nullable OnNotificationSavedListener listener) {
+        save(notification, task -> {
+            if (listener != null) {
+                listener.onNotificationSaved(task.isSuccessful());
+            }
+        });
     }
     
     /**
@@ -199,180 +224,224 @@ public class NotificationDAO {
     }
     
     /**
-     * Tạo notification cho chủ bài viết khi có người like bài viết của họ
-     * @param postId ID của bài viết
-     * @param postOwnerUid UID của người đăng bài viết
-     * @param likerUid UID của người like bài viết
-     * @param listener Callback để xử lý kết quả
+     * Đánh dấu tất cả thông báo của user là đã đọc
+     * Tương thích với FirebaseService interface
      */
-    public void createLikeNotification(@NonNull String postId, @NonNull String postOwnerUid, 
-                                      @NonNull String likerUid,
-                                      @Nullable OnCompleteListener<Void> listener) {
-        Log.d(TAG, "Đang tạo notification cho like bài viết: " + postId);
-        
-        // Lấy thông tin người like để hiển thị trong notification
-        firestoreContext.getDocument("users", likerUid)
-            .get()
-            .addOnSuccessListener(documentSnapshot -> {
-                final String likerName;
-                if (documentSnapshot.exists() && documentSnapshot.getData() != null) {
-                    Map<String, Object> userData = documentSnapshot.getData();
-                    if (userData.containsKey("displayName")) {
-                        likerName = userData.get("displayName").toString();
-                    } else {
-                        likerName = "Ai đó";
-                    }
-                } else {
-                    likerName = "Ai đó";
-                }
-                
-                // Tạo notification document
-                Map<String, Object> notificationData = new HashMap<>();
-                notificationData.put("uid", postOwnerUid); // Gửi cho chủ bài viết
-                notificationData.put("type", "social_like"); // Loại thông báo: like xã hội
-                notificationData.put("title", "Có người thích bài viết của bạn");
-                notificationData.put("body", likerName + " đã thích bài viết của bạn");
-                notificationData.put("sentAt", System.currentTimeMillis()); // Timestamp hiện tại
-                notificationData.put("read", false); // Chưa đọc
-                notificationData.put("isAiGenerated", false); // Không phải AI
-                notificationData.put("actionType", "open_post"); // Khi click vào sẽ mở post
-                notificationData.put("actionData", postId); // ID của post cần mở
-                
-                // Metadata để lưu thông tin bổ sung
-                Map<String, Object> metadata = new HashMap<>();
-                metadata.put("postId", postId);
-                metadata.put("likerUid", likerUid);
-                metadata.put("likerName", likerName);
-                notificationData.put("metadata", metadata);
-                
-                // Lưu vào Firestore collection "notifications"
-                firestoreContext.getCollection(COLLECTION_NAME)
-                    .add(notificationData)
-                    .addOnSuccessListener(docRef -> {
-                        String notificationId = docRef.getId();
-                        Log.d(TAG, "✓ Đã tạo notification cho like bài viết: " + postId);
-                        Log.d(TAG, "  - Notification ID: " + notificationId);
-                        Log.d(TAG, "  - Post Owner UID: " + postOwnerUid);
-                        Log.d(TAG, "  - Liker UID: " + likerUid);
-                        Log.d(TAG, "  - Liker Name: " + likerName);
-                        if (listener != null) {
-                            listener.onComplete(Tasks.forResult(null));
-                        }
-                    })
-                    .addOnFailureListener(e -> {
-                        Log.e(TAG, "✗ Lỗi tạo notification cho like: " + e.getMessage(), e);
-                        if (listener != null) {
-                            listener.onComplete(Tasks.<Void>forException(e));
-                        }
-                    });
-            })
-            .addOnFailureListener(e -> {
-                Log.w(TAG, "Không thể lấy thông tin user like, dùng thông tin mặc định", e);
-                // Vẫn tạo notification với tên mặc định
-                createLikeNotificationWithName(postId, postOwnerUid, likerUid, "Ai đó", listener);
-            });
-    }
-    
-    /**
-     * Helper method để tạo like notification với tên đã biết
-     */
-    private void createLikeNotificationWithName(@NonNull String postId, @NonNull String postOwnerUid,
-                                               @NonNull String likerUid, @NonNull String likerName,
-                                               @Nullable OnCompleteListener<Void> listener) {
-        Map<String, Object> notificationData = new HashMap<>();
-        notificationData.put("uid", postOwnerUid);
-        notificationData.put("type", "social_like");
-        notificationData.put("title", "Có người thích bài viết của bạn");
-        notificationData.put("body", likerName + " đã thích bài viết của bạn");
-        notificationData.put("sentAt", System.currentTimeMillis());
-        notificationData.put("read", false);
-        notificationData.put("isAiGenerated", false);
-        notificationData.put("actionType", "open_post");
-        notificationData.put("actionData", postId);
-        
-        Map<String, Object> metadata = new HashMap<>();
-        metadata.put("postId", postId);
-        metadata.put("likerUid", likerUid);
-        metadata.put("likerName", likerName);
-        notificationData.put("metadata", metadata);
+    public void markAllNotificationsAsRead(@NonNull String uid, @Nullable OnNotificationUpdatedListener listener) {
+        Log.d(TAG, "Đánh dấu tất cả thông báo đã đọc cho user: " + uid);
         
         firestoreContext.getCollection(COLLECTION_NAME)
-            .add(notificationData)
-            .addOnSuccessListener(docRef -> {
-                Log.d(TAG, "✓ Đã tạo notification cho like bài viết: " + postId);
-                if (listener != null) {
-                    listener.onComplete(Tasks.forResult(null));
+            .whereEqualTo("uid", uid)
+            .whereEqualTo("read", false)
+            .get()
+            .addOnSuccessListener(queryDocumentSnapshots -> {
+                if (queryDocumentSnapshots.isEmpty()) {
+                    Log.d(TAG, "Không có thông báo chưa đọc");
+                    if (listener != null) {
+                        listener.onNotificationUpdated(true);
+                    }
+                    return;
                 }
+                
+                int totalNotifications = queryDocumentSnapshots.size();
+                final int[] updatedCount = {0};
+                
+                queryDocumentSnapshots.forEach(document -> {
+                    document.getReference().update("read", true)
+                        .addOnCompleteListener(task -> {
+                            updatedCount[0]++;
+                            if (updatedCount[0] == totalNotifications) {
+                                Log.d(TAG, "✓ Đã đánh dấu " + totalNotifications + " thông báo là đã đọc");
+                                if (listener != null) {
+                                    listener.onNotificationUpdated(true);
+                                }
+                            }
+                        });
+                });
             })
             .addOnFailureListener(e -> {
-                Log.e(TAG, "✗ Lỗi tạo notification cho like: " + e.getMessage(), e);
+                Log.e(TAG, "✗ Lỗi đánh dấu thông báo: " + e.getMessage(), e);
                 if (listener != null) {
-                    listener.onComplete(Tasks.<Void>forException(e));
+                    listener.onNotificationUpdated(false);
                 }
             });
     }
     
     /**
-     * Tạo notification cho chủ bài viết khi có người comment bài viết của họ
-     * @param postId ID của bài viết
-     * @param postOwnerUid UID của người đăng bài viết
-     * @param commenterUid UID của người comment
-     * @param commenterName Tên của người comment
-     * @param commentText Nội dung comment
-     * @param listener Callback để xử lý kết quả
+     * Gửi feedback cho thông báo AI (accepted, ignored, dismissed)
+     * Tương thích với FirebaseService interface
      */
-    public void createCommentNotification(@NonNull String postId, @NonNull String postOwnerUid,
-                                        @NonNull String commenterUid, @NonNull String commenterName,
-                                        @NonNull String commentText,
-                                        @Nullable OnCompleteListener<Void> listener) {
-        Log.d(TAG, "Đang tạo notification cho comment bài viết: " + postId);
+    public void sendNotificationFeedback(@NonNull String notificationId, @NonNull String feedback, 
+                                        @Nullable OnNotificationUpdatedListener listener) {
+        Log.d(TAG, "Gửi feedback cho thông báo: " + notificationId + ", feedback: " + feedback);
         
-        // Rút ngắn nội dung comment nếu quá dài
-        String previewText = commentText;
-        if (commentText.length() > 50) {
-            previewText = commentText.substring(0, 50) + "...";
+        firestoreContext.getDocument(COLLECTION_NAME, notificationId)
+            .update("feedback", feedback)
+            .addOnSuccessListener(aVoid -> {
+                Log.d(TAG, "✓ Đã gửi feedback thành công");
+                if (listener != null) {
+                    listener.onNotificationUpdated(true);
+                }
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "✗ Lỗi gửi feedback: " + e.getMessage(), e);
+                if (listener != null) {
+                    listener.onNotificationUpdated(false);
+                }
+            });
+    }
+    
+    /**
+     * Đếm số thông báo chưa đọc của user
+     * Tương thích với FirebaseService interface
+     */
+    public void countUnreadNotifications(@NonNull String uid, @Nullable OnUnreadCountLoadedListener listener) {
+        Log.d(TAG, "Đếm thông báo chưa đọc cho user: " + uid);
+        
+        firestoreContext.getCollection(COLLECTION_NAME)
+            .whereEqualTo("uid", uid)
+            .whereEqualTo("read", false)
+            .get()
+            .addOnSuccessListener(queryDocumentSnapshots -> {
+                int count = queryDocumentSnapshots.size();
+                Log.d(TAG, "✓ Có " + count + " thông báo chưa đọc");
+                if (listener != null) {
+                    listener.onUnreadCountLoaded(count);
+                }
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "✗ Lỗi đếm thông báo: " + e.getMessage(), e);
+                if (listener != null) {
+                    listener.onUnreadCountLoaded(0);
+                }
+            });
+    }
+    
+    /**
+     * Load thông báo AI (chỉ lấy thông báo do AI tạo)
+     * Tương thích với FirebaseService interface
+     */
+    public void loadAiNotifications(@NonNull String uid, @Nullable OnNotificationsLoadedListener listener) {
+        Log.d(TAG, "Loading AI notifications for userId: " + uid);
+        
+        firestoreContext.getCollection(COLLECTION_NAME)
+            .whereEqualTo("uid", uid)
+            .whereEqualTo("isAiGenerated", true)
+            .orderBy("sentAt", Query.Direction.DESCENDING)
+            .limit(30)
+            .get()
+            .addOnSuccessListener(queryDocumentSnapshots -> {
+                ArrayList<Notification> notifications = new ArrayList<>();
+                for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
+                    try {
+                        Notification notification = document.toObject(Notification.class);
+                        if (notification != null) {
+                            notification.setId(document.getId());
+                            notifications.add(notification);
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error parsing AI notification: " + e.getMessage());
+                    }
+                }
+                Log.d(TAG, "Loaded " + notifications.size() + " AI notifications");
+                if (listener != null) {
+                    listener.onNotificationsLoaded(notifications);
+                }
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "Error loading AI notifications", e);
+                if (listener != null) {
+                    listener.onNotificationsLoaded(new ArrayList<>());
+                }
+            });
+    }
+    
+    /**
+     * Load notifications với callback interface tương thích FirebaseService
+     */
+    public void loadUserNotifications(@NonNull String uid, @Nullable OnNotificationsLoadedListener listener) {
+        getByUserId(uid, task -> {
+            if (task.isSuccessful() && task.getResult() != null) {
+                ArrayList<Notification> notifications = new ArrayList<>(task.getResult());
+                if (listener != null) {
+                    listener.onNotificationsLoaded(notifications);
+                }
+            } else {
+                if (listener != null) {
+                    listener.onNotificationsLoaded(new ArrayList<>());
+                }
+            }
+        });
+    }
+    
+    /**
+     * Cập nhật FCM token cho user
+     * Tương thích với FirebaseService interface
+     */
+    public void updateFcmToken(@NonNull String uid, @NonNull String fcmToken, 
+                               @Nullable OnNotificationUpdatedListener listener) {
+        Log.d(TAG, "Cập nhật FCM token cho user: " + uid);
+        
+        firestoreContext.getDocument("users", uid)
+            .update("notification.fcmToken", fcmToken)
+            .addOnSuccessListener(aVoid -> {
+                Log.d(TAG, "✓ Đã cập nhật FCM token thành công");
+                if (listener != null) {
+                    listener.onNotificationUpdated(true);
+                }
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "✗ Lỗi cập nhật FCM token: " + e.getMessage(), e);
+                if (listener != null) {
+                    listener.onNotificationUpdated(false);
+                }
+            });
+    }
+    
+    /**
+     * Cập nhật cài đặt thông báo AI cho user
+     * Tương thích với FirebaseService interface
+     */
+    public void updateAiNotificationSettings(@NonNull String uid, @NonNull java.util.Map<String, Object> settings, 
+                                            @Nullable OnNotificationUpdatedListener listener) {
+        Log.d(TAG, "Cập nhật cài đặt AI notification cho user: " + uid);
+        
+        java.util.Map<String, Object> updates = new java.util.HashMap<>();
+        for (java.util.Map.Entry<String, Object> entry : settings.entrySet()) {
+            updates.put("notification." + entry.getKey(), entry.getValue());
         }
         
-        // Tạo notification document
-        Map<String, Object> notificationData = new HashMap<>();
-        notificationData.put("uid", postOwnerUid); // Gửi cho chủ bài viết
-        notificationData.put("type", "social_comment"); // Loại thông báo: comment xã hội
-        notificationData.put("title", "Có người bình luận bài viết của bạn");
-        notificationData.put("body", commenterName + " đã bình luận: \"" + previewText + "\"");
-        notificationData.put("sentAt", System.currentTimeMillis()); // Timestamp hiện tại
-        notificationData.put("read", false); // Chưa đọc
-        notificationData.put("isAiGenerated", false); // Không phải AI
-        notificationData.put("actionType", "open_post"); // Khi click vào sẽ mở post
-        notificationData.put("actionData", postId); // ID của post cần mở
-        
-        // Metadata để lưu thông tin bổ sung
-        Map<String, Object> metadata = new HashMap<>();
-        metadata.put("postId", postId);
-        metadata.put("commenterUid", commenterUid);
-        metadata.put("commenterName", commenterName);
-        metadata.put("commentText", commentText);
-        notificationData.put("metadata", metadata);
-        
-        // Lưu vào Firestore collection "notifications"
-        firestoreContext.getCollection(COLLECTION_NAME)
-            .add(notificationData)
-            .addOnSuccessListener(docRef -> {
-                String notificationId = docRef.getId();
-                Log.d(TAG, "✓ Đã tạo notification cho comment bài viết: " + postId);
-                Log.d(TAG, "  - Notification ID: " + notificationId);
-                Log.d(TAG, "  - Post Owner UID: " + postOwnerUid);
-                Log.d(TAG, "  - Commenter UID: " + commenterUid);
-                Log.d(TAG, "  - Commenter Name: " + commenterName);
+        firestoreContext.getDocument("users", uid)
+            .update(updates)
+            .addOnSuccessListener(aVoid -> {
+                Log.d(TAG, "✓ Đã cập nhật cài đặt thành công");
                 if (listener != null) {
-                    listener.onComplete(Tasks.forResult(null));
+                    listener.onNotificationUpdated(true);
                 }
             })
             .addOnFailureListener(e -> {
-                Log.e(TAG, "✗ Lỗi tạo notification cho comment: " + e.getMessage(), e);
+                Log.e(TAG, "✗ Lỗi cập nhật cài đặt: " + e.getMessage(), e);
                 if (listener != null) {
-                    listener.onComplete(Tasks.<Void>forException(e));
+                    listener.onNotificationUpdated(false);
                 }
             });
+    }
+    
+    // Interfaces tương thích với FirebaseService
+    public interface OnNotificationSavedListener {
+        void onNotificationSaved(boolean success);
+    }
+    
+    public interface OnNotificationsLoadedListener {
+        void onNotificationsLoaded(ArrayList<Notification> notifications);
+    }
+    
+    public interface OnNotificationUpdatedListener {
+        void onNotificationUpdated(boolean success);
+    }
+    
+    public interface OnUnreadCountLoadedListener {
+        void onUnreadCountLoaded(int count);
     }
 }
 

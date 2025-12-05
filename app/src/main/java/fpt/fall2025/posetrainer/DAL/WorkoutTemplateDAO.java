@@ -21,7 +21,10 @@ import com.google.firebase.storage.StorageReference;
 import java.util.ArrayList;
 import java.util.List;
 
+import androidx.appcompat.app.AppCompatActivity;
+
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
+import fpt.fall2025.posetrainer.Domain.Exercise;
 import fpt.fall2025.posetrainer.FirebaseContext.FirebaseFirestoreContext;
 import fpt.fall2025.posetrainer.FirebaseContext.FirebaseStorageContext;
 
@@ -210,6 +213,130 @@ public class WorkoutTemplateDAO {
                     listener.onComplete(Tasks.<String>forException(e));
                 }
             });
+    }
+    
+    /**
+     * Load exercises for a workout template
+     * Tương thích với FirebaseService interface
+     */
+    public void loadExercises(@NonNull WorkoutTemplate workoutTemplate, 
+                             @NonNull AppCompatActivity activity,
+                             @Nullable OnExercisesLoadedListener listener) {
+        if (workoutTemplate == null || workoutTemplate.getItems() == null) {
+            Log.e(TAG, "No workout items to load");
+            if (listener != null) {
+                activity.runOnUiThread(() -> listener.onExercisesLoaded(new ArrayList<>()));
+            }
+            return;
+        }
+
+        ArrayList<Exercise> exercises = new ArrayList<>();
+        final int totalItems = (workoutTemplate.getItems() != null) ? workoutTemplate.getItems().size() : 0;
+        final int[] loadedItems = {0};
+
+        if (workoutTemplate.getItems() == null || totalItems == 0) {
+            Log.e(TAG, "WorkoutTemplate has no items");
+            if (listener != null) {
+                activity.runOnUiThread(() -> listener.onExercisesLoaded(exercises));
+            }
+            return;
+        }
+
+        ExerciseDAO exerciseDAO = new ExerciseDAO();
+        for (WorkoutTemplate.WorkoutItem item : workoutTemplate.getItems()) {
+            exerciseDAO.getById(item.getExerciseId(), task -> {
+                if (task.isSuccessful() && task.getResult() != null) {
+                    Exercise exercise = task.getResult();
+                    exercises.add(exercise);
+                    Log.d(TAG, "Loaded exercise: " + exercise.getName());
+                }
+
+                loadedItems[0]++;
+                if (loadedItems[0] == totalItems) {
+                    activity.runOnUiThread(() -> {
+                        if (listener != null) {
+                            listener.onExercisesLoaded(exercises);
+                        }
+                    });
+                }
+            });
+        }
+    }
+    
+    /**
+     * Get image resource based on workout template focus/type
+     */
+    public int getImageResourceForWorkout(@NonNull WorkoutTemplate workoutTemplate, 
+                                          @NonNull AppCompatActivity activity) {
+        int defaultResId = activity.getResources().getIdentifier("pic_1", "drawable", activity.getPackageName());
+
+        if (workoutTemplate.getFocus() != null && !workoutTemplate.getFocus().isEmpty()) {
+            String focus = workoutTemplate.getFocus().get(0);
+            switch (focus) {
+                case "push":
+                    return activity.getResources().getIdentifier("pic_1", "drawable", activity.getPackageName());
+                case "legs":
+                    return activity.getResources().getIdentifier("pic_2", "drawable", activity.getPackageName());
+                case "cardio":
+                    return activity.getResources().getIdentifier("pic_3", "drawable", activity.getPackageName());
+                case "fullbody":
+                    return activity.getResources().getIdentifier("pic_1", "drawable", activity.getPackageName());
+                default:
+                    return defaultResId;
+            }
+        }
+
+        return defaultResId;
+    }
+    
+    /**
+     * Load favorite workout templates for a user
+     * Tương thích với FirebaseService interface
+     */
+    public void loadFavoriteWorkoutTemplates(@NonNull String userId, 
+                                            @NonNull AppCompatActivity activity,
+                                            @Nullable OnWorkoutTemplatesLoadedListener listener) {
+        Log.d(TAG, "Load favorite workout templates cho user: " + userId);
+        
+        FavoriteDAO favoriteDAO = new FavoriteDAO();
+        favoriteDAO.loadFavoriteWorkoutTemplateIds(userId, favoriteIds -> {
+            if (favoriteIds == null || favoriteIds.isEmpty()) {
+                Log.d(TAG, "Không có favorite workout templates");
+                if (listener != null) {
+                    activity.runOnUiThread(() -> listener.onWorkoutTemplatesLoaded(new ArrayList<>()));
+                }
+                return;
+            }
+            
+            ArrayList<WorkoutTemplate> favoriteTemplates = new ArrayList<>();
+            final int[] loadedCount = {0};
+            final int totalCount = favoriteIds.size();
+            
+            for (String workoutTemplateId : favoriteIds) {
+                getById(workoutTemplateId, task -> {
+                    if (task.isSuccessful() && task.getResult() != null) {
+                        favoriteTemplates.add(task.getResult());
+                    }
+                    loadedCount[0]++;
+                    
+                    if (loadedCount[0] == totalCount) {
+                        Log.d(TAG, "✓ Đã load " + favoriteTemplates.size() + " favorite workout templates");
+                        if (listener != null) {
+                            activity.runOnUiThread(() -> listener.onWorkoutTemplatesLoaded(favoriteTemplates));
+                        }
+                    }
+                });
+            }
+        });
+    }
+    
+    // Interfaces tương thích với FirebaseService
+    public interface OnExercisesLoadedListener {
+        void onExercisesLoaded(ArrayList<Exercise> exercises);
+    }
+    
+    public interface OnWorkoutTemplatesLoadedListener {
+        void onWorkoutTemplatesLoaded(ArrayList<WorkoutTemplate> workoutTemplates);
     }
 }
 

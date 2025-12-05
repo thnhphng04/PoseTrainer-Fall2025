@@ -29,9 +29,12 @@ import fpt.fall2025.posetrainer.Domain.Profile;
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
 import fpt.fall2025.posetrainer.Domain.Session;
 import fpt.fall2025.posetrainer.R;
-import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.Service.AuthService;
 import fpt.fall2025.posetrainer.DAL.ProfileDAO;
+import fpt.fall2025.posetrainer.DAL.FavoriteDAO;
+import fpt.fall2025.posetrainer.DAL.SessionDAO;
+import fpt.fall2025.posetrainer.DAL.UserWorkoutDAO;
+import fpt.fall2025.posetrainer.DAL.ExerciseDAO;
 import fpt.fall2025.posetrainer.databinding.ActivityUserWorkoutDetailBinding;
 import androidx.fragment.app.FragmentManager;
 import androidx.recyclerview.widget.ItemTouchHelper;
@@ -55,6 +58,10 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
     private EditWorkoutAdapter editWorkoutAdapter;
     private AuthService authService;
     private ProfileDAO profileDAO;
+    private FavoriteDAO favoriteDAO;
+    private SessionDAO sessionDAO;
+    private UserWorkoutDAO userWorkoutDAO;
+    private ExerciseDAO exerciseDAO;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,6 +74,10 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
         // Initialize Firebase
         authService = new AuthService();
         profileDAO = new ProfileDAO();
+        favoriteDAO = new FavoriteDAO();
+        sessionDAO = new SessionDAO();
+        userWorkoutDAO = new UserWorkoutDAO();
+        exerciseDAO = new ExerciseDAO();
 
         // Initialize data
         exercises = new ArrayList<>();
@@ -153,7 +164,7 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
         
         // Kiểm tra xem user workout có trong danh sách yêu thích không
         // Sử dụng userWorkoutId làm workoutTemplateId trong Favorite (vì Favorite chỉ có workoutTemplateId)
-        FirebaseService.getInstance().checkFavoriteWorkoutTemplate(userId, userWorkoutId, new FirebaseService.OnFavoriteWorkoutCheckedListener() {
+        favoriteDAO.checkFavoriteWorkoutTemplate(userId, userWorkoutId, new FavoriteDAO.OnFavoriteWorkoutCheckedListener() {
             @Override
             public void onFavoriteWorkoutChecked(boolean isFavorite) {
                 // Cập nhật icon dựa trên trạng thái favorite
@@ -182,12 +193,12 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
         
         // Kiểm tra trạng thái hiện tại
         // Sử dụng userWorkoutId làm workoutTemplateId trong Favorite
-        FirebaseService.getInstance().checkFavoriteWorkoutTemplate(userId, userWorkoutId, new FirebaseService.OnFavoriteWorkoutCheckedListener() {
+        favoriteDAO.checkFavoriteWorkoutTemplate(userId, userWorkoutId, new FavoriteDAO.OnFavoriteWorkoutCheckedListener() {
             @Override
             public void onFavoriteWorkoutChecked(boolean isFavorite) {
                 if (isFavorite) {
                     // Đang là favorite → Xóa khỏi yêu thích
-                    FirebaseService.getInstance().removeFavoriteWorkoutTemplate(userId, userWorkoutId, new FirebaseService.OnFavoriteWorkoutUpdatedListener() {
+                    favoriteDAO.removeFavoriteWorkoutTemplate(userId, userWorkoutId, new FavoriteDAO.OnFavoriteWorkoutUpdatedListener() {
                         @Override
                         public void onFavoriteWorkoutUpdated(boolean success) {
                             if (success) {
@@ -201,7 +212,7 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
                     });
                 } else {
                     // Chưa là favorite → Thêm vào yêu thích
-                    FirebaseService.getInstance().addFavoriteWorkoutTemplate(userId, userWorkoutId, new FirebaseService.OnFavoriteWorkoutUpdatedListener() {
+                    favoriteDAO.addFavoriteWorkoutTemplate(userId, userWorkoutId, new FavoriteDAO.OnFavoriteWorkoutUpdatedListener() {
                         @Override
                         public void onFavoriteWorkoutUpdated(boolean success) {
                             if (success) {
@@ -491,7 +502,7 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
         
         if (currentSession != null && currentSession.getId() != null) {
             Log.d(TAG, "Reloading current session by ID: " + currentSession.getId());
-            FirebaseService.getInstance().loadSessionById(currentSession.getId(), new FirebaseService.OnSessionLoadedListener() {
+            sessionDAO.loadSessionById(currentSession.getId(), new SessionDAO.OnSessionLoadedListener() {
                 @Override
                 public void onSessionLoaded(Session syncedSession) {
                     if (syncedSession != null) {
@@ -626,7 +637,7 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
      */
     private void saveSessionToFirebase() {
         if (currentSession != null) {
-            FirebaseService.getInstance().saveSession(currentSession, new FirebaseService.OnSessionSavedListener() {
+            sessionDAO.saveSession(currentSession, new SessionDAO.OnSessionSavedListener() {
                 @Override
                 public void onSessionSaved(boolean success) {
                     if (success) {
@@ -684,7 +695,7 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
         
         if (currentSession != null && currentSession.getId() != null) {
             Log.d(TAG, "Reloading session after back by ID: " + currentSession.getId());
-            FirebaseService.getInstance().loadSessionById(currentSession.getId(), new FirebaseService.OnSessionLoadedListener() {
+            sessionDAO.loadSessionById(currentSession.getId(), new SessionDAO.OnSessionLoadedListener() {
                 @Override
                 public void onSessionLoaded(Session updatedSession) {
                     if (updatedSession != null) {
@@ -767,9 +778,9 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
     private void loadUserWorkoutById(String userWorkoutId, boolean fromSchedule) {
         Log.d(TAG, "Loading user workout: " + userWorkoutId + " (fromSchedule: " + fromSchedule + ")");
         
-        FirebaseService.getInstance().loadUserWorkoutById(userWorkoutId, this, new FirebaseService.OnUserWorkoutLoadedListener() {
-            @Override
-            public void onUserWorkoutLoaded(UserWorkout workout) {
+        userWorkoutDAO.getById(userWorkoutId, task -> {
+            if (task.isSuccessful()) {
+                UserWorkout workout = task.getResult();
                 if (workout != null) {
                     userWorkout = workout;
                     
@@ -818,7 +829,7 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
      */
     private void loadExistingSession() {
         // Load session từ Firebase cho user workout hiện tại
-        FirebaseService.getInstance().loadActiveSession(userWorkout.getId(), new FirebaseService.OnSessionLoadedListener() {
+        sessionDAO.loadActiveSession(userWorkout.getId(), new SessionDAO.OnSessionLoadedListener() {
             @Override
             public void onSessionLoaded(Session session) {
                 if (session != null) {
@@ -971,7 +982,7 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
             }
         }
 
-        FirebaseService.getInstance().loadExercisesForUserWorkout(userWorkout, this, new FirebaseService.OnExercisesLoadedListener() {
+        exerciseDAO.loadExercisesForUserWorkout(userWorkout, this, new ExerciseDAO.OnExercisesLoadedListener() {
             @Override
             public void onExercisesLoaded(ArrayList<Exercise> loadedExercises) {
                 Log.d(TAG, "=== EXERCISES LOADED CALLBACK ===");
@@ -1420,9 +1431,9 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
         Log.d(TAG, "Đã cập nhật user workout: " + userWorkout.getTitle() + " (ID: " + userWorkout.getId() + ")");
         
         // Update to Firebase (saveUserWorkout uses .set() which will update if document exists)
-        FirebaseService.getInstance().saveUserWorkout(userWorkout, new FirebaseService.OnUserWorkoutSavedListener() {
-            @Override
-            public void onUserWorkoutSaved(boolean success) {
+        userWorkoutDAO.save(userWorkout, task -> {
+            if (task.isSuccessful()) {
+                boolean success = true;
                 if (success) {
                     Log.d(TAG, "Đã cập nhật user workout thành công: " + userWorkout.toString());
                     Toast.makeText(UserWorkoutDetailActivity.this, "Cập nhật bài tập thành công!", Toast.LENGTH_SHORT).show();
@@ -1558,7 +1569,7 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
         
         summary.setEstKcal(estimatedKcal);
         
-        FirebaseService.getInstance().saveSession(currentSession, new FirebaseService.OnSessionSavedListener() {
+        sessionDAO.saveSession(currentSession, new SessionDAO.OnSessionSavedListener() {
             @Override
             public void onSessionSaved(boolean success) {
                 if (success) {

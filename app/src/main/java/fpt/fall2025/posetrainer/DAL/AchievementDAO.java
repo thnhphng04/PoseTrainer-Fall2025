@@ -97,5 +97,37 @@ public class AchievementDAO {
                 }
             });
     }
+    
+    /**
+     * Load user achievements với callback interface tương thích FirebaseService
+     * Load từ collection "achievements" với document ID = uid
+     */
+    public void loadUserAchievements(@NonNull String uid, @Nullable OnAchievementsLoadedListener listener) {
+        Log.d(TAG, "Loading achievements for: " + uid);
+
+        getById(uid, task -> {
+            if (task.isSuccessful()) {
+                Achievement achievement = task.getResult();
+                if (achievement != null) {
+                    Log.d(TAG, "Achievements loaded: " + (achievement.getBadges() != null ? achievement.getBadges().size() : 0) + " badges");
+                } else {
+                    Log.d(TAG, "No achievements found");
+                }
+                if (listener != null) {
+                    listener.onAchievementsLoaded(achievement);
+                }
+            } else {
+                Log.e(TAG, "Error loading achievements", task.getException());
+                if (listener != null) {
+                    listener.onAchievementsLoaded(null);
+                }
+            }
+        });
+    }
+    
+    // Interface tương thích với FirebaseService
+    public interface OnAchievementsLoadedListener {
+        void onAchievementsLoaded(Achievement achievement);
+    }
 }
 

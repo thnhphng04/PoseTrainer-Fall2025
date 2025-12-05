@@ -23,7 +23,7 @@ import fpt.fall2025.posetrainer.Activity.WorkoutActivity;
 import fpt.fall2025.posetrainer.Activity.PostDetailActivity;
 import fpt.fall2025.posetrainer.Domain.Notification;
 import fpt.fall2025.posetrainer.R;
-import fpt.fall2025.posetrainer.Service.FirebaseService;
+import fpt.fall2025.posetrainer.DAL.NotificationDAO;
 
 /**
  * Service để nhận và xử lý thông báo push từ Firebase Cloud Messaging (FCM)
@@ -31,6 +31,7 @@ import fpt.fall2025.posetrainer.Service.FirebaseService;
  */
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
     private static final String TAG = "FCMService";
+    private NotificationDAO notificationDAO;
     
     // Channel ID cho các loại thông báo khác nhau
     private static final String CHANNEL_ID_AI = "ai_notifications"; // Thông báo từ AI
@@ -46,6 +47,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     public void onNewToken(@NonNull String token) {
         super.onNewToken(token);
         Log.d(TAG, "FCM Token mới: " + token);
+        
+        if (notificationDAO == null) {
+            notificationDAO = new NotificationDAO();
+        }
         
         // Cập nhật token lên Firestore cho user hiện tại
         updateTokenToFirestore(token);
@@ -431,7 +436,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 });
         } else {
             // Tạo mới với auto-generated ID
-            FirebaseService.getInstance().saveNotification(notification, success -> {
+            notificationDAO.saveNotification(notification, success -> {
                 if (success) {
                     Log.d(TAG, "✓ Đã lưu notification vào Firestore thành công");
                 } else {

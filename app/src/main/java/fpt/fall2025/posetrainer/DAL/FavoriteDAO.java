@@ -137,5 +137,124 @@ public class FavoriteDAO {
                 }
             });
     }
+    
+    /**
+     * Thêm workout template vào danh sách yêu thích của user
+     * Tương thích với FirebaseService interface
+     */
+    public void addFavoriteWorkoutTemplate(@NonNull String userId, @NonNull String workoutTemplateId, 
+                                          @Nullable OnFavoriteWorkoutUpdatedListener listener) {
+        Log.d(TAG, "Thêm workout template vào yêu thích: " + workoutTemplateId + " cho user: " + userId);
+        
+        Favorite favorite = new Favorite(
+            workoutTemplateId,
+            userId,
+            System.currentTimeMillis() / 1000
+        );
+        
+        save(userId, favorite, task -> {
+            if (task.isSuccessful()) {
+                Log.d(TAG, "✓ Đã thêm workout template vào yêu thích thành công");
+                if (listener != null) {
+                    listener.onFavoriteWorkoutUpdated(true);
+                }
+            } else {
+                Log.e(TAG, "✗ Lỗi thêm workout template vào yêu thích: " + (task.getException() != null ? task.getException().getMessage() : "Unknown"));
+                if (listener != null) {
+                    listener.onFavoriteWorkoutUpdated(false);
+                }
+            }
+        });
+    }
+    
+    /**
+     * Xóa workout template khỏi danh sách yêu thích của user
+     * Tương thích với FirebaseService interface
+     */
+    public void removeFavoriteWorkoutTemplate(@NonNull String userId, @NonNull String workoutTemplateId, 
+                                            @Nullable OnFavoriteWorkoutUpdatedListener listener) {
+        Log.d(TAG, "Xóa workout template khỏi yêu thích: " + workoutTemplateId + " cho user: " + userId);
+        
+        delete(userId, workoutTemplateId, task -> {
+            if (task.isSuccessful()) {
+                Log.d(TAG, "✓ Đã xóa workout template khỏi yêu thích thành công");
+                if (listener != null) {
+                    listener.onFavoriteWorkoutUpdated(true);
+                }
+            } else {
+                Log.e(TAG, "✗ Lỗi xóa workout template khỏi yêu thích: " + (task.getException() != null ? task.getException().getMessage() : "Unknown"));
+                if (listener != null) {
+                    listener.onFavoriteWorkoutUpdated(false);
+                }
+            }
+        });
+    }
+    
+    /**
+     * Kiểm tra xem workout template có trong danh sách yêu thích không
+     * Tương thích với FirebaseService interface
+     */
+    public void checkFavoriteWorkoutTemplate(@NonNull String userId, @NonNull String workoutTemplateId, 
+                                           @Nullable OnFavoriteWorkoutCheckedListener listener) {
+        Log.d(TAG, "Kiểm tra workout template yêu thích: " + workoutTemplateId + " cho user: " + userId);
+        
+        isFavorite(userId, workoutTemplateId, task -> {
+            if (task.isSuccessful()) {
+                boolean isFavorite = task.getResult() != null && task.getResult();
+                Log.d(TAG, "✓ Workout template " + (isFavorite ? "có" : "không có") + " trong yêu thích");
+                if (listener != null) {
+                    listener.onFavoriteWorkoutChecked(isFavorite);
+                }
+            } else {
+                Log.e(TAG, "✗ Lỗi kiểm tra workout template yêu thích: " + (task.getException() != null ? task.getException().getMessage() : "Unknown"));
+                if (listener != null) {
+                    listener.onFavoriteWorkoutChecked(false);
+                }
+            }
+        });
+    }
+    
+    /**
+     * Load tất cả favorite workout template IDs của user
+     * Tương thích với FirebaseService interface
+     */
+    public void loadFavoriteWorkoutTemplateIds(@NonNull String userId, 
+                                             @Nullable OnFavoriteWorkoutTemplateIdsLoadedListener listener) {
+        Log.d(TAG, "Load danh sách favorite workout template IDs cho user: " + userId);
+        
+        getByUserId(userId, task -> {
+            if (task.isSuccessful() && task.getResult() != null) {
+                ArrayList<String> favoriteIds = new ArrayList<>();
+                for (Favorite favorite : task.getResult()) {
+                    String workoutTemplateId = favorite.getWorkoutTemplateId();
+                    if (workoutTemplateId != null && !workoutTemplateId.isEmpty()) {
+                        favoriteIds.add(workoutTemplateId);
+                    }
+                }
+                Log.d(TAG, "✓ Đã load " + favoriteIds.size() + " favorite workout template IDs");
+                if (listener != null) {
+                    listener.onFavoriteWorkoutTemplateIdsLoaded(favoriteIds);
+                }
+            } else {
+                Log.e(TAG, "✗ Lỗi load favorite workout template IDs: " + (task.getException() != null ? task.getException().getMessage() : "Unknown"));
+                if (listener != null) {
+                    listener.onFavoriteWorkoutTemplateIdsLoaded(new ArrayList<>());
+                }
+            }
+        });
+    }
+    
+    // Interfaces tương thích với FirebaseService
+    public interface OnFavoriteWorkoutUpdatedListener {
+        void onFavoriteWorkoutUpdated(boolean success);
+    }
+    
+    public interface OnFavoriteWorkoutCheckedListener {
+        void onFavoriteWorkoutChecked(boolean isFavorite);
+    }
+    
+    public interface OnFavoriteWorkoutTemplateIdsLoadedListener {
+        void onFavoriteWorkoutTemplateIdsLoaded(ArrayList<String> favoriteIds);
+    }
 }
 

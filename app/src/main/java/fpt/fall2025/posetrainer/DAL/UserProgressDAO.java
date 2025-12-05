@@ -8,8 +8,16 @@ import androidx.annotation.Nullable;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
 
 import fpt.fall2025.posetrainer.Domain.UserProgress;
+import fpt.fall2025.posetrainer.Domain.Session;
 import fpt.fall2025.posetrainer.FirebaseContext.FirebaseFirestoreContext;
 
 /**
@@ -110,6 +118,96 @@ public class UserProgressDAO {
                     listener.onComplete(Tasks.<Void>forException(e));
                 }
             });
+    }
+    
+    /**
+     * Update user progress (calendar heatmap)
+     * Tương thích với FirebaseService interface
+     */
+    public void updateUserProgress(@NonNull String uid, @Nullable OnProgressUpdatedListener listener) {
+        Log.d(TAG, "Updating user progress for: " + uid);
+
+        SessionDAO sessionDAO = new SessionDAO();
+        sessionDAO.getByUserId(uid, task -> {
+            if (task.isSuccessful() && task.getResult() != null) {
+                Map<String, Boolean> calendar = new HashMap<>();
+                int totalSessions = task.getResult().size();
+
+                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+
+                for (Session session : task.getResult()) {
+                    if (session != null && session.getStartedAt() > 0) {
+                        Calendar sessionDate = Calendar.getInstance();
+                        sessionDate.setTimeInMillis(session.getStartedAt() * 1000L);
+                        sessionDate.set(Calendar.HOUR_OF_DAY, 0);
+                        sessionDate.set(Calendar.MINUTE, 0);
+                        sessionDate.set(Calendar.SECOND, 0);
+                        sessionDate.set(Calendar.MILLISECOND, 0);
+
+                        String dateKey = dateFormat.format(sessionDate.getTime());
+                        calendar.put(dateKey, true);
+                    }
+                }
+
+                int totalWorkoutDays = calendar.size();
+
+                UserProgress progress = new UserProgress(uid, totalWorkoutDays, totalSessions, calendar);
+
+                save(progress, saveTask -> {
+                    if (saveTask.isSuccessful()) {
+                        Log.d(TAG, "User progress updated successfully: " + totalWorkoutDays + " days, " + totalSessions + " sessions");
+                        if (listener != null) {
+                            listener.onProgressUpdated(progress);
+                        }
+                    } else {
+                        Log.e(TAG, "Error saving user progress", saveTask.getException());
+                        if (listener != null) {
+                            listener.onProgressUpdated(null);
+                        }
+                    }
+                });
+            } else {
+                Log.e(TAG, "Error loading sessions for user progress", task.getException());
+                if (listener != null) {
+                    listener.onProgressUpdated(null);
+                }
+            }
+        });
+    }
+    
+    /**
+     * Load user progress với callback interface tương thích FirebaseService
+     */
+    public void loadUserProgress(@NonNull String uid, @Nullable OnProgressLoadedListener listener) {
+        Log.d(TAG, "Loading user progress for: " + uid);
+
+        getByUserId(uid, task -> {
+            if (task.isSuccessful()) {
+                UserProgress progress = task.getResult();
+                if (progress != null) {
+                    Log.d(TAG, "User progress loaded: " + progress.getTotalWorkoutDays() + " days, " + progress.getTotalSessions() + " sessions");
+                } else {
+                    Log.d(TAG, "No user progress found");
+                }
+                if (listener != null) {
+                    listener.onProgressLoaded(progress);
+                }
+            } else {
+                Log.e(TAG, "Error loading user progress", task.getException());
+                if (listener != null) {
+                    listener.onProgressLoaded(null);
+                }
+            }
+        });
+    }
+    
+    // Interfaces tương thích với FirebaseService
+    public interface OnProgressUpdatedListener {
+        void onProgressUpdated(UserProgress progress);
+    }
+    
+    public interface OnProgressLoadedListener {
+        void onProgressLoaded(UserProgress progress);
     }
 }
 

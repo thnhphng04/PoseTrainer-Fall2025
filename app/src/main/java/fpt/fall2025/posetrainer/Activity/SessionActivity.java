@@ -32,9 +32,10 @@ import fpt.fall2025.posetrainer.Domain.Session;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
 import fpt.fall2025.posetrainer.Helper.CalorieCalculator;
 import fpt.fall2025.posetrainer.R;
-import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.Service.AuthService;
 import fpt.fall2025.posetrainer.DAL.ProfileDAO;
+import fpt.fall2025.posetrainer.DAL.SessionDAO;
+import fpt.fall2025.posetrainer.DAL.ExerciseDAO;
 import fpt.fall2025.posetrainer.databinding.ActivitySessionBinding;
 
 public class SessionActivity extends AppCompatActivity implements SessionExerciseAdapter.OnExerciseClickListener {
@@ -53,6 +54,8 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
     private long sessionResumeTime; // Thời điểm mở màn hình lần này (để tính thời gian thực tế đã tập)
     private AuthService authService;
     private ProfileDAO profileDAO;
+    private SessionDAO sessionDAO;
+    private ExerciseDAO exerciseDAO;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,6 +66,8 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
         // Initialize Firebase
         authService = new AuthService();
         profileDAO = new ProfileDAO();
+        sessionDAO = new SessionDAO();
+        exerciseDAO = new ExerciseDAO();
 
         // Get sessionId from intent
         String sessionId = getIntent().getStringExtra("sessionId");
@@ -90,7 +95,7 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
     private void loadSessionData(String sessionId) {
         Log.d(TAG, "Loading session data for ID: " + sessionId);
 
-        FirebaseService.getInstance().loadSessionById(sessionId, new FirebaseService.OnSessionLoadedListener() {
+        sessionDAO.loadSessionById(sessionId, new SessionDAO.OnSessionLoadedListener() {
             @Override
             public void onSessionLoaded(Session session) {
                 if (session != null) {
@@ -127,9 +132,9 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
         Log.d(TAG, "Found " + exerciseIds.size() + " unique exercise IDs");
         
         // Load exercises by IDs
-        FirebaseService.getInstance().loadExercisesByIds(new ArrayList<>(exerciseIds), this, new FirebaseService.OnExercisesLoadedListener() {
-            @Override
-            public void onExercisesLoaded(ArrayList<Exercise> exercisesList) {
+        exerciseDAO.getByIds(new ArrayList<>(exerciseIds), task -> {
+            if (task.isSuccessful() && task.getResult() != null) {
+                ArrayList<Exercise> exercisesList = new ArrayList<>(task.getResult());
                 if (exercisesList != null) {
                     exercises = exercisesList;
                     Log.d(TAG, "Exercises loaded successfully: " + exercisesList.size());
@@ -395,7 +400,7 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
         Log.d(TAG, "Saving active duration: " + totalDurationSec + " seconds (previous: " + previousDurationSec + ", current: " + currentSessionSec + ")");
         
         // Lưu vào Firebase
-        FirebaseService.getInstance().saveSession(currentSession, success -> {
+        sessionDAO.saveSession(currentSession, success -> {
             if (success) {
                 Log.d(TAG, "Active duration saved successfully: " + totalDurationSec + " seconds");
             } else {
@@ -499,7 +504,7 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
                 // Save to Firebase if no duration update needed
                 saveSessionToFirebase();
             }
-            FirebaseService.getInstance().saveSession(currentSession, new FirebaseService.OnSessionSavedListener() {
+            sessionDAO.saveSession(currentSession, new SessionDAO.OnSessionSavedListener() {
                 @Override
                 public void onSessionSaved(boolean success) {
                     Log.d(TAG, "Session ended and saved: " + success);
@@ -719,7 +724,7 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
         if (currentSession != null && currentSession.getId() != null) {
             Log.d(TAG, "Refreshing session from Firebase: " + currentSession.getId());
 
-            FirebaseService.getInstance().loadSessionById(currentSession.getId(), new FirebaseService.OnSessionLoadedListener() {
+            sessionDAO.loadSessionById(currentSession.getId(), new SessionDAO.OnSessionLoadedListener() {
                 @Override
                 public void onSessionLoaded(Session updatedSession) {
                     if (updatedSession != null) {
@@ -891,7 +896,7 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
      */
     private void saveSessionToFirebase() {
         if (currentSession != null) {
-            FirebaseService.getInstance().saveSession(currentSession, new FirebaseService.OnSessionSavedListener() {
+            sessionDAO.saveSession(currentSession, new SessionDAO.OnSessionSavedListener() {
                 @Override
                 public void onSessionSaved(boolean success) {
                     Log.d(TAG, "Session ended and saved: " + success);
@@ -910,7 +915,7 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
             
             Log.d(TAG, "Finishing workout - Duration: " + durationSec + "s (from display), Calories: " + estimatedKcal);
             
-            FirebaseService.getInstance().saveSession(currentSession, new FirebaseService.OnSessionSavedListener() {
+            sessionDAO.saveSession(currentSession, new SessionDAO.OnSessionSavedListener() {
                 @Override
                 public void onSessionSaved(boolean success) {
                     if (success) {

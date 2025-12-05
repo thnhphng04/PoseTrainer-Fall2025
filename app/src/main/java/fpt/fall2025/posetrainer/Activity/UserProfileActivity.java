@@ -95,21 +95,21 @@ public class UserProfileActivity extends AppCompatActivity {
             }
             
             User user = task.getResult();
-            tvName.setText(user.getDisplayName() != null ? user.getDisplayName() : "Người dùng");
-            tvEmail.setText(user.getEmail() != null ? user.getEmail() : "");
+                            tvName.setText(user.getDisplayName() != null ? user.getDisplayName() : "Người dùng");
+                            tvEmail.setText(user.getEmail() != null ? user.getEmail() : "");
 
-            String photoUrl = user.getPhotoURL();
-            if (photoUrl != null && !photoUrl.isEmpty()) {
-                Glide.with(this)
-                        .load(photoUrl)
-                        .placeholder(R.drawable.ic_person)
-                        .error(R.drawable.ic_person)
-                        .circleCrop()
-                        .into(ivAvatar);
-            } else {
-                ivAvatar.setImageResource(R.drawable.ic_person);
-            }
-        });
+                            String photoUrl = user.getPhotoURL();
+                            if (photoUrl != null && !photoUrl.isEmpty()) {
+                                Glide.with(this)
+                                        .load(photoUrl)
+                                        .placeholder(R.drawable.ic_person)
+                                        .error(R.drawable.ic_person)
+                                        .circleCrop()
+                                        .into(ivAvatar);
+                            } else {
+                                ivAvatar.setImageResource(R.drawable.ic_person);
+                            }
+                });
     }
 
     private void checkFollowStatus() {

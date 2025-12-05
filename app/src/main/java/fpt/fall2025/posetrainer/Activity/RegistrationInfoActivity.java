@@ -460,11 +460,11 @@ public class RegistrationInfoActivity extends AppCompatActivity implements
                 return;
             }
             
-            setLoading(false);
-            Toast.makeText(this, "Đăng ký thành công", Toast.LENGTH_SHORT).show();
-            startActivity(new android.content.Intent(this, MainActivity.class));
-            finish();
-        });
+                    setLoading(false);
+                    Toast.makeText(this, "Đăng ký thành công", Toast.LENGTH_SHORT).show();
+                    startActivity(new android.content.Intent(this, MainActivity.class));
+                    finish();
+                });
     }
 
     private void collectAllData() {

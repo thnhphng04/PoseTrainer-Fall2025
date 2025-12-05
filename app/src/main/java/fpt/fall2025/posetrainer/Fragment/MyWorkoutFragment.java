@@ -20,9 +20,9 @@ import fpt.fall2025.posetrainer.Activity.PlanPreviewActivity;
 import fpt.fall2025.posetrainer.Adapter.UserWorkoutCardAdapter;
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
 import fpt.fall2025.posetrainer.R;
-import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.Service.AuthService;
 import fpt.fall2025.posetrainer.DAL.UserDAO;
+import fpt.fall2025.posetrainer.DAL.UserWorkoutDAO;
 import fpt.fall2025.posetrainer.databinding.FragmentMyworkoutBinding;
 
 import java.util.ArrayList;
@@ -39,6 +39,7 @@ public class MyWorkoutFragment extends Fragment {
     private UserWorkoutCardAdapter aiWorkoutAdapter; // Adapter cho AI workouts
     private AuthService authService;
     private UserDAO userDAO;
+    private UserWorkoutDAO userWorkoutDAO;
     
     // Cache để tránh reload không cần thiết
     private String cachedUserId = null;
@@ -56,6 +57,7 @@ public class MyWorkoutFragment extends Fragment {
 
         authService = new AuthService();
         userDAO = new UserDAO();
+        userWorkoutDAO = new UserWorkoutDAO();
 
         // Initialize data
         userWorkouts = new ArrayList<>();
@@ -301,9 +303,9 @@ public class MyWorkoutFragment extends Fragment {
             return;
         }
         
-        FirebaseService.getInstance().loadUserWorkouts(userId, (androidx.appcompat.app.AppCompatActivity) getActivity(), new FirebaseService.OnUserWorkoutsLoadedListener() {
-            @Override
-            public void onUserWorkoutsLoaded(ArrayList<UserWorkout> workouts) {
+        userWorkoutDAO.getByUserId(userId, task -> {
+            if (task.isSuccessful() && task.getResult() != null) {
+                ArrayList<UserWorkout> workouts = new ArrayList<>(task.getResult());
                 isWorkoutsLoaded = true;
                 
                 // Kiểm tra fragment view có còn attached không
@@ -313,6 +315,12 @@ public class MyWorkoutFragment extends Fragment {
                 
                 // Filter và hiển thị workouts vào 2 RecyclerView riêng biệt
                 filterAndDisplayWorkouts(workouts != null ? workouts : new ArrayList<>());
+            } else {
+                isWorkoutsLoaded = true;
+                if (!isAdded() || binding == null) {
+                    return;
+                }
+                filterAndDisplayWorkouts(new ArrayList<>());
             }
         });
     }

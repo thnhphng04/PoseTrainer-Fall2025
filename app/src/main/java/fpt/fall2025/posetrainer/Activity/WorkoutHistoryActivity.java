@@ -34,8 +34,11 @@ import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
 import fpt.fall2025.posetrainer.Domain.FavoriteWorkoutItem;
 import fpt.fall2025.posetrainer.R;
-import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.Service.AuthService;
+import fpt.fall2025.posetrainer.DAL.SessionDAO;
+import fpt.fall2025.posetrainer.DAL.FavoriteDAO;
+import fpt.fall2025.posetrainer.DAL.WorkoutTemplateDAO;
+import fpt.fall2025.posetrainer.DAL.UserWorkoutDAO;
 
 /**
  * Activity hiển thị lịch sử tập luyện với tabs: Lịch sử, Gần đây, Yêu thích
@@ -72,6 +75,10 @@ public class WorkoutHistoryActivity extends AppCompatActivity {
     private List<String> statusFilterOptions; // Filter cho tab Gần đây
     
     private AuthService authService;
+    private SessionDAO sessionDAO;
+    private FavoriteDAO favoriteDAO;
+    private WorkoutTemplateDAO workoutTemplateDAO;
+    private UserWorkoutDAO userWorkoutDAO;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,6 +87,10 @@ public class WorkoutHistoryActivity extends AppCompatActivity {
         
         // Initialize Firebase Auth
         authService = new AuthService();
+        sessionDAO = new SessionDAO();
+        favoriteDAO = new FavoriteDAO();
+        workoutTemplateDAO = new WorkoutTemplateDAO();
+        userWorkoutDAO = new UserWorkoutDAO();
         
         // Initialize UI
         initViews();
@@ -270,9 +281,9 @@ public class WorkoutHistoryActivity extends AppCompatActivity {
         Log.d(TAG, "=== ĐANG TẢI SESSIONS ===");
         Log.d(TAG, "Đang tải sessions cho uid: " + uid);
 
-        FirebaseService.getInstance().loadUserSessions(uid, this, new FirebaseService.OnSessionsLoadedListener() {
-            @Override
-            public void onSessionsLoaded(ArrayList<Session> loadedSessions) {
+        sessionDAO.getByUserId(uid, task -> {
+            if (task.isSuccessful() && task.getResult() != null) {
+                ArrayList<Session> loadedSessions = new ArrayList<>(task.getResult());
                 Log.d(TAG, "=== SESSIONS ĐÃ TẢI ===");
                 Log.d(TAG, "Nhận được " + (loadedSessions != null ? loadedSessions.size() : 0) + " sessions");
 
@@ -282,6 +293,9 @@ public class WorkoutHistoryActivity extends AppCompatActivity {
                 filterSessionsByTab();
                 
                 Log.d(TAG, "=== KẾT THÚC TẢI SESSIONS ===");
+            } else {
+                allSessions = new ArrayList<>();
+                filterSessionsByTab();
             }
         });
     }
@@ -592,7 +606,7 @@ public class WorkoutHistoryActivity extends AppCompatActivity {
         Log.d(TAG, "Đang tải favorite workout templates và user workouts cho uid: " + uid);
 
         // Bước 1: Load favorite workout template IDs
-        FirebaseService.getInstance().loadFavoriteWorkoutTemplateIds(uid, favoriteIds -> {
+        favoriteDAO.loadFavoriteWorkoutTemplateIds(uid, favoriteIds -> {
             Log.d(TAG, "=== FAVORITE IDs ĐÃ TẢI ===");
             Log.d(TAG, "Nhận được " + (favoriteIds != null ? favoriteIds.size() : 0) + " favorite IDs");
 
@@ -602,35 +616,19 @@ public class WorkoutHistoryActivity extends AppCompatActivity {
                 return;
             }
 
-            // Bước 2: Load từng favorite ID - thử load như WorkoutTemplate trước, nếu không có thì load như UserWorkout
-            favoriteWorkoutItems = new ArrayList<>();
-            final int[] loadedCount = {0};
-            final int totalCount = favoriteIds.size();
+                // Bước 2: Load từng favorite ID - thử load như WorkoutTemplate trước, nếu không có thì load như UserWorkout
+                favoriteWorkoutItems = new ArrayList<>();
+                final int[] loadedCount = {0};
+                final int totalCount = favoriteIds.size();
 
-            for (String favoriteId : favoriteIds) {
-                // Thử load như WorkoutTemplate trước
-                FirebaseService.getInstance().loadWorkoutTemplateById(favoriteId, this, template -> {
-                    if (template != null) {
-                        // Là WorkoutTemplate
-                        favoriteWorkoutItems.add(new FavoriteWorkoutItem(template));
-                        Log.d(TAG, "✓ Loaded WorkoutTemplate: " + template.getTitle());
-                        
-                        // Tăng counter và kiểm tra xem đã load xong chưa
-                        loadedCount[0]++;
-                        if (loadedCount[0] == totalCount) {
-                            // Đã load xong tất cả
-                            updateFavoriteWorkoutUI();
-                        }
-                    } else {
-                        // Không phải WorkoutTemplate, thử load như UserWorkout
-                        FirebaseService.getInstance().loadUserWorkoutById(favoriteId, this, userWorkout -> {
-                            if (userWorkout != null) {
-                                // Là UserWorkout
-                                favoriteWorkoutItems.add(new FavoriteWorkoutItem(userWorkout));
-                                Log.d(TAG, "✓ Loaded UserWorkout: " + userWorkout.getTitle());
-                            } else {
-                                Log.w(TAG, "✗ Không tìm thấy workout với ID: " + favoriteId);
-                            }
+                for (String favoriteId : favoriteIds) {
+                    // Thử load như WorkoutTemplate trước
+                    workoutTemplateDAO.getById(favoriteId, templateTask -> {
+                        if (templateTask.isSuccessful() && templateTask.getResult() != null) {
+                            WorkoutTemplate template = templateTask.getResult();
+                            // Là WorkoutTemplate
+                            favoriteWorkoutItems.add(new FavoriteWorkoutItem(template));
+                            Log.d(TAG, "✓ Loaded WorkoutTemplate: " + template.getTitle());
                             
                             // Tăng counter và kiểm tra xem đã load xong chưa
                             loadedCount[0]++;
@@ -638,10 +636,28 @@ public class WorkoutHistoryActivity extends AppCompatActivity {
                                 // Đã load xong tất cả
                                 updateFavoriteWorkoutUI();
                             }
-                        });
-                    }
-                });
-            }
+                        } else {
+                            // Không phải WorkoutTemplate, thử load như UserWorkout
+                            userWorkoutDAO.getById(favoriteId, userWorkoutTask -> {
+                                if (userWorkoutTask.isSuccessful() && userWorkoutTask.getResult() != null) {
+                                    UserWorkout userWorkout = userWorkoutTask.getResult();
+                                    // Là UserWorkout
+                                    favoriteWorkoutItems.add(new FavoriteWorkoutItem(userWorkout));
+                                    Log.d(TAG, "✓ Loaded UserWorkout: " + userWorkout.getTitle());
+                                } else {
+                                    Log.w(TAG, "✗ Không tìm thấy workout với ID: " + favoriteId);
+                                }
+                                
+                                // Tăng counter và kiểm tra xem đã load xong chưa
+                                loadedCount[0]++;
+                                if (loadedCount[0] == totalCount) {
+                                    // Đã load xong tất cả
+                                    updateFavoriteWorkoutUI();
+                                }
+                            });
+                        }
+                    });
+                }
         });
     }
 

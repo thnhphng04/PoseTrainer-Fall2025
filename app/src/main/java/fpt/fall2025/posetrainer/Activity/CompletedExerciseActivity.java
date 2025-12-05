@@ -27,9 +27,12 @@ import fpt.fall2025.posetrainer.Dialog.AchievementUnlockedDialog;
 import fpt.fall2025.posetrainer.Helper.CalorieCalculator;
 import fpt.fall2025.posetrainer.Manager.AchievementManager;
 import fpt.fall2025.posetrainer.R;
-import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.Service.AuthService;
 import fpt.fall2025.posetrainer.DAL.ProfileDAO;
+import fpt.fall2025.posetrainer.DAL.SessionDAO;
+import fpt.fall2025.posetrainer.DAL.StreakDAO;
+import fpt.fall2025.posetrainer.DAL.UserProgressDAO;
+import fpt.fall2025.posetrainer.DAL.ExerciseDAO;
 
 import com.google.firebase.firestore.DocumentSnapshot;
 
@@ -56,6 +59,10 @@ public class CompletedExerciseActivity extends AppCompatActivity {
     private CompletedExerciseAdapter adapter;
     private AuthService authService;
     private ProfileDAO profileDAO;
+    private SessionDAO sessionDAO;
+    private StreakDAO streakDAO;
+    private UserProgressDAO userProgressDAO;
+    private ExerciseDAO exerciseDAO;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,6 +81,10 @@ public class CompletedExerciseActivity extends AppCompatActivity {
         // Initialize Firebase
         authService = new AuthService();
         profileDAO = new ProfileDAO();
+        sessionDAO = new SessionDAO();
+        streakDAO = new StreakDAO();
+        userProgressDAO = new UserProgressDAO();
+        exerciseDAO = new ExerciseDAO();
 
         // Initialize UI
         initViews();
@@ -167,7 +178,7 @@ public class CompletedExerciseActivity extends AppCompatActivity {
                 // Load user profile để lấy weight và tính calories bằng METs formula
                 loadUserProfileAndUpdateCalories(uid, () -> {
                     // Save session với endedAt và calories mới trước khi update streak
-                    FirebaseService.getInstance().saveSession(currentSession, success -> {
+                    sessionDAO.saveSession(currentSession, success -> {
                         if (success) {
                             Log.d(TAG, "✅ Session đã được cập nhật với endedAt và calories trước khi update streak");
                             updateStreakAndAchievements(uid);
@@ -184,7 +195,7 @@ public class CompletedExerciseActivity extends AppCompatActivity {
                 // Load profile và update calories nếu cần
                 loadUserProfileAndUpdateCalories(uid, () -> {
                     // Nếu calories đã được cập nhật, lưu lại session
-                    FirebaseService.getInstance().saveSession(currentSession, success -> {
+                    sessionDAO.saveSession(currentSession, success -> {
                         if (success) {
                             Log.d(TAG, "✅ Session đã được cập nhật với calories");
                         }
@@ -201,7 +212,7 @@ public class CompletedExerciseActivity extends AppCompatActivity {
      */
     private void updateStreakAndAchievements(String uid) {
         // Update streak
-        FirebaseService.getInstance().updateStreak(uid, currentSession, streak -> {
+        streakDAO.updateStreak(uid, currentSession, streak -> {
                 if (streak != null) {
                     Log.d(TAG, "✅ Streak updated: " + streak.getCurrentStreak() + " ngày");
 
@@ -219,7 +230,7 @@ public class CompletedExerciseActivity extends AppCompatActivity {
                         }
 
                         // Update user progress (calendar heatmap)
-                        FirebaseService.getInstance().updateUserProgress(uid, progress -> {
+                        userProgressDAO.updateUserProgress(uid, progress -> {
                             if (progress != null) {
                                 Log.d(TAG, "✅ User progress updated: " + progress.getTotalWorkoutDays() + " days");
                             }
@@ -253,7 +264,7 @@ public class CompletedExerciseActivity extends AppCompatActivity {
     private void loadSessionData(String sessionId) {
         Log.d(TAG, "Loading session data for ID: " + sessionId);
 
-        FirebaseService.getInstance().loadSessionById(sessionId, new FirebaseService.OnSessionLoadedListener() {
+        sessionDAO.loadSessionById(sessionId, new SessionDAO.OnSessionLoadedListener() {
             @Override
             public void onSessionLoaded(Session session) {
                 if (session != null) {
@@ -309,16 +320,13 @@ public class CompletedExerciseActivity extends AppCompatActivity {
                 continue;
             }
 
-            FirebaseService.getInstance().loadExerciseById(exerciseId, this, new FirebaseService.OnExerciseLoadedListener() {
-                @Override
-                public void onExerciseLoaded(Exercise exercise) {
-                    if (exercise != null) {
-                        exercises.add(exercise);
-                    }
-                    loadedCount[0]++;
-                    if (loadedCount[0] == totalExercises) {
-                        updateAdapter(perExercises);
-                    }
+            exerciseDAO.getById(exerciseId, task -> {
+                if (task.isSuccessful() && task.getResult() != null) {
+                    exercises.add(task.getResult());
+                }
+                loadedCount[0]++;
+                if (loadedCount[0] == totalExercises) {
+                    updateAdapter(perExercises);
                 }
             });
         }

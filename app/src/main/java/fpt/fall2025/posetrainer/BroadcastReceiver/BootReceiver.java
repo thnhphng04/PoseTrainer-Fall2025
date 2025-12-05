@@ -10,13 +10,14 @@ import com.google.firebase.auth.FirebaseUser;
 
 import fpt.fall2025.posetrainer.Domain.Schedule;
 import fpt.fall2025.posetrainer.Service.AlarmScheduler;
-import fpt.fall2025.posetrainer.Service.FirebaseService;
+import fpt.fall2025.posetrainer.DAL.ScheduleDAO;
 
 /**
  * BroadcastReceiver để restart alarms sau khi thiết bị reboot
  */
 public class BootReceiver extends BroadcastReceiver {
     private static final String TAG = "BootReceiver";
+    private ScheduleDAO scheduleDAO;
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -42,8 +43,10 @@ public class BootReceiver extends BroadcastReceiver {
 
         String userId = currentUser.getUid();
         Log.d(TAG, "Restarting alarms for user: " + userId);
+        
+        ScheduleDAO scheduleDAO = new ScheduleDAO();
 
-        FirebaseService.getInstance().loadUserSchedule(userId, new FirebaseService.OnScheduleLoadedListener() {
+        scheduleDAO.loadUserSchedule(userId, new ScheduleDAO.OnScheduleLoadedListener() {
             @Override
             public void onScheduleLoaded(Schedule schedule) {
                 if (schedule != null) {

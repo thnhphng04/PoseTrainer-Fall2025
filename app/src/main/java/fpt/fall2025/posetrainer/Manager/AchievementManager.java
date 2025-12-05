@@ -12,7 +12,7 @@ import java.util.Map;
 import fpt.fall2025.posetrainer.Domain.Achievement;
 import fpt.fall2025.posetrainer.Domain.Session;
 import fpt.fall2025.posetrainer.Domain.Streak;
-import fpt.fall2025.posetrainer.Service.FirebaseService;
+import fpt.fall2025.posetrainer.DAL.StreakDAO;
 
 /**
  * Manager để kiểm tra và unlock achievements
@@ -21,6 +21,7 @@ public class AchievementManager {
     private static final String TAG = "AchievementManager";
     private static AchievementManager instance;
     private FirebaseFirestore db;
+    private StreakDAO streakDAO;
 
     // Achievement definitions
     public static class AchievementInfo {
@@ -67,6 +68,7 @@ public class AchievementManager {
 
     private AchievementManager() {
         db = FirebaseFirestore.getInstance();
+        this.streakDAO = new StreakDAO();
     }
 
     public static synchronized AchievementManager getInstance() {
@@ -90,7 +92,7 @@ public class AchievementManager {
         Log.d(TAG, "Checking achievements for user: " + uid);
 
         // Load current streak
-        FirebaseService.getInstance().loadUserStreak(uid, streak -> {
+        streakDAO.loadUserStreak(uid, streak -> {
             int currentStreak = (streak != null) ? streak.getCurrentStreak() : 0;
 
             // Load total workout count

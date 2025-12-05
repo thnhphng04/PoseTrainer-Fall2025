@@ -16,7 +16,10 @@ import fpt.fall2025.posetrainer.Domain.Session
 import fpt.fall2025.posetrainer.Fragment.UnifiedCameraFragment
 import fpt.fall2025.posetrainer.Manager.WorkoutSessionManager
 import fpt.fall2025.posetrainer.R
-import fpt.fall2025.posetrainer.Service.FirebaseService
+import fpt.fall2025.posetrainer.DAL.SessionDAO
+import fpt.fall2025.posetrainer.DAL.ExerciseDAO
+import com.google.android.gms.tasks.OnCompleteListener
+import com.google.android.gms.tasks.Task
 
 /**
  * ExerciseActivity - Activity để host camera fragment cho từng bài tập
@@ -37,6 +40,8 @@ class ExerciseActivity : AppCompatActivity() {
     private var currentSession: Session? = null
     private var currentSetNumber: Int = 1 // Set hiện tại cần tiếp tục
     private var isResume: Boolean = false // Flag để phân biệt resume vs new workout
+    private lateinit var sessionDAO: SessionDAO
+    private lateinit var exerciseDAO: ExerciseDAO
     
     companion object {
         private const val CAMERA_PERMISSION_REQUEST_CODE = 1001
@@ -61,6 +66,9 @@ class ExerciseActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_exercise)
+        
+        sessionDAO = SessionDAO()
+        exerciseDAO = ExerciseDAO()
         
         // Full screen
 //        getWindow().setFlags(
@@ -91,8 +99,9 @@ class ExerciseActivity : AppCompatActivity() {
     private fun loadSessionAndExerciseData(sessionId: String, exerciseNo: Int) {
         Log.d("ExerciseActivity", "Loading session data for ID: $sessionId, exerciseNo: $exerciseNo")
         
-        FirebaseService.getInstance().loadSessionById(sessionId, object : FirebaseService.OnSessionLoadedListener {
-            override fun onSessionLoaded(session: Session?) {
+        sessionDAO.getById(sessionId, OnCompleteListener { task ->
+            if (task.isSuccessful) {
+                val session = task.result
                 if (session != null) {
                     currentSession = session
                     Log.d("ExerciseActivity", "Session loaded successfully")
@@ -103,10 +112,8 @@ class ExerciseActivity : AppCompatActivity() {
                     Log.e("ExerciseActivity", "Failed to load session")
                     finish()
                 }
-            }
-
-            override fun onError(error: String?) {
-                Log.e("ExerciseActivity", "Error loading session: $error")
+            } else {
+                Log.e("ExerciseActivity", "Error loading session: ${task.exception?.message}")
                 finish()
             }
         })
@@ -145,8 +152,9 @@ class ExerciseActivity : AppCompatActivity() {
     private fun loadExerciseFromFirebase(perExercise: Session.PerExercise) {
         Log.d("ExerciseActivity", "Loading exercise from Firebase: ${perExercise.exerciseId}")
         
-        FirebaseService.getInstance().loadExerciseById(perExercise.exerciseId, this, object : FirebaseService.OnExerciseLoadedListener {
-            override fun onExerciseLoaded(exercise: Exercise?) {
+        exerciseDAO.getById(perExercise.exerciseId, OnCompleteListener { task ->
+            if (task.isSuccessful) {
+                val exercise = task.result
                 if (exercise != null) {
                     Log.d("ExerciseActivity", "Exercise loaded from Firebase: ${exercise.name}")
                     
@@ -181,6 +189,24 @@ class ExerciseActivity : AppCompatActivity() {
                     currentExercise = fallbackExercise
                     initializeExercise(fallbackExercise)
                 }
+            } else {
+                // Error loading exercise, create fallback
+                Log.e("ExerciseActivity", "Error loading exercise from Firebase: ${task.exception?.message}, creating fallback")
+                val fallbackName = perExercise.exerciseId;
+                
+                val fallbackExercise = Exercise().apply {
+                    id = perExercise.exerciseId
+                    name = fallbackName
+                    val sets = perExercise.sets?.size ?: 3
+                    val reps = perExercise.sets?.firstOrNull()?.targetReps ?: 12
+                    defaultConfig = Exercise.DefaultConfig(sets, reps, 90, perExercise.difficultyUsed ?: "beginner")
+                }
+                
+                Log.d("ExerciseActivity", "Created fallback exercise: ${fallbackExercise.name} (ID: ${fallbackExercise.id})")
+                
+                allExercises = arrayListOf(fallbackExercise)
+                currentExercise = fallbackExercise
+                initializeExercise(fallbackExercise)
             }
         })
     }
@@ -522,13 +548,11 @@ class ExerciseActivity : AppCompatActivity() {
         android.util.Log.d("ExerciseActivity", "=== SAVE SESSION TO FIREBASE ===")
         currentSession?.let { session ->
             android.util.Log.d("ExerciseActivity", "Saving session: ${session.getId()}")
-            fpt.fall2025.posetrainer.Service.FirebaseService.getInstance().saveSession(session, object : fpt.fall2025.posetrainer.Service.FirebaseService.OnSessionSavedListener {
-                override fun onSessionSaved(success: Boolean) {
-                    if (success) {
-                        android.util.Log.d("ExerciseActivity", "Session saved successfully to Firebase")
-                    } else {
-                        android.util.Log.e("ExerciseActivity", "Failed to save session to Firebase")
-                    }
+            sessionDAO.save(session, OnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    android.util.Log.d("ExerciseActivity", "Session saved successfully to Firebase")
+                } else {
+                    android.util.Log.e("ExerciseActivity", "Failed to save session to Firebase: ${task.exception?.message}")
                 }
             })
         } ?: run {
@@ -548,8 +572,9 @@ class ExerciseActivity : AppCompatActivity() {
             android.util.Log.d("ExerciseActivity", "Reloading session: $sessionId")
             
             // Load session from Firebase to get the latest data
-            fpt.fall2025.posetrainer.Service.FirebaseService.getInstance().loadSessionById(sessionId, object : fpt.fall2025.posetrainer.Service.FirebaseService.OnSessionLoadedListener {
-                override fun onSessionLoaded(freshSession: Session?) {
+            sessionDAO.getById(sessionId, OnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val freshSession = task.result
                     if (freshSession != null) {
                         android.util.Log.d("ExerciseActivity", "Fresh session loaded from Firebase")
                         currentSession = freshSession
@@ -565,10 +590,8 @@ class ExerciseActivity : AppCompatActivity() {
                         determineCurrentSetFromSession()
                         showExerciseFragmentInternal()
                     }
-                }
-                
-                override fun onError(error: String) {
-                    android.util.Log.e("ExerciseActivity", "Error loading fresh session: $error")
+                } else {
+                    android.util.Log.e("ExerciseActivity", "Error loading fresh session: ${task.exception?.message}")
                     // Fallback to existing session
                     determineCurrentSetFromSession()
                     showExerciseFragmentInternal()

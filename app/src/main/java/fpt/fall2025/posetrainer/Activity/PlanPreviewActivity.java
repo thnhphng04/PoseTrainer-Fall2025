@@ -26,7 +26,6 @@ import java.util.Map;
 
 import fpt.fall2025.posetrainer.Domain.Schedule;
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
-import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.Service.AuthService;
 import fpt.fall2025.posetrainer.Service.FunctionsService;
 import fpt.fall2025.posetrainer.DAL.ProfileDAO;
@@ -70,7 +69,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
         profileDAO = new ProfileDAO();
         userWorkoutDAO = new UserWorkoutDAO();
         scheduleDAO = new ScheduleDAO();
-        
+
         // Check if user is logged in
         FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser == null) {
@@ -895,13 +894,16 @@ public class PlanPreviewActivity extends AppCompatActivity {
         int totalCount = workouts.size();
 
         for (UserWorkout workout : workouts) {
-            FirebaseService.getInstance().saveUserWorkout(workout, success -> {
-                savedCount[0]++;
-                Log.d(TAG, "Saved workout " + savedCount[0] + "/" + totalCount + ": " + workout.getTitle());
+            userWorkoutDAO.save(workout, task -> {
+                boolean success = task.isSuccessful();
+                if (success) {
+                    savedCount[0]++;
+                    Log.d(TAG, "Saved workout " + savedCount[0] + "/" + totalCount + ": " + workout.getTitle());
 
-                // Khi đã lưu hết workouts, tạo Schedule
-                if (savedCount[0] == totalCount) {
-                    createScheduleFromItems(scheduleItems);
+                    // Khi đã lưu hết workouts, tạo Schedule
+                    if (savedCount[0] == totalCount) {
+                        createScheduleFromItems(scheduleItems);
+                    }
                 }
             });
         }
@@ -931,9 +933,9 @@ public class PlanPreviewActivity extends AppCompatActivity {
         );
 
         // Lưu Schedule vào Firestore
-        FirebaseService.getInstance().saveSchedule(schedule, success -> {
+        scheduleDAO.save(schedule, task -> {
             setLoading(false);
-            if (success) {
+            if (task.isSuccessful()) {
                 String successMsg = "Đã lưu " + scheduleItems.size() + " bài tập vào lịch tập luyện!";
                 tvSub.setText(successMsg);
                 Toast.makeText(this, successMsg, Toast.LENGTH_LONG).show();

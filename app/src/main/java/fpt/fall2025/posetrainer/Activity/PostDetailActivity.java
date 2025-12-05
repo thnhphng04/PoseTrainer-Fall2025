@@ -82,20 +82,16 @@ public class PostDetailActivity extends AppCompatActivity {
 
 
         // --- 2) Initial like state ---
-        communityDAO.isLikedByMe(postId, task -> {
-            if (task.isSuccessful() && task.getResult() != null) {
-                likedByMe = task.getResult();
-                renderLikeIcon();
-            }
+        communityDAO.isLikedByMe(postId).addOnSuccessListener(b -> {
+            likedByMe = b;
+            renderLikeIcon();
         });
 
         // --- 3) Like toggle ---
         btnLike.setOnClickListener(v -> {
-            communityDAO.toggleLike(postId, task -> {
-                if (!task.isSuccessful()) {
-                    Toast.makeText(this, "Lỗi khi like: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
-                }
-            });
+            communityDAO.toggleLike(postId)
+                    .addOnFailureListener(err ->
+                            Toast.makeText(this, "Lỗi khi like: " + err.getMessage(), Toast.LENGTH_SHORT).show());
         });
 
         // --- 4) Comments list ---
@@ -133,13 +129,9 @@ public class PostDetailActivity extends AppCompatActivity {
         btnSend.setOnClickListener(v -> {
             String text = edtComment.getText().toString().trim();
             if (TextUtils.isEmpty(text)) return;
-            communityDAO.addComment(postId, text, task -> {
-                if (task.isSuccessful()) {
-                    edtComment.setText("");
-                } else {
-                    Toast.makeText(this, task.getException().getMessage(), Toast.LENGTH_SHORT).show();
-                }
-            });
+            communityDAO.addComment(postId, text)
+                    .addOnSuccessListener(x -> edtComment.setText(""))
+                    .addOnFailureListener(err -> Toast.makeText(this, err.getMessage(), Toast.LENGTH_SHORT).show());
         });
         //Nút back
         ImageView btnBack = findViewById(R.id.btnBack);

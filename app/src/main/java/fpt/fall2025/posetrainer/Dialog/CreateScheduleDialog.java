@@ -28,7 +28,8 @@ import fpt.fall2025.posetrainer.Domain.Schedule;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
 import fpt.fall2025.posetrainer.R;
-import fpt.fall2025.posetrainer.Service.FirebaseService;
+import fpt.fall2025.posetrainer.DAL.WorkoutTemplateDAO;
+import fpt.fall2025.posetrainer.DAL.UserWorkoutDAO;
 
 public class CreateScheduleDialog extends DialogFragment {
     private static final String TAG = "CreateScheduleDialog";
@@ -44,6 +45,8 @@ public class CreateScheduleDialog extends DialogFragment {
     private ArrayList<WorkoutTemplate> workoutTemplates;
     private ArrayList<UserWorkout> userWorkouts;
     private ArrayList<Object> allWorkouts; // Combined list for spinner
+    private WorkoutTemplateDAO workoutTemplateDAO;
+    private UserWorkoutDAO userWorkoutDAO;
     private ArrayAdapter<String> workoutAdapter;
     private OnScheduleCreatedListener listener;
     
@@ -61,6 +64,9 @@ public class CreateScheduleDialog extends DialogFragment {
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         LayoutInflater inflater = requireActivity().getLayoutInflater();
         View view = inflater.inflate(R.layout.dialog_create_schedule, null);
+        
+        workoutTemplateDAO = new WorkoutTemplateDAO();
+        userWorkoutDAO = new UserWorkoutDAO();
         
         initViews(view);
         setupListeners();
@@ -157,30 +163,27 @@ public class CreateScheduleDialog extends DialogFragment {
         userWorkouts = new ArrayList<>();
         allWorkouts = new ArrayList<>();
         
-        FirebaseService.getInstance().loadWorkoutTemplates(
-            (androidx.appcompat.app.AppCompatActivity) requireActivity(),
-            templates -> {
-                workoutTemplates = templates != null ? templates : new ArrayList<>();
+        workoutTemplateDAO.getPublicTemplates(task -> {
+            if (task.isSuccessful() && task.getResult() != null) {
+                workoutTemplates = new ArrayList<>(task.getResult());
                 allWorkouts.addAll(workoutTemplates);
                 
                 // Load user workouts
                 com.google.firebase.auth.FirebaseUser currentUser = 
                     com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
                 if (currentUser != null) {
-                    FirebaseService.getInstance().loadUserWorkouts(
-                        currentUser.getUid(),
-                        (androidx.appcompat.app.AppCompatActivity) requireActivity(),
-                        userWorkoutsList -> {
-                            userWorkouts = userWorkoutsList != null ? userWorkoutsList : new ArrayList<>();
+                    userWorkoutDAO.getByUserId(currentUser.getUid(), userWorkoutTask -> {
+                        if (userWorkoutTask.isSuccessful() && userWorkoutTask.getResult() != null) {
+                            userWorkouts = new ArrayList<>(userWorkoutTask.getResult());
                             allWorkouts.addAll(userWorkouts);
                             updateWorkoutSpinner();
                         }
-                    );
+                    });
                 } else {
                     updateWorkoutSpinner();
                 }
             }
-        );
+        });
     }
     
     private void updateWorkoutSpinner() {

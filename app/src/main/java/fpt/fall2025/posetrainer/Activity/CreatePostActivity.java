@@ -194,7 +194,7 @@ public class CreatePostActivity extends AppCompatActivity {
         post.updatedAt = new com.google.firebase.Timestamp(new java.util.Date());
 
         // Upload ảnh trước (nếu có)
-        if (selectedImages.isEmpty()) {
+            if (selectedImages.isEmpty()) {
             // Không có ảnh, lưu post luôn
             communityDAO.save(post, task -> {
                 if (task.isSuccessful()) {
@@ -205,7 +205,7 @@ public class CreatePostActivity extends AppCompatActivity {
                     Toast.makeText(this, "Lỗi đăng bài: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
                     setUiEnabled(true);
                     progress.setVisibility(ProgressBar.GONE);
-                }
+            }
             });
         } else {
             // Upload ảnh trước
@@ -214,20 +214,20 @@ public class CreatePostActivity extends AppCompatActivity {
                     CommunityDAO.UploadResult result = uploadTask.getResult();
                     post.imageUrls = result.imageUrls;
                     post.imagePaths = result.imagePaths;
-                    
-                    // Backward compatibility: set ảnh đầu tiên vào imageUrl
+                
+                // Backward compatibility: set ảnh đầu tiên vào imageUrl
                     if (!result.imageUrls.isEmpty()) {
                         post.imageUrl = result.imageUrls.get(0);
                         post.imagePath = result.imagePaths.get(0);
-                    }
-                    
+                }
+                
                     post.updatedAt = new com.google.firebase.Timestamp(new java.util.Date());
                     
                     // Lưu post với ảnh
                     communityDAO.save(post, saveTask -> {
                         if (saveTask.isSuccessful()) {
-                            Toast.makeText(this, "Đăng bài thành công!", Toast.LENGTH_SHORT).show();
-                            finish();
+            Toast.makeText(this, "Đăng bài thành công!", Toast.LENGTH_SHORT).show();
+            finish();
                         } else {
                             Log.e(TAG, "Error creating post: " + saveTask.getException().getMessage(), saveTask.getException());
                             Toast.makeText(this, "Lỗi đăng bài: " + saveTask.getException().getMessage(), Toast.LENGTH_LONG).show();
@@ -238,10 +238,10 @@ public class CreatePostActivity extends AppCompatActivity {
                 } else {
                     Log.e(TAG, "Error uploading images: " + uploadTask.getException().getMessage(), uploadTask.getException());
                     Toast.makeText(this, "Lỗi upload ảnh: " + uploadTask.getException().getMessage(), Toast.LENGTH_LONG).show();
-                    setUiEnabled(true);
-                    progress.setVisibility(ProgressBar.GONE);
+            setUiEnabled(true);
+            progress.setVisibility(ProgressBar.GONE);
                 }
-            });
+        });
         }
     }
 

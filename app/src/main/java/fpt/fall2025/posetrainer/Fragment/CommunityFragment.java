@@ -41,16 +41,17 @@ import fpt.fall2025.posetrainer.Dialog.LikeListDialog;
 import fpt.fall2025.posetrainer.Domain.Community;
 import fpt.fall2025.posetrainer.Domain.User;
 import fpt.fall2025.posetrainer.R;
-import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.Service.AuthService;
 import fpt.fall2025.posetrainer.DAL.CommunityDAO;
 import fpt.fall2025.posetrainer.DAL.UserDAO;
+import fpt.fall2025.posetrainer.DAL.NotificationDAO;
 import fpt.fall2025.posetrainer.View.CommunityViewModel;
 
 public class CommunityFragment extends Fragment {
     private AuthService authService;
     private CommunityDAO communityDAO;
     private UserDAO userDAO;
+    private NotificationDAO notificationDAO;
     private ImageView imgAvatar;
     private FirestoreRecyclerAdapter<Community, PostVH> adapter;
     private LinearLayoutManager layoutManager;
@@ -93,6 +94,7 @@ public class CommunityFragment extends Fragment {
         authService = new AuthService();
         communityDAO = new CommunityDAO();
         userDAO = new UserDAO();
+        notificationDAO = new NotificationDAO();
         imgAvatar = v.findViewById(R.id.profile_image);
 
         // ViewModel để lưu vị trí scroll
@@ -289,7 +291,7 @@ public class CommunityFragment extends Fragment {
         lastNotificationCountUpdate = currentTime;
         
         // Gọi FirebaseService để đếm thông báo chưa đọc
-        FirebaseService.getInstance().countUnreadNotifications(uid, count -> {
+        notificationDAO.countUnreadNotifications(uid, count -> {
             updateNotificationBadge(count);
         });
     }
@@ -631,9 +633,11 @@ public class CommunityFragment extends Fragment {
         private String currentPostId = null;
         private long currentLikesCount = 0;
         private long currentCommentsCount = 0;
+        private CommunityDAO communityDAO;
 
         public PostVH(@NonNull View itemView) {
             super(itemView);
+            communityDAO = new CommunityDAO();
             tvAuthor = itemView.findViewById(R.id.tvAuthor);
             tvContent = itemView.findViewById(R.id.tvContent);
             tvCounts = itemView.findViewById(R.id.tvCounts);
@@ -786,19 +790,17 @@ public class CommunityFragment extends Fragment {
                     }
                 }
 
-                CommunityDAO communityDAO = new CommunityDAO();
-                communityDAO.toggleLike(currentPostId, task -> {
-                    if (!task.isSuccessful()) {
-                        isLiked = previousLiked;
-                        currentLikesCount = previousLikesCount;
-                        renderLike(isLiked);
-                        tvCounts.setText("💬 " + currentCommentsCount);
-                        if (tvLikesCount != null) {
-                            tvLikesCount.setText("❤ " + currentLikesCount);
-                        }
-                        // Error toggling like
-                    }
-                });
+                communityDAO.toggleLike(currentPostId)
+                        .addOnFailureListener(e -> {
+                            isLiked = previousLiked;
+                            currentLikesCount = previousLikesCount;
+                            renderLike(isLiked);
+                            tvCounts.setText("💬 " + currentCommentsCount);
+                            if (tvLikesCount != null) {
+                                tvLikesCount.setText("❤ " + currentLikesCount);
+                            }
+                            // Error toggling like
+                        });
             });
 
             // Comment button

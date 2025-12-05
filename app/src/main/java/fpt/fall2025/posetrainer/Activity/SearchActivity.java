@@ -18,7 +18,8 @@ import fpt.fall2025.posetrainer.Adapter.WorkoutTemplateAdapter;
 import fpt.fall2025.posetrainer.Domain.Exercise;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
 import fpt.fall2025.posetrainer.R;
-import fpt.fall2025.posetrainer.Service.FirebaseService;
+import fpt.fall2025.posetrainer.DAL.ExerciseDAO;
+import fpt.fall2025.posetrainer.DAL.WorkoutTemplateDAO;
 import fpt.fall2025.posetrainer.databinding.ActivitySearchBinding;
 
 import java.util.ArrayList;
@@ -37,6 +38,8 @@ public class SearchActivity extends AppCompatActivity {
     // Exercise cache
     private Map<String, Exercise> exerciseMap; // exerciseId -> Exercise
     private ArrayList<Exercise> allExercises;
+    private ExerciseDAO exerciseDAO;
+    private WorkoutTemplateDAO workoutTemplateDAO;
     
     // Filter states
     private String selectedCategory = "Tất cả";
@@ -55,6 +58,8 @@ public class SearchActivity extends AppCompatActivity {
         filteredWorkouts = new ArrayList<>();
         exerciseMap = new HashMap<>();
         allExercises = new ArrayList<>();
+        exerciseDAO = new ExerciseDAO();
+        workoutTemplateDAO = new WorkoutTemplateDAO();
 
         setupRecyclerView();
         setupSearchBar();
@@ -304,45 +309,46 @@ public class SearchActivity extends AppCompatActivity {
      */
     private void loadExercises() {
         Log.d(TAG, "Loading all exercises...");
-        FirebaseService.getInstance().loadAllExercises(
-                this,
-                exercises -> {
-                    if (exercises != null) {
-                        allExercises = exercises;
-                        // Build exercise map for quick lookup
-                        exerciseMap.clear();
-                        for (Exercise exercise : exercises) {
-                            if (exercise.getId() != null) {
-                                exerciseMap.put(exercise.getId(), exercise);
-                            }
-                        }
-                        Log.d(TAG, "Loaded " + exercises.size() + " exercises");
-                        setupDynamicFilterChips(); // Setup dynamic filter chips after exercises are loaded
-                        filterWorkouts(); // Re-filter after exercises are loaded
-                    } else {
-                        allExercises = new ArrayList<>();
-                        exerciseMap.clear();
-                        Log.e(TAG, "Failed to load exercises");
+        exerciseDAO.loadAllExercises(this, exercises -> {
+            if (exercises != null && !exercises.isEmpty()) {
+                allExercises = exercises;
+                // Build exercise map for quick lookup
+                exerciseMap.clear();
+                for (Exercise exercise : exercises) {
+                    if (exercise.getId() != null) {
+                        exerciseMap.put(exercise.getId(), exercise);
                     }
                 }
-        );
+                Log.d(TAG, "Loaded " + exercises.size() + " exercises");
+                setupDynamicFilterChips(); // Setup dynamic filter chips after exercises are loaded
+                filterWorkouts(); // Re-filter after exercises are loaded
+            } else {
+                allExercises = new ArrayList<>();
+                exerciseMap.clear();
+                Log.e(TAG, "Failed to load exercises");
+                Log.e(TAG, "Failed to load exercises");
+            }
+        });
     }
 
     private void loadWorkouts() {
         Log.d(TAG, "Loading workouts...");
-        FirebaseService.getInstance().loadWorkoutTemplates(
-                this,
-                workouts -> {
-                    if (workouts != null) {
-                        allWorkouts = workouts;
-                        Log.d(TAG, "Loaded " + workouts.size() + " workouts");
-                        filterWorkouts();
-                    } else {
-                        allWorkouts = new ArrayList<>();
-                        filterWorkouts();
-                    }
+        workoutTemplateDAO.getPublicTemplates(task -> {
+            if (task.isSuccessful() && task.getResult() != null) {
+                ArrayList<WorkoutTemplate> workouts = new ArrayList<>(task.getResult());
+                if (workouts != null) {
+                    allWorkouts = workouts;
+                    Log.d(TAG, "Loaded " + workouts.size() + " workouts");
+                    filterWorkouts();
+                } else {
+                    allWorkouts = new ArrayList<>();
+                    filterWorkouts();
                 }
-        );
+            } else {
+                allWorkouts = new ArrayList<>();
+                filterWorkouts();
+            }
+        });
     }
 
     /**

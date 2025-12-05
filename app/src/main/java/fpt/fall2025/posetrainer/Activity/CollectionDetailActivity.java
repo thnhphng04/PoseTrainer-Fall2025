@@ -15,8 +15,8 @@ import fpt.fall2025.posetrainer.Adapter.WorkoutTemplateAdapter;
 import fpt.fall2025.posetrainer.Domain.Collection;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
 import fpt.fall2025.posetrainer.R;
-import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.DAL.CollectionDAO;
+import fpt.fall2025.posetrainer.DAL.WorkoutTemplateDAO;
 import fpt.fall2025.posetrainer.databinding.ActivityCollectionDetailBinding;
 
 import java.util.ArrayList;
@@ -30,6 +30,7 @@ public class CollectionDetailActivity extends AppCompatActivity {
     private ArrayList<WorkoutTemplate> workouts;
     private WorkoutTemplateAdapter adapter;
     private CollectionDAO collectionDAO;
+    private WorkoutTemplateDAO workoutTemplateDAO;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,6 +49,7 @@ public class CollectionDetailActivity extends AppCompatActivity {
 
         workouts = new ArrayList<>();
         collectionDAO = new CollectionDAO();
+        workoutTemplateDAO = new WorkoutTemplateDAO();
 
         setupRecyclerView();
         setupBackButton();
@@ -122,31 +124,27 @@ public class CollectionDetailActivity extends AppCompatActivity {
         final int totalCount = collection.getWorkoutTemplateIds().size();
 
         for (String workoutTemplateId : collection.getWorkoutTemplateIds()) {
-            FirebaseService.getInstance().loadWorkoutTemplateById(
-                    workoutTemplateId,
-                    this,
-                    workoutTemplate -> {
-                        if (workoutTemplate != null) {
-                            loadedWorkouts.add(workoutTemplate);
-                        }
-                        loadedCount[0]++;
-                        
-                        if (loadedCount[0] == totalCount) {
-                            // All workouts loaded
-                            workouts = loadedWorkouts;
-                            adapter.updateList(workouts);
-                            Log.d(TAG, "Loaded " + workouts.size() + " workouts");
-                            
-                            if (workouts.isEmpty()) {
-                                binding.llEmptyState.setVisibility(View.VISIBLE);
-                                binding.rvWorkouts.setVisibility(View.GONE);
-                            } else {
-                                binding.llEmptyState.setVisibility(View.GONE);
-                                binding.rvWorkouts.setVisibility(View.VISIBLE);
-                            }
-                        }
+            workoutTemplateDAO.getById(workoutTemplateId, task -> {
+                if (task.isSuccessful() && task.getResult() != null) {
+                    loadedWorkouts.add(task.getResult());
+                }
+                loadedCount[0]++;
+                
+                if (loadedCount[0] == totalCount) {
+                    // All workouts loaded
+                    workouts = loadedWorkouts;
+                    adapter.updateList(workouts);
+                    Log.d(TAG, "Loaded " + workouts.size() + " workouts");
+                    
+                    if (workouts.isEmpty()) {
+                        binding.llEmptyState.setVisibility(View.VISIBLE);
+                        binding.rvWorkouts.setVisibility(View.GONE);
+                    } else {
+                        binding.llEmptyState.setVisibility(View.GONE);
+                        binding.rvWorkouts.setVisibility(View.VISIBLE);
                     }
-            );
+                }
+            });
         }
     }
 

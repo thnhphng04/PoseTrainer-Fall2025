@@ -13,7 +13,13 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
 import java.util.List;
 
+import androidx.appcompat.app.AppCompatActivity;
+import android.widget.Toast;
+
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+
 import fpt.fall2025.posetrainer.Domain.Exercise;
+import fpt.fall2025.posetrainer.Domain.UserWorkout;
 import fpt.fall2025.posetrainer.FirebaseContext.FirebaseFirestoreContext;
 
 /**
@@ -98,6 +104,104 @@ public class ExerciseDAO {
                 }
             });
         }
+    }
+    
+    /**
+     * Load all exercises from Firebase
+     * Tương thích với FirebaseService interface
+     */
+    public void loadAllExercises(@NonNull AppCompatActivity activity, 
+                                @Nullable OnExercisesLoadedListener listener) {
+        Log.d(TAG, "Loading all exercises from Firebase");
+        
+        firestoreContext.getCollection(COLLECTION_NAME)
+            .get()
+            .addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    Log.d(TAG, "Firebase query successful, found " + task.getResult().size() + " exercises");
+                    ArrayList<Exercise> exercises = new ArrayList<>();
+                    for (QueryDocumentSnapshot document : task.getResult()) {
+                        try {
+                            Exercise exercise = document.toObject(Exercise.class);
+                            if (exercise != null) {
+                                exercise.setId(document.getId());
+                                exercises.add(exercise);
+                                Log.d(TAG, "Loaded exercise: " + exercise.getName() + " (ID: " + document.getId() + ")");
+                            }
+                        } catch (Exception e) {
+                            Log.e(TAG, "Error parsing exercise: " + e.getMessage());
+                        }
+                    }
+                    
+                    Log.d(TAG, "Total exercises loaded: " + exercises.size());
+                    activity.runOnUiThread(() -> {
+                        if (listener != null) {
+                            listener.onExercisesLoaded(exercises);
+                        }
+                    });
+                } else {
+                    Log.e(TAG, "Error getting exercises: ", task.getException());
+                    activity.runOnUiThread(() -> {
+                        Toast.makeText(activity, "Error loading exercises", Toast.LENGTH_SHORT).show();
+                        if (listener != null) {
+                            listener.onExercisesLoaded(new ArrayList<>());
+                        }
+                    });
+                }
+            });
+    }
+    
+    /**
+     * Load exercises for a user workout
+     * Tương thích với FirebaseService interface
+     */
+    public void loadExercisesForUserWorkout(@NonNull UserWorkout userWorkout, 
+                                           @NonNull AppCompatActivity activity,
+                                           @Nullable OnExercisesLoadedListener listener) {
+        if (userWorkout == null || userWorkout.getItems() == null) {
+            Log.e(TAG, "UserWorkout or items is null");
+            if (listener != null) {
+                activity.runOnUiThread(() -> listener.onExercisesLoaded(new ArrayList<>()));
+            }
+            return;
+        }
+        
+        Log.d(TAG, "Loading exercises for user workout: " + userWorkout.getTitle());
+        
+        List<String> exerciseIds = new ArrayList<>();
+        for (UserWorkout.UserWorkoutItem item : userWorkout.getItems()) {
+            exerciseIds.add(item.getExerciseId());
+        }
+        
+        if (exerciseIds.isEmpty()) {
+            Log.w(TAG, "No exercise IDs found in user workout");
+            if (listener != null) {
+                activity.runOnUiThread(() -> listener.onExercisesLoaded(new ArrayList<>()));
+            }
+            return;
+        }
+        
+        getByIds(exerciseIds, task -> {
+            if (task.isSuccessful() && task.getResult() != null) {
+                ArrayList<Exercise> exercises = new ArrayList<>(task.getResult());
+                activity.runOnUiThread(() -> {
+                    if (listener != null) {
+                        listener.onExercisesLoaded(exercises);
+                    }
+                });
+            } else {
+                activity.runOnUiThread(() -> {
+                    if (listener != null) {
+                        listener.onExercisesLoaded(new ArrayList<>());
+                    }
+                });
+            }
+        });
+    }
+    
+    // Interface tương thích với FirebaseService
+    public interface OnExercisesLoadedListener {
+        void onExercisesLoaded(ArrayList<Exercise> exercises);
     }
 }
 

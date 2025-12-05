@@ -24,8 +24,8 @@ import fpt.fall2025.posetrainer.Domain.User;
 import fpt.fall2025.posetrainer.Service.AuthService;
 import fpt.fall2025.posetrainer.DAL.UserDAO;
 import fpt.fall2025.posetrainer.DAL.SessionDAO;
+import fpt.fall2025.posetrainer.DAL.StreakDAO;
 import fpt.fall2025.posetrainer.R;
-import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.databinding.FragmentProfileBinding;
 
 public class ProfileFragment extends Fragment {
@@ -33,6 +33,7 @@ public class ProfileFragment extends Fragment {
     private AuthService authService;
     private UserDAO userDAO;
     private SessionDAO sessionDAO;
+    private StreakDAO streakDAO;
     private GoogleSignInClient googleClient;
     
     // Cache để tránh reload không cần thiết
@@ -54,6 +55,7 @@ public class ProfileFragment extends Fragment {
         authService = new AuthService();
         userDAO = new UserDAO();
         sessionDAO = new SessionDAO();
+        streakDAO = new StreakDAO();
 
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken(getString(R.string.default_web_client_id))
@@ -141,28 +143,28 @@ public class ProfileFragment extends Fragment {
             }
             
             User user = task.getResult();
-            if (binding == null || !isAdded()) {
-                return;
-            }
-            
-            setLoading(false);
-            isUserDataLoaded = true;
-            
-            String name = user.getDisplayName() != null ? user.getDisplayName() : "User";
-            String email = user.getEmail() != null ? user.getEmail() : currentUser.getEmail();
+                    if (binding == null || !isAdded()) {
+                        return;
+                    }
+                    
+                    setLoading(false);
+                    isUserDataLoaded = true;
+                    
+                            String name = user.getDisplayName() != null ? user.getDisplayName() : "User";
+                            String email = user.getEmail() != null ? user.getEmail() : currentUser.getEmail();
             String photoUrl = user.getPhotoURL() != null ? user.getPhotoURL() : null;
 
-            // Nếu chưa có photoUrl thì fallback sang FirebaseAuth
-            if (photoUrl == null || photoUrl.isEmpty()) {
+                            // Nếu chưa có photoUrl thì fallback sang FirebaseAuth
+                            if (photoUrl == null || photoUrl.isEmpty()) {
                 String authPhotoUrl = authService.getCurrentUserPhotoUrl();
                 if (authPhotoUrl != null && !authPhotoUrl.isEmpty()) {
                     photoUrl = authPhotoUrl;
-                }
-            }
+                                }
+                            }
 
             if (binding.profileName != null) {
                 binding.profileName.setText(name);
-            }
+                    }
             if (binding.profileEmail != null) {
                 binding.profileEmail.setText(email != null ? email : "");
             }
@@ -177,7 +179,7 @@ public class ProfileFragment extends Fragment {
                     binding.profileImage.setImageResource(R.drawable.profile);
                 }
             }
-        });
+                });
     }
 
     private void bindFromAuth(FirebaseUser user) {
@@ -337,7 +339,7 @@ public class ProfileFragment extends Fragment {
             return;
         }
 
-        FirebaseService.getInstance().loadUserStreak(currentUser.getUid(), streak -> {
+        streakDAO.loadUserStreak(currentUser.getUid(), streak -> {
             if (getActivity() == null || binding == null || !isAdded()) {
                 return;
             }

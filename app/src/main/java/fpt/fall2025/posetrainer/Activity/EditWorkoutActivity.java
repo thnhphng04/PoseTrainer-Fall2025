@@ -26,8 +26,10 @@ import fpt.fall2025.posetrainer.Domain.Exercise;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
 import fpt.fall2025.posetrainer.R;
-import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.Service.AuthService;
+import fpt.fall2025.posetrainer.DAL.WorkoutTemplateDAO;
+import fpt.fall2025.posetrainer.DAL.ExerciseDAO;
+import fpt.fall2025.posetrainer.DAL.UserWorkoutDAO;
 import fpt.fall2025.posetrainer.databinding.ActivityEditWorkoutBinding;
 
 /**
@@ -44,6 +46,9 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
     private String workoutTemplateId;
     private String userId;
     private String selectedLevel = "Người mới bắt đầu"; // Default level (Vietnamese)
+    private WorkoutTemplateDAO workoutTemplateDAO;
+    private ExerciseDAO exerciseDAO;
+    private UserWorkoutDAO userWorkoutDAO;
     
     // Level mapping: Vietnamese display <-> English database value
     private static final String[] LEVELS_VI = {"Người mới bắt đầu", "Trung bình", "Nâng cao"};
@@ -98,6 +103,9 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
      */
     private void getCurrentUserId() {
         authService = new AuthService();
+        workoutTemplateDAO = new WorkoutTemplateDAO();
+        exerciseDAO = new ExerciseDAO();
+        userWorkoutDAO = new UserWorkoutDAO();
         FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser != null) {
             userId = currentUser.getUid();
@@ -176,16 +184,18 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
     private void loadWorkoutTemplate() {
         Log.d(TAG, "Đang tải workout template: " + workoutTemplateId);
         
-        FirebaseService.getInstance().loadWorkoutTemplateById(workoutTemplateId, this, new FirebaseService.OnWorkoutTemplateLoadedListener() {
-            @Override
-            public void onWorkoutTemplateLoaded(WorkoutTemplate template) {
-                originalWorkoutTemplate = template;
-                
-                // Update UI
-                updateWorkoutTemplateUI();
-                
-                // Load exercises for this template
-                loadExercises();
+        workoutTemplateDAO.getById(workoutTemplateId, task -> {
+            if (task.isSuccessful()) {
+                WorkoutTemplate template = task.getResult();
+                if (template != null) {
+                    originalWorkoutTemplate = template;
+                    
+                    // Update UI
+                    updateWorkoutTemplateUI();
+                    
+                    // Load exercises for this template
+                    loadExercises();
+                }
             }
         });
     }
@@ -277,9 +287,9 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
             exerciseIds.add(item.getExerciseId());
         }
 
-        FirebaseService.getInstance().loadExercisesByIds(exerciseIds, this, new FirebaseService.OnExercisesLoadedListener() {
-            @Override
-            public void onExercisesLoaded(ArrayList<Exercise> loadedExercises) {
+        exerciseDAO.getByIds(exerciseIds, task -> {
+            if (task.isSuccessful() && task.getResult() != null) {
+                ArrayList<Exercise> loadedExercises = new ArrayList<>(task.getResult());
                 // Sort exercises by WorkoutTemplate order
                 exercises = sortExercisesByTemplateOrder(loadedExercises);
                 
@@ -439,9 +449,9 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
         Log.d(TAG, "Đã tạo user workout: " + userWorkout.getTitle() + " (ID: " + userWorkout.getId() + ", UID: " + userWorkout.getUid() + ")");
         
         // Save to Firebase
-        FirebaseService.getInstance().saveUserWorkout(userWorkout, new FirebaseService.OnUserWorkoutSavedListener() {
-            @Override
-            public void onUserWorkoutSaved(boolean success) {
+        userWorkoutDAO.save(userWorkout, task -> {
+            if (task.isSuccessful()) {
+                boolean success = true;
                 if (success) {
                     Log.d(TAG, "Đã lưu user workout thành công: " + userWorkout.toString());
                     Toast.makeText(EditWorkoutActivity.this, "Lưu bài tập thành công!", Toast.LENGTH_SHORT).show();

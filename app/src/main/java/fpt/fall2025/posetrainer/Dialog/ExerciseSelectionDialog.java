@@ -27,7 +27,7 @@ import java.util.Set;
 import fpt.fall2025.posetrainer.Adapter.ExerciseSelectionAdapter;
 import fpt.fall2025.posetrainer.Domain.Exercise;
 import fpt.fall2025.posetrainer.R;
-import fpt.fall2025.posetrainer.Service.FirebaseService;
+import fpt.fall2025.posetrainer.DAL.ExerciseDAO;
 
 /**
  * Dialog to display and select exercises
@@ -47,6 +47,7 @@ public class ExerciseSelectionDialog extends DialogFragment {
     private ArrayList<Exercise> allExercises;
     private ArrayList<Exercise> filteredExercises;
     private OnExerciseSelectedListener listener;
+    private ExerciseDAO exerciseDAO;
     private String selectedCategory = null;
     private String currentSearchQuery = "";
     private ArrayList<TextView> categoryChips = new ArrayList<>();
@@ -82,6 +83,8 @@ public class ExerciseSelectionDialog extends DialogFragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        
+        exerciseDAO = new ExerciseDAO();
 
         recyclerViewExercises = view.findViewById(R.id.recycler_view_exercises);
         searchView = view.findViewById(R.id.search_view);
@@ -149,7 +152,7 @@ public class ExerciseSelectionDialog extends DialogFragment {
         recyclerViewExercises.setVisibility(View.GONE);
         layoutEmptyState.setVisibility(View.GONE);
         
-        FirebaseService.getInstance().loadAllExercises(activity, exercises -> {
+        exerciseDAO.loadAllExercises(activity, exercises -> {
             progressBar.setVisibility(View.GONE);
             
             if (exercises != null && !exercises.isEmpty()) {

@@ -21,7 +21,6 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentChange;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
-import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.Service.NotificationHelper;
 import fpt.fall2025.posetrainer.Service.AuthService;
 import fpt.fall2025.posetrainer.Service.MessagingService;
@@ -45,6 +44,7 @@ public class MainActivity extends AppCompatActivity {
     
     private Fragment currentFragment;
     private ListenerRegistration socialNotificationListener; // Listener cho social notifications
+    private NotificationDAO notificationDAO;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,6 +53,9 @@ public class MainActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
 //        getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
+
+        // Khởi tạo NotificationDAO
+        notificationDAO = new NotificationDAO();
 
         // Khởi tạo và cache fragments
         initializeFragments();
@@ -367,21 +370,21 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
             
-            String token = task.getResult();
-            Log.d(TAG, "✓ FCM Token: " + token);
-            
-            // Lưu token lên Firestore
+                    String token = task.getResult();
+                    Log.d(TAG, "✓ FCM Token: " + token);
+                    
+                    // Lưu token lên Firestore
             messagingService.updateFcmToken(uid, token, updateTask -> {
                 if (updateTask.isSuccessful()) {
-                    Log.d(TAG, "✓ Đã lưu FCM token lên Firestore");
-                } else {
-                    Log.e(TAG, "✗ Lỗi lưu FCM token");
-                }
+                                Log.d(TAG, "✓ Đã lưu FCM token lên Firestore");
+                            } else {
+                                Log.e(TAG, "✗ Lỗi lưu FCM token");
+                            }
             });
-            
-            // Sau khi có token, setup notification settings
-            setupNotificationSettings(uid);
-        });
+                    
+                    // Sau khi có token, setup notification settings
+                    setupNotificationSettings(uid);
+            });
     }
     
     /**
@@ -450,8 +453,8 @@ public class MainActivity extends AppCompatActivity {
                 }
                 
                 // Cập nhật settings lên Firestore
-                if (!notificationSettings.isEmpty()) {
-                    FirebaseService.getInstance().updateAiNotificationSettings(
+                if (!notificationSettings.isEmpty() && notificationDAO != null) {
+                    notificationDAO.updateAiNotificationSettings(
                         uid, 
                         notificationSettings, 
                         success -> {
@@ -475,17 +478,19 @@ public class MainActivity extends AppCompatActivity {
                 defaultSettings.put("allowMotivationalMessages", true);
                 defaultSettings.put("maxNotificationsPerDay", 30);
                 
-                FirebaseService.getInstance().updateAiNotificationSettings(
-                    uid, 
-                    defaultSettings, 
-                    success -> {
-                        if (success) {
-                            Log.d(TAG, "✓ Đã tạo notification settings mới");
-                        } else {
-                            Log.e(TAG, "✗ Lỗi tạo notification settings");
+                if (notificationDAO != null) {
+                    notificationDAO.updateAiNotificationSettings(
+                        uid, 
+                        defaultSettings, 
+                        success -> {
+                            if (success) {
+                                Log.d(TAG, "✓ Đã tạo notification settings mới");
+                            } else {
+                                Log.e(TAG, "✗ Lỗi tạo notification settings");
+                            }
                         }
-                    }
-                );
+                    );
+                }
             });
     }
     

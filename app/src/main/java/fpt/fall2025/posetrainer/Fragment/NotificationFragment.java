@@ -33,8 +33,8 @@ import fpt.fall2025.posetrainer.Activity.PostDetailActivity;
 import fpt.fall2025.posetrainer.Adapter.NotificationAdapter;
 import fpt.fall2025.posetrainer.Domain.Notification;
 import fpt.fall2025.posetrainer.R;
-import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.Service.AuthService;
+import fpt.fall2025.posetrainer.DAL.NotificationDAO;
 
 /**
  * Fragment hiển thị danh sách thông báo
@@ -57,7 +57,7 @@ public class NotificationFragment extends Fragment {
     
     // Firebase
     private AuthService authService;
-    private FirebaseService firebaseService;
+    private NotificationDAO notificationDAO;
     
     // Filter type
     private String currentFilter = "all"; // "all", "ai", "workout", "social"
@@ -69,7 +69,7 @@ public class NotificationFragment extends Fragment {
         
         // Khởi tạo Firebase
         authService = new AuthService();
-        firebaseService = FirebaseService.getInstance();
+        notificationDAO = new NotificationDAO();
         
         // Khởi tạo views
         initViews(view);
@@ -178,7 +178,7 @@ public class NotificationFragment extends Fragment {
         showLoading();
         
         // Load từ Firestore
-        firebaseService.loadUserNotifications(uid, notifications -> {
+        notificationDAO.loadUserNotifications(uid, notifications -> {
             if (notifications == null) {
                 notifications = new ArrayList<>();
             }
@@ -337,7 +337,7 @@ public class NotificationFragment extends Fragment {
         
         // Gửi feedback nếu là thông báo AI
         if (notification.isFromAI()) {
-            firebaseService.sendNotificationFeedback(notification.getId(), "accepted", null);
+            notificationDAO.sendNotificationFeedback(notification.getId(), "accepted", null);
         }
         
         // Hiển thị dialog
@@ -424,8 +424,8 @@ public class NotificationFragment extends Fragment {
      * Đánh dấu thông báo là đã đọc
      */
     private void markNotificationAsRead(Notification notification) {
-        firebaseService.markNotificationAsRead(notification.getId(), success -> {
-            if (success) {
+        notificationDAO.markAsRead(notification.getId(), task -> {
+            if (task.isSuccessful()) {
                 notification.setRead(true);
                 adapter.notifyDataSetChanged();
                 updateUnreadCount();
@@ -442,7 +442,7 @@ public class NotificationFragment extends Fragment {
         
         String uid = currentUser.getUid();
         
-        firebaseService.markAllNotificationsAsRead(uid, success -> {
+        notificationDAO.markAllNotificationsAsRead(uid, success -> {
             if (success) {
                 Toast.makeText(getContext(), "Đã đánh dấu tất cả đã đọc", Toast.LENGTH_SHORT).show();
                 // Cập nhật UI
@@ -461,8 +461,8 @@ public class NotificationFragment extends Fragment {
      * Xóa thông báo
      */
     private void deleteNotification(Notification notification) {
-        firebaseService.deleteNotification(notification.getId(), success -> {
-            if (success) {
+        notificationDAO.delete(notification.getId(), task -> {
+            if (task.isSuccessful()) {
                 Toast.makeText(getContext(), "Đã xóa thông báo", Toast.LENGTH_SHORT).show();
                 // Xóa khỏi danh sách
                 allNotifications.remove(notification);

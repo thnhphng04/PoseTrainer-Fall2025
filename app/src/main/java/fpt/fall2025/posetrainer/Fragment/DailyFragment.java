@@ -44,10 +44,11 @@ import fpt.fall2025.posetrainer.Domain.Schedule;
 import fpt.fall2025.posetrainer.Domain.Notification;
 import fpt.fall2025.posetrainer.Helper.PermissionHelper;
 import fpt.fall2025.posetrainer.Service.AlarmScheduler;
-import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.Service.NotificationHelper;
 import fpt.fall2025.posetrainer.Service.AuthService;
 import fpt.fall2025.posetrainer.DAL.SessionDAO;
+import fpt.fall2025.posetrainer.DAL.ScheduleDAO;
+import fpt.fall2025.posetrainer.DAL.NotificationDAO;
 import fpt.fall2025.posetrainer.Helper.AppStateHelper;
 import fpt.fall2025.posetrainer.databinding.FragmentDailyBinding;
 
@@ -62,6 +63,8 @@ public class DailyFragment extends Fragment {
     private Map<String, Boolean> weeklyWorkoutStatus; // Track workout status for each day
     private AuthService authService;
     private SessionDAO sessionDAO;
+    private ScheduleDAO scheduleDAO;
+    private NotificationDAO notificationDAO;
     private SessionAdapter sessionAdapter;
     
     // ActivityResultLauncher for notification permission (Android 13+)
@@ -109,6 +112,8 @@ public class DailyFragment extends Fragment {
         // Initialize Firebase Auth
         authService = new AuthService();
         sessionDAO = new SessionDAO();
+        scheduleDAO = new ScheduleDAO();
+        notificationDAO = new NotificationDAO();
 
         // Initialize data
         sessions = new ArrayList<>();
@@ -540,7 +545,7 @@ public class DailyFragment extends Fragment {
         }
 
         // Luôn load schedule từ Firestore trước để đảm bảo có dữ liệu mới nhất
-        FirebaseService.getInstance().loadUserSchedule(currentUser.getUid(), schedule -> {
+        scheduleDAO.loadUserSchedule(currentUser.getUid(), schedule -> {
             if (schedule != null && schedule.getScheduleItems() != null && !schedule.getScheduleItems().isEmpty()) {
                 // Có schedule cũ, thêm vào schedule đó
                 userSchedule = schedule;
@@ -601,7 +606,7 @@ public class DailyFragment extends Fragment {
             );
         }
 
-        FirebaseService.getInstance().saveSchedule(newSchedule, success -> {
+        scheduleDAO.saveSchedule(newSchedule, success -> {
             if (success) {
                 Toast.makeText(getContext(), "Đã thêm lịch tập thành công", Toast.LENGTH_SHORT).show();
                 // Reload schedule
@@ -633,7 +638,7 @@ public class DailyFragment extends Fragment {
             userSchedule.setNotification(new Schedule.NotificationSettings(true, 15, "default"));
         }
 
-        FirebaseService.getInstance().saveSchedule(userSchedule, success -> {
+        scheduleDAO.saveSchedule(userSchedule, success -> {
             if (success) {
                 Toast.makeText(getContext(), "Đã thêm lịch tập thành công", Toast.LENGTH_SHORT).show();
                 // Reload schedule
@@ -683,7 +688,7 @@ public class DailyFragment extends Fragment {
             );
             
             // Save notification to Firestore
-            FirebaseService.getInstance().saveNotification(notification, success -> {
+            notificationDAO.saveNotification(notification, success -> {
                 // Notification saved
             });
         }
@@ -799,7 +804,7 @@ public class DailyFragment extends Fragment {
             return;
         }
 
-        FirebaseService.getInstance().loadUserSchedule(userId, new FirebaseService.OnScheduleLoadedListener() {
+        scheduleDAO.loadUserSchedule(userId, new ScheduleDAO.OnScheduleLoadedListener() {
             @Override
             public void onScheduleLoaded(Schedule schedule) {
                 if (schedule != null) {
@@ -977,9 +982,9 @@ public class DailyFragment extends Fragment {
         
         cachedUserId = uid;
 
-        FirebaseService.getInstance().loadUserSessions(uid, (androidx.appcompat.app.AppCompatActivity) getActivity(), new FirebaseService.OnSessionsLoadedListener() {
-            @Override
-            public void onSessionsLoaded(ArrayList<Session> loadedSessions) {
+        sessionDAO.getByUserId(uid, task -> {
+            if (task.isSuccessful() && task.getResult() != null) {
+                ArrayList<Session> loadedSessions = new ArrayList<>(task.getResult());
                 sessions = loadedSessions != null ? loadedSessions : new ArrayList<>();
                 isSessionsLoaded = true;
                 
@@ -1317,9 +1322,9 @@ public class DailyFragment extends Fragment {
         String uid = currentUser.getUid();
         
         // Reload sessions từ Firestore
-        FirebaseService.getInstance().loadUserSessions(uid, (androidx.appcompat.app.AppCompatActivity) getActivity(), new FirebaseService.OnSessionsLoadedListener() {
-            @Override
-            public void onSessionsLoaded(ArrayList<Session> loadedSessions) {
+        sessionDAO.getByUserId(uid, task -> {
+            if (task.isSuccessful() && task.getResult() != null) {
+                ArrayList<Session> loadedSessions = new ArrayList<>(task.getResult());
                 // So sánh với sessions hiện tại để xem có session mới không
                 boolean hasNewSessions = false;
                 if (sessions == null || sessions.isEmpty()) {

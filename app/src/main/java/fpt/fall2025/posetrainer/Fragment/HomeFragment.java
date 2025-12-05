@@ -20,10 +20,13 @@ import fpt.fall2025.posetrainer.Domain.Session;
 import fpt.fall2025.posetrainer.Domain.Collection;
 import fpt.fall2025.posetrainer.Domain.User;
 import fpt.fall2025.posetrainer.R;
-import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.Service.AuthService;
 import fpt.fall2025.posetrainer.DAL.SessionDAO;
 import fpt.fall2025.posetrainer.DAL.UserDAO;
+import fpt.fall2025.posetrainer.DAL.NotificationDAO;
+import fpt.fall2025.posetrainer.DAL.StreakDAO;
+import fpt.fall2025.posetrainer.DAL.CollectionDAO;
+import fpt.fall2025.posetrainer.DAL.WorkoutTemplateDAO;
 import fpt.fall2025.posetrainer.Activity.MainActivity;
 import fpt.fall2025.posetrainer.databinding.FragmentHomeBinding;
 import com.google.firebase.auth.FirebaseUser;
@@ -40,6 +43,10 @@ public class HomeFragment extends Fragment {
     private AuthService authService;
     private SessionDAO sessionDAO;
     private UserDAO userDAO;
+    private NotificationDAO notificationDAO;
+    private StreakDAO streakDAO;
+    private CollectionDAO collectionDAO;
+    private WorkoutTemplateDAO workoutTemplateDAO;
     private WorkoutTemplateAdapter adapter; // Reuse adapter thay vì tạo mới mỗi lần
     private WorkoutTemplateAdapter featuredAdapter; // Adapter cho featured workouts
     private WorkoutTemplateAdapter personalizedAdapter; // Adapter cho personalized workouts
@@ -71,6 +78,10 @@ public class HomeFragment extends Fragment {
         authService = new AuthService();
         sessionDAO = new SessionDAO();
         userDAO = new UserDAO();
+        notificationDAO = new NotificationDAO();
+        streakDAO = new StreakDAO();
+        collectionDAO = new CollectionDAO();
+        workoutTemplateDAO = new WorkoutTemplateDAO();
 
         workoutTemplates = new ArrayList<>();
         filteredWorkoutTemplates = new ArrayList<>();
@@ -213,7 +224,7 @@ public class HomeFragment extends Fragment {
         lastNotificationCountUpdate = currentTime;
         
         // Gọi FirebaseService để đếm thông báo chưa đọc
-        FirebaseService.getInstance().countUnreadNotifications(uid, count -> {
+        notificationDAO.countUnreadNotifications(uid, count -> {
             updateNotificationBadge(count);
         });
     }
@@ -227,7 +238,7 @@ public class HomeFragment extends Fragment {
             return;
         }
 
-        FirebaseService.getInstance().loadUserStreak(currentUser.getUid(), streak -> {
+        streakDAO.loadUserStreak(currentUser.getUid(), streak -> {
             if (getActivity() == null || binding == null) {
                 return;
             }
@@ -257,14 +268,14 @@ public class HomeFragment extends Fragment {
             return;
         }
 
-        FirebaseService.getInstance().loadCollections(
-                (androidx.appcompat.app.AppCompatActivity) getActivity(),
-                loadedCollections -> {
-                    if (!isAdded() || binding == null) {
-                        return;
-                    }
+        collectionDAO.getPublicCollections(task -> {
+            if (task.isSuccessful() && task.getResult() != null) {
+                ArrayList<Collection> loadedCollections = new ArrayList<>(task.getResult());
+                if (!isAdded() || binding == null) {
+                    return;
+                }
 
-                    if (loadedCollections != null) {
+                if (loadedCollections != null) {
                         collections = loadedCollections;
 
                         // Update adapter
@@ -274,14 +285,14 @@ public class HomeFragment extends Fragment {
                             collectionAdapter = new CollectionAdapter(collections);
                             binding.rvCollections.setAdapter(collectionAdapter);
                         }
-                    } else {
-                        collections = new ArrayList<>();
-                        if (collectionAdapter != null) {
-                            collectionAdapter.updateList(collections);
-                        }
+                } else {
+                    collections = new ArrayList<>();
+                    if (collectionAdapter != null) {
+                        collectionAdapter.updateList(collections);
                     }
                 }
-        );
+            }
+        });
     }
 
     /**
@@ -428,22 +439,20 @@ public class HomeFragment extends Fragment {
             return;
         }
         
-        FirebaseService.getInstance().loadWorkoutTemplates(
-                (androidx.appcompat.app.AppCompatActivity) getActivity(),
-                templates -> {
-                    if (templates != null) {
-                        workoutTemplates = templates;
-                        isWorkoutTemplatesLoaded = true;
-                    } else {
-                        workoutTemplates = new ArrayList<>();
-                        isWorkoutTemplatesLoaded = true;
-                    }
-                    applyFilters();
-                    // Load recommended và personalized workouts sau khi có data
-                    loadRecommendedWorkouts();
-                    loadPersonalizedWorkouts();
-                }
-        );
+        workoutTemplateDAO.getPublicTemplates(task -> {
+            if (task.isSuccessful() && task.getResult() != null) {
+                ArrayList<WorkoutTemplate> templates = new ArrayList<>(task.getResult());
+                workoutTemplates = templates;
+                isWorkoutTemplatesLoaded = true;
+            } else {
+                workoutTemplates = new ArrayList<>();
+                isWorkoutTemplatesLoaded = true;
+            }
+            applyFilters();
+            // Load recommended và personalized workouts sau khi có data
+            loadRecommendedWorkouts();
+            loadPersonalizedWorkouts();
+        });
     }
 
     /**

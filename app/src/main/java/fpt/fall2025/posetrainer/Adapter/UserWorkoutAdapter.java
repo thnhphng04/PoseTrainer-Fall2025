@@ -14,7 +14,7 @@ import com.bumptech.glide.Glide;
 import fpt.fall2025.posetrainer.Activity.WorkoutActivity;
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
 import fpt.fall2025.posetrainer.R;
-import fpt.fall2025.posetrainer.Service.FirebaseService;
+import fpt.fall2025.posetrainer.DAL.UserWorkoutDAO;
 import fpt.fall2025.posetrainer.databinding.ViewholderWorktoutBinding;
 
 import java.util.ArrayList;
@@ -23,6 +23,7 @@ public class UserWorkoutAdapter extends RecyclerView.Adapter<UserWorkoutAdapter.
     private final ArrayList<UserWorkout> list;
     private Context context;
     private OnUserWorkoutDeletedListener onUserWorkoutDeletedListener;
+    private UserWorkoutDAO userWorkoutDAO;
 
     public interface OnUserWorkoutDeletedListener {
         void onUserWorkoutDeleted();
@@ -30,6 +31,7 @@ public class UserWorkoutAdapter extends RecyclerView.Adapter<UserWorkoutAdapter.
 
     public UserWorkoutAdapter(ArrayList<UserWorkout> list) {
         this.list = list;
+        this.userWorkoutDAO = new UserWorkoutDAO();
     }
 
     public void setOnUserWorkoutDeletedListener(OnUserWorkoutDeletedListener listener) {
@@ -109,9 +111,9 @@ public class UserWorkoutAdapter extends RecyclerView.Adapter<UserWorkoutAdapter.
      * Delete user workout from Firebase
      */
     private void deleteUserWorkout(String userWorkoutId, int position) {
-        FirebaseService.getInstance().deleteUserWorkout(userWorkoutId, new FirebaseService.OnUserWorkoutDeletedListener() {
-            @Override
-            public void onUserWorkoutDeleted(boolean success) {
+        userWorkoutDAO.delete(userWorkoutId, task -> {
+            if (task.isSuccessful()) {
+                boolean success = true;
                 if (success) {
                     // Remove from local list
                     list.remove(position);
@@ -127,6 +129,8 @@ public class UserWorkoutAdapter extends RecyclerView.Adapter<UserWorkoutAdapter.
                 } else {
                     Toast.makeText(context, "Failed to delete workout", Toast.LENGTH_SHORT).show();
                 }
+            } else {
+                Toast.makeText(context, "Failed to delete workout", Toast.LENGTH_SHORT).show();
             }
         });
     }

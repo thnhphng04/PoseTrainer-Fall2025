@@ -29,8 +29,9 @@ import fpt.fall2025.posetrainer.Adapter.SessionResultExerciseAdapter;
 import fpt.fall2025.posetrainer.Domain.Exercise;
 import fpt.fall2025.posetrainer.Domain.Session;
 import fpt.fall2025.posetrainer.R;
-import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.Service.AuthService;
+import fpt.fall2025.posetrainer.DAL.SessionDAO;
+import fpt.fall2025.posetrainer.DAL.ExerciseDAO;
 
 /**
  * Activity hiển thị kết quả của session đã hoàn thành
@@ -57,6 +58,8 @@ public class SessionResultActivity extends AppCompatActivity {
     private SessionResultExerciseAdapter adapter;
 
     private AuthService authService;
+    private SessionDAO sessionDAO;
+    private ExerciseDAO exerciseDAO;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,6 +68,8 @@ public class SessionResultActivity extends AppCompatActivity {
 
         // Initialize Firebase Auth
         authService = new AuthService();
+        sessionDAO = new SessionDAO();
+        exerciseDAO = new ExerciseDAO();
 
         // Get sessionId from intent
         String sessionId = getIntent().getStringExtra("sessionId");
@@ -132,7 +137,7 @@ public class SessionResultActivity extends AppCompatActivity {
         Log.d(TAG, "=== ĐANG TẢI SESSION ===");
         Log.d(TAG, "Đang tải session cho ID: " + sessionId);
 
-        FirebaseService.getInstance().loadSessionById(sessionId, new FirebaseService.OnSessionLoadedListener() {
+        sessionDAO.loadSessionById(sessionId, new SessionDAO.OnSessionLoadedListener() {
             @Override
             public void onSessionLoaded(Session session) {
                 Log.d(TAG, "=== SESSION ĐÃ TẢI ===");
@@ -190,9 +195,9 @@ public class SessionResultActivity extends AppCompatActivity {
         }
 
         // Load exercises bằng IDs
-        FirebaseService.getInstance().loadExercisesByIds(new ArrayList<>(exerciseIds), this, new FirebaseService.OnExercisesLoadedListener() {
-            @Override
-            public void onExercisesLoaded(ArrayList<Exercise> exercisesList) {
+        exerciseDAO.getByIds(new ArrayList<>(exerciseIds), task -> {
+            if (task.isSuccessful() && task.getResult() != null) {
+                ArrayList<Exercise> exercisesList = new ArrayList<>(task.getResult());
                 Log.d(TAG, "=== EXERCISES ĐÃ TẢI ===");
                 Log.d(TAG, "Đã tải được " + (exercisesList != null ? exercisesList.size() : 0) + " exercises");
 

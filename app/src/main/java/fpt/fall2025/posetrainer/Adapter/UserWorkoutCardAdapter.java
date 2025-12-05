@@ -17,7 +17,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import fpt.fall2025.posetrainer.Activity.UserWorkoutDetailActivity;
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
 import fpt.fall2025.posetrainer.R;
-import fpt.fall2025.posetrainer.Service.FirebaseService;
+import fpt.fall2025.posetrainer.DAL.UserWorkoutDAO;
 import fpt.fall2025.posetrainer.databinding.ViewholderUserWorkoutBinding;
 
 import java.util.ArrayList;
@@ -27,6 +27,7 @@ public class UserWorkoutCardAdapter extends RecyclerView.Adapter<UserWorkoutCard
     private Context context;
     private OnUserWorkoutDeletedListener onUserWorkoutDeletedListener;
     private FirebaseFirestore db;
+    private UserWorkoutDAO userWorkoutDAO;
     private String cachedTrainingStartTime;
     private String cachedTrainingEndTime;
     private boolean isProfileLoaded = false;
@@ -38,6 +39,7 @@ public class UserWorkoutCardAdapter extends RecyclerView.Adapter<UserWorkoutCard
     public UserWorkoutCardAdapter(ArrayList<UserWorkout> list) {
         this.list = list;
         this.db = FirebaseFirestore.getInstance();
+        this.userWorkoutDAO = new UserWorkoutDAO();
         // ✅ Load profile ngay khi adapter được tạo để cache sẵn
         loadProfileForCache();
     }
@@ -166,9 +168,9 @@ public class UserWorkoutCardAdapter extends RecyclerView.Adapter<UserWorkoutCard
      * Delete user workout from Firebase
      */
     private void deleteUserWorkout(String userWorkoutId, int position) {
-        FirebaseService.getInstance().deleteUserWorkout(userWorkoutId, new FirebaseService.OnUserWorkoutDeletedListener() {
-            @Override
-            public void onUserWorkoutDeleted(boolean success) {
+        userWorkoutDAO.delete(userWorkoutId, task -> {
+            if (task.isSuccessful()) {
+                boolean success = true;
                 if (success) {
                     // Remove from local list
                     list.remove(position);

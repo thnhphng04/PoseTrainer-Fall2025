@@ -23,9 +23,12 @@ import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
 import fpt.fall2025.posetrainer.Domain.Session;
 import fpt.fall2025.posetrainer.Helper.CalorieCalculator;
 import fpt.fall2025.posetrainer.R;
-import fpt.fall2025.posetrainer.Service.FirebaseService;
 import fpt.fall2025.posetrainer.Service.AuthService;
 import fpt.fall2025.posetrainer.DAL.ProfileDAO;
+import fpt.fall2025.posetrainer.DAL.FavoriteDAO;
+import fpt.fall2025.posetrainer.DAL.SessionDAO;
+import fpt.fall2025.posetrainer.DAL.WorkoutTemplateDAO;
+import fpt.fall2025.posetrainer.DAL.UserWorkoutDAO;
 import fpt.fall2025.posetrainer.databinding.ActivityWorkoutBinding;
 
 import java.util.ArrayList;
@@ -44,6 +47,10 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
     private boolean hasActiveSession = false;
     private AuthService authService;
     private ProfileDAO profileDAO;
+    private FavoriteDAO favoriteDAO;
+    private SessionDAO sessionDAO;
+    private WorkoutTemplateDAO workoutTemplateDAO;
+    private UserWorkoutDAO userWorkoutDAO;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,6 +61,10 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
         // Initialize Firebase
         authService = new AuthService();
         profileDAO = new ProfileDAO();
+        favoriteDAO = new FavoriteDAO();
+        sessionDAO = new SessionDAO();
+        workoutTemplateDAO = new WorkoutTemplateDAO();
+        userWorkoutDAO = new UserWorkoutDAO();
 
 //        getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
 
@@ -146,7 +157,7 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
         String workoutTemplateId = workoutTemplate.getId();
         
         // Kiểm tra xem workout template có trong danh sách yêu thích không
-        FirebaseService.getInstance().checkFavoriteWorkoutTemplate(userId, workoutTemplateId, new FirebaseService.OnFavoriteWorkoutCheckedListener() {
+        favoriteDAO.checkFavoriteWorkoutTemplate(userId, workoutTemplateId, new FavoriteDAO.OnFavoriteWorkoutCheckedListener() {
             @Override
             public void onFavoriteWorkoutChecked(boolean isFavorite) {
                 // Cập nhật icon dựa trên trạng thái favorite
@@ -174,12 +185,12 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
         String workoutTemplateId = workoutTemplate.getId();
         
         // Kiểm tra trạng thái hiện tại
-        FirebaseService.getInstance().checkFavoriteWorkoutTemplate(userId, workoutTemplateId, new FirebaseService.OnFavoriteWorkoutCheckedListener() {
+        favoriteDAO.checkFavoriteWorkoutTemplate(userId, workoutTemplateId, new FavoriteDAO.OnFavoriteWorkoutCheckedListener() {
             @Override
             public void onFavoriteWorkoutChecked(boolean isFavorite) {
                 if (isFavorite) {
                     // Đang là favorite → Xóa khỏi yêu thích
-                    FirebaseService.getInstance().removeFavoriteWorkoutTemplate(userId, workoutTemplateId, new FirebaseService.OnFavoriteWorkoutUpdatedListener() {
+                    favoriteDAO.removeFavoriteWorkoutTemplate(userId, workoutTemplateId, new FavoriteDAO.OnFavoriteWorkoutUpdatedListener() {
                         @Override
                         public void onFavoriteWorkoutUpdated(boolean success) {
                             if (success) {
@@ -193,7 +204,7 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
                     });
                 } else {
                     // Chưa là favorite → Thêm vào yêu thích
-                    FirebaseService.getInstance().addFavoriteWorkoutTemplate(userId, workoutTemplateId, new FirebaseService.OnFavoriteWorkoutUpdatedListener() {
+                    favoriteDAO.addFavoriteWorkoutTemplate(userId, workoutTemplateId, new FavoriteDAO.OnFavoriteWorkoutUpdatedListener() {
                         @Override
                         public void onFavoriteWorkoutUpdated(boolean success) {
                             if (success) {
@@ -299,7 +310,7 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
         // Nếu có currentSession, load lại từ Firebase bằng ID
         if (currentSession != null && currentSession.getId() != null) {
             Log.d(TAG, "Reloading current session by ID: " + currentSession.getId());
-            FirebaseService.getInstance().loadSessionById(currentSession.getId(), new FirebaseService.OnSessionLoadedListener() {
+            sessionDAO.loadSessionById(currentSession.getId(), new SessionDAO.OnSessionLoadedListener() {
                 @Override
                 public void onSessionLoaded(Session syncedSession) {
                     if (syncedSession != null) {
@@ -450,7 +461,7 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
      */
     private void saveSessionToFirebase() {
         if (currentSession != null) {
-            FirebaseService.getInstance().saveSession(currentSession, new FirebaseService.OnSessionSavedListener() {
+            sessionDAO.saveSession(currentSession, new SessionDAO.OnSessionSavedListener() {
                 @Override
                 public void onSessionSaved(boolean success) {
                     if (success) {
@@ -515,7 +526,7 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
         // Nếu có currentSession, load lại từ Firebase bằng ID
         if (currentSession != null && currentSession.getId() != null) {
             Log.d(TAG, "Reloading session after back by ID: " + currentSession.getId());
-            FirebaseService.getInstance().loadSessionById(currentSession.getId(), new FirebaseService.OnSessionLoadedListener() {
+            sessionDAO.loadSessionById(currentSession.getId(), new SessionDAO.OnSessionLoadedListener() {
                 @Override
                 public void onSessionLoaded(Session updatedSession) {
                     if (updatedSession != null) {
@@ -623,9 +634,9 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
     private void tryLoadAsWorkoutTemplate(String workoutId, boolean fromSchedule) {
         Log.d(TAG, "Trying to load as WorkoutTemplate from workouts_templates collection: " + workoutId);
         
-        FirebaseService.getInstance().loadWorkoutTemplateById(workoutId, this, new FirebaseService.OnWorkoutTemplateLoadedListener() {
-            @Override
-            public void onWorkoutTemplateLoaded(WorkoutTemplate template) {
+        workoutTemplateDAO.getById(workoutId, task -> {
+            if (task.isSuccessful()) {
+                WorkoutTemplate template = task.getResult();
                 if (template != null) {
                     // Successfully loaded as WorkoutTemplate
                     Log.d(TAG, "✓ Workout loaded as WorkoutTemplate: " + template.getTitle() + " (ID: " + template.getId() + ")");
@@ -674,9 +685,9 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
     private void tryLoadAsUserWorkout(String workoutId, boolean fromSchedule) {
         Log.d(TAG, "Trying to load as UserWorkout from user_workouts collection: " + workoutId);
         
-        FirebaseService.getInstance().loadUserWorkoutById(workoutId, this, new FirebaseService.OnUserWorkoutLoadedListener() {
-            @Override
-            public void onUserWorkoutLoaded(fpt.fall2025.posetrainer.Domain.UserWorkout userWorkout) {
+        userWorkoutDAO.getById(workoutId, task -> {
+            if (task.isSuccessful()) {
+                fpt.fall2025.posetrainer.Domain.UserWorkout userWorkout = task.getResult();
                 if (userWorkout != null) {
                     // Successfully loaded as UserWorkout - navigate to UserWorkoutDetailActivity
                     Log.d(TAG, "✓ Workout loaded as UserWorkout: " + userWorkout.getTitle() + " (ID: " + userWorkout.getId() + ")");
@@ -737,31 +748,33 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
     private void loadWorkoutTemplateById(String workoutTemplateId) {
         Log.d(TAG, "Loading workout template: " + workoutTemplateId);
         
-        FirebaseService.getInstance().loadWorkoutTemplateById(workoutTemplateId, this, new FirebaseService.OnWorkoutTemplateLoadedListener() {
-            @Override
-            public void onWorkoutTemplateLoaded(WorkoutTemplate template) {
-                workoutTemplate = template;
-                
-                // Update UI
-                updateWorkoutTemplateUI();
-                
-                // Kiểm tra trạng thái favorite
-                checkFavoriteStatus();
-                
-                // Load exercises for this template
-                loadExercises();
-                
-                // Check if coming from MainActivity
-                boolean isFromMainActivity = getIntent().getBooleanExtra("fromMainActivity", true);
-                
-                if (isFromMainActivity) {
-                    // Từ MainActivity: luôn hiển thị "Start Workout"
-                    hasActiveSession = false;
-                    updateButtonUI();
-                    Log.d(TAG, "From MainActivity: Always show 'Start Workout' button");
-                } else {
-                    // Check for existing session to determine button state
-                    loadExistingSession();
+        workoutTemplateDAO.getById(workoutTemplateId, task -> {
+            if (task.isSuccessful()) {
+                WorkoutTemplate template = task.getResult();
+                if (template != null) {
+                    workoutTemplate = template;
+                    
+                    // Update UI
+                    updateWorkoutTemplateUI();
+                    
+                    // Kiểm tra trạng thái favorite
+                    checkFavoriteStatus();
+                    
+                    // Load exercises for this template
+                    loadExercises();
+                    
+                    // Check if coming from MainActivity
+                    boolean isFromMainActivity = getIntent().getBooleanExtra("fromMainActivity", true);
+                    
+                    if (isFromMainActivity) {
+                        // Từ MainActivity: luôn hiển thị "Start Workout"
+                        hasActiveSession = false;
+                        updateButtonUI();
+                        Log.d(TAG, "From MainActivity: Always show 'Start Workout' button");
+                    } else {
+                        // Check for existing session to determine button state
+                        loadExistingSession();
+                    }
                 }
             }
         });
@@ -772,7 +785,7 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
      */
     private void loadExistingSession() {
         // Load session từ Firebase cho workout hiện tại
-        FirebaseService.getInstance().loadActiveSession(workoutTemplate.getId(), new FirebaseService.OnSessionLoadedListener() {
+        sessionDAO.loadActiveSession(workoutTemplate.getId(), new SessionDAO.OnSessionLoadedListener() {
             @Override
             public void onSessionLoaded(Session session) {
                 if (session != null) {
@@ -846,7 +859,7 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
             return;
         }
 
-        FirebaseService.getInstance().loadExercises(workoutTemplate, this, new FirebaseService.OnExercisesLoadedListener() {
+        workoutTemplateDAO.loadExercises(workoutTemplate, this, new WorkoutTemplateDAO.OnExercisesLoadedListener() {
             @Override
             public void onExercisesLoaded(ArrayList<Exercise> loadedExercises) {
                 // Sort exercises by WorkoutTemplate order
@@ -961,7 +974,7 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
      * Get image resource based on workout template focus/type
      */
     private int getImageResourceForWorkout(WorkoutTemplate workoutTemplate) {
-        return FirebaseService.getInstance().getImageResourceForWorkout(workoutTemplate, this);
+        return workoutTemplateDAO.getImageResourceForWorkout(workoutTemplate, this);
     }
     
     @Override
@@ -1068,7 +1081,7 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
         summary.setEstKcal(estimatedKcal);
         
         // Save updated session to Firebase
-        FirebaseService.getInstance().saveSession(currentSession, new FirebaseService.OnSessionSavedListener() {
+        sessionDAO.saveSession(currentSession, new SessionDAO.OnSessionSavedListener() {
             @Override
             public void onSessionSaved(boolean success) {
                 if (success) {

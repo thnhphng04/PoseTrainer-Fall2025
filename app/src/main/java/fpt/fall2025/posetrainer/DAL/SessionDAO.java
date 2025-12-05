@@ -20,6 +20,10 @@ import com.google.firebase.firestore.QuerySnapshot;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
+
 import fpt.fall2025.posetrainer.Domain.Session;
 import fpt.fall2025.posetrainer.FirebaseContext.FirebaseFirestoreContext;
 
@@ -49,7 +53,29 @@ public class SessionDAO {
             return;
         }
         
-        Log.d(TAG, "Đang lưu session: " + session.getId());
+        // Kiểm tra uid trước khi lưu
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            Log.e(TAG, "❌ Không thể lưu session: người dùng chưa đăng nhập");
+            if (listener != null) {
+                listener.onComplete(Tasks.<Void>forException(new IllegalStateException("Người dùng chưa đăng nhập")));
+            }
+            return;
+        }
+        
+        String currentUid = currentUser.getUid();
+        String sessionUid = session.getUid();
+        
+        // Đảm bảo uid được set đúng
+        if (sessionUid == null || sessionUid.isEmpty()) {
+            Log.w(TAG, "⚠️ Session UID trống, đang set thành UID của người dùng hiện tại: " + currentUid);
+            session.setUid(currentUid);
+        } else if (!sessionUid.equals(currentUid)) {
+            Log.w(TAG, "⚠️ Session UID (" + sessionUid + ") không khớp với UID hiện tại (" + currentUid + "), đang cập nhật...");
+            session.setUid(currentUid);
+        }
+        
+        Log.d(TAG, "💾 Đang lưu session vào Firestore: " + session.getId() + ", UID: " + session.getUid());
         firestoreContext.getDocument(COLLECTION_NAME, session.getId())
             .set(session)
             .addOnSuccessListener(aVoid -> {
@@ -64,6 +90,106 @@ public class SessionDAO {
                     listener.onComplete(Tasks.<Void>forException(e));
                 }
             });
+    }
+    
+    /**
+     * Lưu session với callback interface tương thích FirebaseService
+     */
+    public void saveSession(@NonNull Session session, @Nullable OnSessionSavedListener listener) {
+        save(session, task -> {
+            if (listener != null) {
+                listener.onSessionSaved(task.isSuccessful());
+            }
+        });
+    }
+    
+    /**
+     * Load session by ID với callback interface tương thích FirebaseService
+     */
+    public void loadSessionById(@NonNull String sessionId, @Nullable OnSessionLoadedListener listener) {
+        Log.d(TAG, "Loading session by ID: " + sessionId);
+        
+        getById(sessionId, task -> {
+            if (task.isSuccessful()) {
+                Session session = task.getResult();
+                Log.d(TAG, "Loaded session by ID: " + (session != null ? session.getId() : "null"));
+                if (listener != null) {
+                    listener.onSessionLoaded(session);
+                }
+            } else {
+                Log.e(TAG, "Error loading session by ID", task.getException());
+                if (listener != null) {
+                    listener.onError(task.getException() != null ? task.getException().getMessage() : "Unknown error");
+                }
+            }
+        });
+    }
+    
+    /**
+     * Load active session for a specific workout
+     * Tương thích với FirebaseService interface
+     */
+    public void loadActiveSession(@NonNull String workoutId, @Nullable OnSessionLoadedListener listener) {
+        Log.d(TAG, "Loading active session for workout: " + workoutId);
+        
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            Log.e(TAG, "No authenticated user found");
+            if (listener != null) {
+                listener.onError("User not authenticated");
+            }
+            return;
+        }
+        
+        String uid = currentUser.getUid();
+        Log.d(TAG, "Loading active session for user: " + uid);
+        
+        firestoreContext.getCollection(COLLECTION_NAME)
+            .whereEqualTo("workoutId", workoutId)
+            .whereEqualTo("uid", uid)
+            .whereEqualTo("endedAt", 0)
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .limit(1)
+            .get()
+            .addOnSuccessListener(queryDocumentSnapshots -> {
+                if (queryDocumentSnapshots.isEmpty()) {
+                    Log.d(TAG, "No active session found for workout: " + workoutId);
+                    if (listener != null) {
+                        listener.onSessionLoaded(null);
+                    }
+                } else {
+                    DocumentSnapshot document = queryDocumentSnapshots.getDocuments().get(0);
+                    Session session = document.toObject(Session.class);
+                    if (session != null) {
+                        session.setId(document.getId());
+                        Log.d(TAG, "Loaded active session: " + session.getId());
+                        if (listener != null) {
+                            listener.onSessionLoaded(session);
+                        }
+                    } else {
+                        Log.e(TAG, "Failed to parse session object");
+                        if (listener != null) {
+                            listener.onError("Failed to parse session");
+                        }
+                    }
+                }
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "Error loading active session", e);
+                if (listener != null) {
+                    listener.onError(e.getMessage());
+                }
+            });
+    }
+    
+    // Interfaces tương thích với FirebaseService
+    public interface OnSessionSavedListener {
+        void onSessionSaved(boolean success);
+    }
+    
+    public interface OnSessionLoadedListener {
+        void onSessionLoaded(Session session);
+        void onError(String error);
     }
     
     /**
