@@ -7,13 +7,8 @@ import androidx.annotation.Nullable;
 
 import android.net.Uri;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
 import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
-import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.storage.StorageMetadata;
 import com.google.firebase.storage.StorageReference;
@@ -25,8 +20,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
 import fpt.fall2025.posetrainer.Domain.Exercise;
-import fpt.fall2025.posetrainer.FirebaseContext.FirebaseFirestoreContext;
-import fpt.fall2025.posetrainer.FirebaseContext.FirebaseStorageContext;
+import fpt.fall2025.posetrainer.Service.firebaseContext.FirebaseFirestoreContext;
+import fpt.fall2025.posetrainer.Service.firebaseContext.FirebaseStorageContext;
 
 /**
  * WorkoutTemplateDAO - Data Access Object cho WorkoutTemplate

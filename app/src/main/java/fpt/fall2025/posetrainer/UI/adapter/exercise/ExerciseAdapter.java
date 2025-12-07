@@ -1,0 +1,166 @@
+package fpt.fall2025.posetrainer.UI.adapter.exercise;
+
+import android.content.Context;
+import android.content.Intent;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.bumptech.glide.Glide;
+import fpt.fall2025.posetrainer.UI.activity.ExerciseActivity;
+import fpt.fall2025.posetrainer.UI.activity.ExerciseDetailActivity;
+import fpt.fall2025.posetrainer.Domain.Exercise;
+import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
+import fpt.fall2025.posetrainer.Util.GlideImageLoader;
+import fpt.fall2025.posetrainer.R;
+import fpt.fall2025.posetrainer.databinding.ViewholderExerciseBinding;
+
+import java.util.ArrayList;
+
+public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.Viewholder> {
+
+    private final ArrayList<Exercise> list;
+    private final WorkoutTemplate workoutTemplate;
+    private Context context;
+    private OnSetsRepsChangedListener listener;
+    private OnDifficultyChangedListener difficultyListener;
+
+    public ExerciseAdapter(ArrayList<Exercise> list, WorkoutTemplate workoutTemplate) {
+        this.list = list;
+        this.workoutTemplate = workoutTemplate;
+    }
+    
+    public interface OnSetsRepsChangedListener {
+        void onSetsRepsChanged(int exerciseIndex, int sets, int reps);
+    }
+    
+    public interface OnDifficultyChangedListener {
+        void onDifficultyChanged(int exerciseIndex, String difficulty);
+    }
+    
+    public void setOnSetsRepsChangedListener(OnSetsRepsChangedListener listener) {
+        this.listener = listener;
+    }
+    
+    public void setOnDifficultyChangedListener(OnDifficultyChangedListener listener) {
+        this.difficultyListener = listener;
+    }
+
+    @NonNull
+    @Override
+    public ExerciseAdapter.Viewholder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        context = parent.getContext();
+        ViewholderExerciseBinding binding = ViewholderExerciseBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false);
+        return new Viewholder(binding);
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull ExerciseAdapter.Viewholder holder, int position) {
+        Exercise exercise = list.get(position);
+        
+        holder.binding.titleTxt.setText(exercise.getName());
+        
+        // Get configOverride from WorkoutTemplate.WorkoutItem if available
+        WorkoutTemplate.WorkoutItem workoutItem = getWorkoutItemForExercise(exercise.getId());
+        
+        // Initialize sets and reps - prioritize configOverride over default config
+        int initialSets = 3;
+        int initialReps = 12;
+        
+        if (workoutItem != null && workoutItem.getConfigOverride() != null) {
+            // Use configOverride from WorkoutTemplate
+            initialSets = workoutItem.getConfigOverride().getSets();
+            initialReps = workoutItem.getConfigOverride().getReps();
+        } else if (exercise.getDefaultConfig() != null) {
+            // Fallback to default config from Exercise
+            initialSets = exercise.getDefaultConfig().getSets();
+            initialReps = exercise.getDefaultConfig().getReps();
+        }
+        
+        // Set initial values
+        holder.binding.setsTxt.setText(String.valueOf(initialSets));
+        holder.binding.repsTxt.setText(String.valueOf(initialReps));
+        holder.binding.durationTxt.setText(initialSets + " sets x " + initialReps + " reps");
+        
+        // Store current values
+        holder.currentSets = initialSets;
+        holder.currentReps = initialReps;
+
+        // Load thumbnail image - sử dụng GlideImageLoader để hỗ trợ tất cả các loại URL
+        if (exercise.getMedia() != null && exercise.getMedia().getThumbnailUrl() != null) {
+            String thumbnailUrl = exercise.getMedia().getThumbnailUrl();
+            // GlideImageLoader tự động xử lý: Google Drive, Google Image Search, direct URLs, local drawables
+            GlideImageLoader.loadImage(context, thumbnailUrl, holder.binding.pic);
+        } else {
+            // Fallback to default image
+            int resId = context.getResources().getIdentifier("pic_1_1", "drawable", context.getPackageName());
+            Glide.with(context)
+                    .load(resId)
+                    .into(holder.binding.pic);
+        }
+
+        // Sets and reps controls are disabled in WorkoutActivity - buttons are hidden
+        // No click listeners needed as users cannot edit sets/reps in this view
+
+        // Difficulty button
+        holder.binding.difficultyBtn.setOnClickListener(v -> {
+            // Toggle between beginner and pro
+            if (holder.currentDifficulty.equals("beginner")) {
+                holder.currentDifficulty = "pro";
+                holder.binding.difficultyBtn.setText("Pro");
+                holder.binding.difficultyBtn.setBackgroundResource(R.drawable.blue_bg);
+            } else {
+                holder.currentDifficulty = "beginner";
+                holder.binding.difficultyBtn.setText("Beginner");
+                holder.binding.difficultyBtn.setBackgroundResource(R.drawable.orange_bg);
+            }
+            
+            if (difficultyListener != null) {
+                difficultyListener.onDifficultyChanged(position, holder.currentDifficulty);
+            }
+        });
+
+        // Add click listener to open ExerciseDetailDialog
+        holder.binding.getRoot().setOnClickListener(v -> {
+            // Use Dialog instead of Activity
+            ExerciseDetailActivity.show(context, exercise);
+        });
+    }
+
+    @Override
+    public int getItemCount() {
+        return list.size();
+    }
+
+    /**
+     * Get WorkoutItem for a specific exercise ID
+     */
+    private WorkoutTemplate.WorkoutItem getWorkoutItemForExercise(String exerciseId) {
+        if (workoutTemplate == null || workoutTemplate.getItems() == null) {
+            return null;
+        }
+        
+        for (WorkoutTemplate.WorkoutItem item : workoutTemplate.getItems()) {
+            if (exerciseId.equals(item.getExerciseId())) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+
+    public class Viewholder extends RecyclerView.ViewHolder {
+        ViewholderExerciseBinding binding;
+        int currentSets = 3;
+        int currentReps = 12;
+        String currentDifficulty = "beginner";
+
+        public Viewholder(ViewholderExerciseBinding binding) {
+            super(binding.getRoot());
+            this.binding = binding;
+        }
+    }
+}

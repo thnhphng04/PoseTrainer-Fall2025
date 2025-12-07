@@ -11,7 +11,6 @@ import java.util.Map;
 
 import fpt.fall2025.posetrainer.Domain.Achievement;
 import fpt.fall2025.posetrainer.Domain.Session;
-import fpt.fall2025.posetrainer.Domain.Streak;
 import fpt.fall2025.posetrainer.DAL.StreakDAO;
 
 /**

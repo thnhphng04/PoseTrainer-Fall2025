@@ -6,14 +6,13 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.functions.FirebaseFunctionsException;
 import com.google.firebase.functions.HttpsCallableResult;
 
 import java.util.Map;
 
-import fpt.fall2025.posetrainer.FirebaseContext.FirebaseFunctionsContext;
+import fpt.fall2025.posetrainer.Service.firebaseContext.FirebaseFunctionsContext;
 
 /**
  * FunctionsService - Service để gọi Firebase Cloud Functions

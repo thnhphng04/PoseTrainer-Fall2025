@@ -53,7 +53,7 @@
                     android:textStyle="bold"
                     android:layout_marginBottom="12dp"/>
 
-                <fpt.fall2025.posetrainer.View.CalendarHeatmapView
+                <fpt.fall2025.posetrainer.UI.view.CalendarHeatmapView
                     android:id="@+id/calendar_heatmap"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content" />
