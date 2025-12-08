@@ -424,9 +424,9 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
     private void updateDuration() {
         int totalMinutes = calculateDurationFromExercises();
         if (totalMinutes > 0) {
-            binding.durationTxt.setText(totalMinutes + " min");
+            binding.durationTxt.setText(totalMinutes + " phút");
         } else {
-            binding.durationTxt.setText("0 min");
+            binding.durationTxt.setText("0 phút");
         }
     }
     
@@ -858,10 +858,10 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
      */
     private void updateButtonUI() {
         if (hasActiveSession) {
-            binding.button.setText("Resume Workout");
+            binding.button.setText("Tiếp tục tập");
             binding.button.setBackgroundColor(getResources().getColor(android.R.color.holo_orange_light));
         } else {
-            binding.button.setText("Start Workout");
+            binding.button.setText("Bắt đầu tập");
             binding.button.setBackgroundColor(getResources().getColor(android.R.color.holo_blue_light));
         }
     }
@@ -879,11 +879,11 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
         // Set exercise count
         // Null check để tránh NullPointerException
         int exerciseCount = (userWorkout.getItems() != null) ? userWorkout.getItems().size() : 0;
-        binding.excerciseTxt.setText(exerciseCount + " Exercise");
+        binding.excerciseTxt.setText(exerciseCount + " bài tập");
         
         // Calculate estimated duration from UserWorkout items
         int estimatedDuration = calculateDurationFromUserWorkout();
-        binding.durationTxt.setText(estimatedDuration + " min");
+        binding.durationTxt.setText(estimatedDuration + " phút");
 
         // Set image based on source or default
         int resId = getImageResourceForUserWorkout(userWorkout);

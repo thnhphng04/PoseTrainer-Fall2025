@@ -159,7 +159,7 @@
                         android:id="@+id/durationTxt"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="30 min"
+                        android:text="30 phút"
                         android:textColor="#B3FFFFFF"
                         android:textSize="14sp" />
 
@@ -184,7 +184,7 @@
                         android:id="@+id/excercise_txt"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="4 Exercise"
+                        android:text="4 bài tập"
                         android:textColor="#B3FFFFFF"
                         android:textSize="14sp" />
                 </LinearLayout>
@@ -213,7 +213,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Exercises"
+                        android:text="Bài tập"
                         android:textColor="@color/white"
                         android:textSize="20sp"
                         android:textStyle="bold" />
@@ -254,7 +254,7 @@
                 android:id="@+id/button"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
-                android:text="Start Workout"
+                android:text="Bắt đầu tập"
                 android:textAllCaps="false"
                 android:textColor="@color/white"
                 android:textSize="16sp"

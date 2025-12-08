@@ -817,10 +817,10 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
      */
     private void updateButtonUI() {
         if (hasActiveSession) {
-            binding.button.setText("Resume Workout");
+            binding.button.setText("Tiếp tục tập");
             binding.button.setBackgroundColor(getResources().getColor(android.R.color.holo_orange_light));
         } else {
-            binding.button.setText("Start Workout");
+            binding.button.setText("Bắt đầu tập");
             binding.button.setBackgroundColor(getResources().getColor(android.R.color.holo_blue_light));
         }
     }
@@ -838,10 +838,10 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
         // Set exercise count
         // Null check để tránh NullPointerException
         int exerciseCount = (workoutTemplate.getItems() != null) ? workoutTemplate.getItems().size() : 0;
-        binding.excerciseTxt.setText(exerciseCount + " Exercise");
+        binding.excerciseTxt.setText(exerciseCount + " bài tập");
         
         // Set duration
-        binding.durationTxt.setText(workoutTemplate.getEstDurationMin() + " min");
+        binding.durationTxt.setText(workoutTemplate.getEstDurationMin() + " phút");
 
         // Set image based on focus
         int resId = getImageResourceForWorkout(workoutTemplate);

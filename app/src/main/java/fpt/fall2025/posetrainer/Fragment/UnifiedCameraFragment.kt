@@ -367,7 +367,7 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         }
         
         Log.d(TAG, "updateSetInfo: currentSet=$currentSet, setStatus=$setStatus, statusText=$statusText")
-        binding.tvSetInfo.text = "Set $currentSet/$sets $statusText"
+        binding.tvSetInfo.text = "Hiệp $currentSet/$sets $statusText"
     }
     
     /**
@@ -393,7 +393,7 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
     }
     
     private fun updateRepsInfo() {
-        binding.tvRepsInfo.text = "Reps: $currentRep/$reps"
+        binding.tvRepsInfo.text = "Lần: $currentRep/$reps"
     }
     
     private fun updateCorrectCount() {
@@ -427,7 +427,7 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
             
             // If no incomplete set found, all sets are completed
             if (nextSet > sets) {
-                Toast.makeText(requireContext(), "All sets are completed!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Tất cả hiệp đã hoàn thành!", Toast.LENGTH_SHORT).show()
                 return
             }
             
@@ -460,7 +460,7 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         binding.tvIncorrectCount.text = "0"
         
         // Update UI
-        binding.btnStartStop.text = "Reset"
+        binding.btnStartStop.text = "Đặt lại"
         updateRepsInfo()
         
         // Set flags
@@ -480,7 +480,7 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
             // Log.d(TAG, "Forced UI update: tvCorrectCount=${binding.tvCorrectCount.text}, tvIncorrectCount=${binding.tvIncorrectCount.text}")
         }
         
-        Toast.makeText(requireContext(), "Set $currentSet started! Perform $reps reps", Toast.LENGTH_SHORT).show()
+        Toast.makeText(requireContext(), "Hiệp $currentSet đã bắt đầu! Thực hiện $reps lần", Toast.LENGTH_SHORT).show()
     }
     
     private fun stopExercise() {
@@ -503,11 +503,11 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         binding.tvIncorrectCount.text = "0"
         
         // Update UI
-        binding.btnStartStop.text = "Start"
+        binding.btnStartStop.text = "Bắt đầu"
         updateRepsInfo()
         updateCorrectCount()
         
-        Toast.makeText(requireContext(), "Set reset. Click Start to begin again", Toast.LENGTH_SHORT).show()
+        Toast.makeText(requireContext(), "Hiệp đã đặt lại. Nhấn Bắt đầu để bắt đầu lại", Toast.LENGTH_SHORT).show()
     }
     
     private fun completeSet() {
@@ -551,7 +551,7 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         binding.tvIncorrectCount.text = "0"
         
         // Update UI
-        binding.btnStartStop.text = "Start"
+        binding.btnStartStop.text = "Bắt đầu"
         updateRepsInfo() // Make sure reps info is updated
         
         // Move to next set (simple logic)
@@ -565,7 +565,7 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
             binding.tvIncorrectCount.text = "0"
             
             // Show continue message
-            Toast.makeText(requireContext(), "Set ${currentSet - 1} completed! Ready for Set $currentSet", Toast.LENGTH_LONG).show()
+            Toast.makeText(requireContext(), "Hiệp ${currentSet - 1} đã hoàn thành! Sẵn sàng cho Hiệp $currentSet", Toast.LENGTH_LONG).show()
         } else {
             // All sets completed
             completeExercise()
@@ -618,7 +618,7 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
             binding.tvCorrectCount.text = "0"
             binding.tvIncorrectCount.text = "0"
             
-            Toast.makeText(requireContext(), "Ready for Set $currentSet", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "Sẵn sàng cho Hiệp $currentSet", Toast.LENGTH_SHORT).show()
         } else {
             // All sets completed
             completeExercise()
@@ -627,24 +627,24 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
     
     private fun completeExercise() {
         // Log.d(TAG, "Exercise completed")
-        Toast.makeText(requireContext(), "Exercise completed! Total reps: $totalCorrectCount", Toast.LENGTH_LONG).show()
+        Toast.makeText(requireContext(), "Bài tập đã hoàn thành! Tổng số lần: $totalCorrectCount", Toast.LENGTH_LONG).show()
         
         // Notify parent activity that exercise is completed
         (activity as? ExerciseActivity)?.onExerciseCompleted()
     }
     
     private fun showSkipOptions() {
-        val options = arrayOf("Skip Set", "Skip Exercise")
+        val options = arrayOf("Bỏ qua hiệp", "Bỏ qua bài tập")
         
         androidx.appcompat.app.AlertDialog.Builder(requireContext())
-            .setTitle("Skip Options")
+            .setTitle("Tùy chọn bỏ qua")
             .setItems(options) { _, which ->
                 when (which) {
                     0 -> skipCurrentSet()
                     1 -> skipCurrentExercise()
                 }
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton("Hủy", null)
             .show()
     }
     
@@ -672,7 +672,7 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         // Stop current exercise if active
         if (isExerciseActive) {
             isExerciseActive = false
-            binding.btnStartStop.text = "Start"
+            binding.btnStartStop.text = "Bắt đầu"
         }
         
         // Reset current set progress
@@ -696,7 +696,7 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
             currentSet++
             updateSetInfo()
             updateRepsInfo()
-            Toast.makeText(requireContext(), "Set ${currentSet - 1} skipped. Ready for Set $currentSet", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "Hiệp ${currentSet - 1} đã bỏ qua. Sẵn sàng cho Hiệp $currentSet", Toast.LENGTH_SHORT).show()
         } else {
             // All sets completed
             completeExercise()
@@ -709,18 +709,18 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         // Stop current exercise if active
         if (isExerciseActive) {
             isExerciseActive = false
-            binding.btnStartStop.text = "Start"
+            binding.btnStartStop.text = "Bắt đầu"
         }
         
         // Show confirmation
         androidx.appcompat.app.AlertDialog.Builder(requireContext())
-            .setTitle("Skip Exercise")
-            .setMessage("Are you sure you want to skip this exercise?")
-            .setPositiveButton("Yes, Skip") { _, _ ->
+            .setTitle("Bỏ qua bài tập")
+            .setMessage("Bạn có chắc chắn muốn bỏ qua bài tập này không?")
+            .setPositiveButton("Có, bỏ qua") { _, _ ->
                 // Skip exercise and go to rest screen
                 skipExerciseAndGoToRest()
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton("Hủy", null)
             .show()
     }
     
@@ -746,7 +746,7 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
             
             // Show progress message
             if (currentRep < reps) {
-                Toast.makeText(requireContext(), "Rep $currentRep/$reps", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Lần $currentRep/$reps", Toast.LENGTH_SHORT).show()
             }
             
             // Complete set only when reaching target reps

@@ -38,7 +38,7 @@
                 android:id="@+id/titleTxt"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Workout Session"
+                android:text="Buổi tập"
                 android:textColor="@color/white"
                 android:textSize="18sp"
                 android:textStyle="bold" />
@@ -47,7 +47,7 @@
                 android:id="@+id/progressTxt"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="0/3 exercises completed"
+                android:text="0/3 bài tập đã hoàn thành"
                 android:textColor="#99FFFFFF"
                 android:textSize="13sp"
                 android:layout_marginTop="4dp" />
@@ -168,7 +168,7 @@
                                 android:id="@+id/exerciseCountTxt"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="3 Exercises"
+                                android:text="3 bài tập"
                                 android:textColor="@color/orange"
                                 android:textSize="12sp"
                                 android:textStyle="bold"
@@ -195,7 +195,7 @@
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:text="Progress"
+                                android:text="Tiến độ"
                                 android:textColor="#99FFFFFF"
                                 android:textSize="12sp" />
 
@@ -228,7 +228,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
                 android:layout_marginBottom="12dp"
-                android:text="Exercises"
+                android:text="Bài tập"
                 android:textColor="@color/white"
                 android:textSize="18sp"
                 android:textStyle="bold" />
@@ -264,7 +264,7 @@
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:background="@drawable/orange_gradient_bg"
-            android:text="Start Exercise"
+            android:text="Bắt đầu bài tập"
             android:textAllCaps="false"
             android:textColor="@color/white"
             android:textSize="16sp"
@@ -278,7 +278,7 @@
             android:layout_height="56dp"
             android:layout_marginTop="8dp"
             android:background="@drawable/gray_outline_bg"
-            android:text="Finish Workout"
+            android:text="Kết thúc buổi tập"
             android:textAllCaps="false"
             android:textColor="@color/white"
             android:textSize="16sp"

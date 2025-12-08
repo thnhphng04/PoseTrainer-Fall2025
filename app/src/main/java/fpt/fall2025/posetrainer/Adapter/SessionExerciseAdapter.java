@@ -142,11 +142,11 @@ public class SessionExerciseAdapter extends RecyclerView.Adapter<SessionExercise
             ", Skipped: " + skippedSets + ", Incomplete: " + incompleteSets);
 
         // Display completed sets
-        holder.exerciseProgressTxt.setText(completedSets + "/" + totalSets + " sets completed");
+        holder.exerciseProgressTxt.setText(completedSets + "/" + totalSets + " hiệp đã hoàn thành");
         
         // Display skipped sets (only show if there are skipped sets)
         if (skippedSets > 0) {
-            holder.exerciseSkippedTxt.setText(skippedSets + " skipped");
+            holder.exerciseSkippedTxt.setText(skippedSets + " đã bỏ qua");
             holder.exerciseSkippedTxt.setVisibility(View.VISIBLE);
         } else {
             holder.exerciseSkippedTxt.setVisibility(View.GONE);
@@ -227,19 +227,19 @@ public class SessionExerciseAdapter extends RecyclerView.Adapter<SessionExercise
     }
 
     private String getStateDisplayText(String state) {
-        if (state == null) return "Not Started";
+        if (state == null) return "Chưa bắt đầu";
         
         switch (state) {
             case "not_started":
-                return "Not Started";
+                return "Chưa bắt đầu";
             case "doing":
-                return "In Progress";
+                return "Đang tập";
             case "completed":
-                return "Completed";
+                return "Đã hoàn thành";
             case "skipped":
-                return "Skipped";
+                return "Đã bỏ qua";
             default:
-                return "Not Started";
+                return "Chưa bắt đầu";
         }
     }
 

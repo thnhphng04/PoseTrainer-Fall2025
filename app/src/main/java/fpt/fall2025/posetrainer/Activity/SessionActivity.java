@@ -285,12 +285,12 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
         Log.d(TAG, "Progress: " + completedExercises + "/" + totalExercises + " completed");
 
         // Update progress text
-        binding.progressTxt.setText(completedExercises + "/" + totalExercises + " exercises completed");
+        binding.progressTxt.setText(completedExercises + "/" + totalExercises + " bài tập đã hoàn thành");
 
         // Update progress bar
         int progressPercent = totalExercises > 0 ? (completedExercises * 100) / totalExercises : 0;
         binding.progressBar.setProgress(progressPercent);
-        binding.progressPercentTxt.setText(progressPercent + "% Complete");
+        binding.progressPercentTxt.setText(progressPercent + "% Hoàn thành");
 
         // Update start/resume button
         updateStartResumeButton();
@@ -650,9 +650,9 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
 
         String state = currentExercise.getState();
         if ("doing".equals(state)) {
-            binding.startResumeBtn.setText("Resume " + exercise.getName());
+            binding.startResumeBtn.setText("Tiếp tục " + exercise.getName());
         } else {
-            binding.startResumeBtn.setText("Start " + exercise.getName());
+            binding.startResumeBtn.setText("Bắt đầu " + exercise.getName());
         }
 
         Log.d(TAG, "Updated start/resume button for exercise: " + exercise.getName() + " (state: " + state + ")");
