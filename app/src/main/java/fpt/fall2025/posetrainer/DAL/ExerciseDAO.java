@@ -6,7 +6,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
@@ -16,11 +15,9 @@ import java.util.List;
 import androidx.appcompat.app.AppCompatActivity;
 import android.widget.Toast;
 
-import com.google.firebase.firestore.QueryDocumentSnapshot;
-
 import fpt.fall2025.posetrainer.Domain.Exercise;
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
-import fpt.fall2025.posetrainer.FirebaseContext.FirebaseFirestoreContext;
+import fpt.fall2025.posetrainer.Service.firebaseContext.FirebaseFirestoreContext;
 
 /**
  * ExerciseDAO - Data Access Object cho Exercise

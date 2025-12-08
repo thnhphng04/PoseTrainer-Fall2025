@@ -6,11 +6,11 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 
 import fpt.fall2025.posetrainer.DAL.UserDAO;
-import fpt.fall2025.posetrainer.FirebaseContext.FirebaseMessagingContext;
+import fpt.fall2025.posetrainer.Service.firebaseContext.FirebaseMessagingContext;
+import fpt.fall2025.posetrainer.Service.firebaseContext.FirebaseFirestoreContext;
 
 /**
  * MessagingService - Service để quản lý FCM token và topics
@@ -62,7 +62,7 @@ public class MessagingService {
         updates.put("notification", notificationMap);
         
         // Tạm thời dùng Firestore trực tiếp vì UserDAO chưa có update field cụ thể
-        fpt.fall2025.posetrainer.FirebaseContext.FirebaseFirestoreContext.getInstance()
+        FirebaseFirestoreContext.getInstance()
             .getDocument("users", uid)
             .update(updates)
             .addOnSuccessListener(aVoid -> {

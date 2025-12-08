@@ -12,9 +12,9 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
 
-import fpt.fall2025.posetrainer.BroadcastReceiver.WorkoutReminderReceiver;
+import fpt.fall2025.posetrainer.Service.receiver.WorkoutReminderReceiver;
 import fpt.fall2025.posetrainer.Domain.Schedule;
-import fpt.fall2025.posetrainer.Helper.PermissionHelper;
+import fpt.fall2025.posetrainer.Util.PermissionHelper;
 
 /**
  * Service để schedule alarms cho workout reminders

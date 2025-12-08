@@ -16,7 +16,6 @@ import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
-import com.google.firebase.firestore.Transaction;
 import com.google.firebase.storage.StorageMetadata;
 import com.google.firebase.storage.StorageReference;
 
@@ -25,12 +24,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
 import fpt.fall2025.posetrainer.Domain.Community;
-import fpt.fall2025.posetrainer.FirebaseContext.FirebaseFirestoreContext;
-import fpt.fall2025.posetrainer.FirebaseContext.FirebaseStorageContext;
+import fpt.fall2025.posetrainer.Service.firebaseContext.FirebaseFirestoreContext;
+import fpt.fall2025.posetrainer.Service.firebaseContext.FirebaseStorageContext;
 
 /**
  * CommunityDAO - Data Access Object cho Community (Posts)

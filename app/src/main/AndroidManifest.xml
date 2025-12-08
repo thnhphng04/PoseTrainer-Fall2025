@@ -28,82 +28,82 @@
         android:enableOnBackInvokedCallback="true"
         tools:targetApi="31">
         <activity
-            android:name=".Activity.RegisterAccountActivity"
+            android:name=".UI.activity.RegisterAccountActivity"
             android:exported="false" />
         <activity
-            android:name=".Activity.MainActivity"
+            android:name=".UI.activity.MainActivity"
             android:exported="false" />
         <activity
-            android:name=".Activity.WorkoutActivity"
+            android:name=".UI.activity.WorkoutActivity"
             android:exported="false" />
         <activity
-            android:name=".Activity.UserWorkoutDetailActivity"
+            android:name=".UI.activity.UserWorkoutDetailActivity"
             android:exported="false" />
         <activity
-            android:name=".Activity.SessionActivity"
+            android:name=".UI.activity.SessionActivity"
             android:exported="false" />
         <activity
-            android:name=".Activity.ExerciseActivity"
+            android:name=".UI.activity.ExerciseActivity"
             android:exported="false" />
         <activity
-            android:name=".Activity.EditWorkoutActivity"
+            android:name=".UI.activity.EditWorkoutActivity"
             android:exported="false" />
-        <activity android:name=".Activity.ChallengeDetailActivity"
+        <activity android:name=".UI.activity.ChallengeDetailActivity"
             android:exported="false"
             />
         <activity
-            android:name=".Activity.ForgotPasswordActivity"
+            android:name=".UI.activity.ForgotPasswordActivity"
             android:exported="false"/>
 
         <activity
-            android:name=".Activity.EditGoalsActivity"
+            android:name=".UI.activity.EditGoalsActivity"
             android:exported="false"/>
         <activity
-            android:name=".Activity.RegistrationInfoActivity"
+            android:name=".UI.activity.RegistrationInfoActivity"
             android:exported="false"/>
         <activity
-            android:name=".Activity.EditProfileActivity"
+            android:name=".UI.activity.EditProfileActivity"
             android:exported="false"/>
         <activity
-            android:name=".Activity.CreatePostActivity"
+            android:name=".UI.activity.CreatePostActivity"
             android:exported="false"/>
         <activity
-            android:name=".Activity.PostDetailActivity"
+            android:name=".UI.activity.PostDetailActivity"
             android:exported="false"/>
         <activity
-            android:name=".Activity.ImageGalleryActivity"
+            android:name=".UI.activity.ImageGalleryActivity"
             android:exported="false"
             android:theme="@style/Theme.ImageGallery" />
         <activity
-            android:name=".Activity.UserProfileActivity"
+            android:name=".UI.activity.UserProfileActivity"
             android:exported="false"/>
         <activity
-            android:name=".Activity.PlanPreviewActivity"
+            android:name=".UI.activity.PlanPreviewActivity"
             android:theme="@style/HomeWorkoutTheme" />
         <activity
-            android:name=".Activity.WorkoutHistoryActivity"
+            android:name=".UI.activity.WorkoutHistoryActivity"
             android:exported="false" />
         <activity
-            android:name=".Activity.SessionResultActivity"
+            android:name=".UI.activity.SessionResultActivity"
             android:exported="false" />
         <activity
-            android:name=".Activity.CompletedExerciseActivity"
+            android:name=".UI.activity.CompletedExerciseActivity"
             android:exported="false" />
         <activity
-            android:name=".Activity.AchievementsActivity"
+            android:name=".UI.activity.AchievementsActivity"
             android:exported="false" />
         <activity
-            android:name=".Activity.SearchActivity"
+            android:name=".UI.activity.SearchActivity"
             android:exported="false" />
         <activity
-            android:name=".Activity.CollectionDetailActivity"
+            android:name=".UI.activity.CollectionDetailActivity"
             android:exported="false" />
 
         <!--        <activity-->
-<!--            android:name=".Activity.MainActivity"-->
+<!--            android:name=".UI.activity.MainActivity"-->
 <!--            android:exported="false" />-->
         <activity
-            android:name=".Activity.LoginActivity"
+            android:name=".UI.activity.LoginActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -114,13 +114,13 @@
 
         <!-- Workout Reminder BroadcastReceiver -->
         <receiver
-            android:name=".BroadcastReceiver.WorkoutReminderReceiver"
+            android:name=".Service.receiver.WorkoutReminderReceiver"
             android:enabled="true"
             android:exported="false" />
 
         <!-- Boot Receiver to restart alarms after device reboot -->
         <receiver
-            android:name=".BroadcastReceiver.BootReceiver"
+            android:name=".Service.receiver.BootReceiver"
             android:enabled="true"
             android:exported="true"
             android:permission="android.permission.RECEIVE_BOOT_COMPLETED">
@@ -133,7 +133,7 @@
 
         <!-- Firebase Cloud Messaging Service để nhận thông báo push -->
         <service
-            android:name=".Service.MyFirebaseMessagingService"
+            android:name=".Service.PoseTrainerMessagingService"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />

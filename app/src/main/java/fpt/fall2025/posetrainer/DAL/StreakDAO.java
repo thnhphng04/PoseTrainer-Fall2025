@@ -6,7 +6,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 
 import java.text.SimpleDateFormat;
@@ -15,7 +14,7 @@ import java.util.Locale;
 
 import fpt.fall2025.posetrainer.Domain.Streak;
 import fpt.fall2025.posetrainer.Domain.Session;
-import fpt.fall2025.posetrainer.FirebaseContext.FirebaseFirestoreContext;
+import fpt.fall2025.posetrainer.Service.firebaseContext.FirebaseFirestoreContext;
 
 /**
  * StreakDAO - Data Access Object cho Streak

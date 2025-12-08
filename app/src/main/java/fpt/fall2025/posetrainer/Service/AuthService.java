@@ -6,7 +6,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.AuthResult;
@@ -18,7 +17,7 @@ import java.util.List;
 
 import fpt.fall2025.posetrainer.DAL.UserDAO;
 import fpt.fall2025.posetrainer.Domain.User;
-import fpt.fall2025.posetrainer.FirebaseContext.FirebaseAuthContext;
+import fpt.fall2025.posetrainer.Service.firebaseContext.FirebaseAuthContext;
 
 /**
  * AuthService - Service để quản lý authentication operations

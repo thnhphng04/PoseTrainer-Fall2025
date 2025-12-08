@@ -6,7 +6,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
@@ -16,7 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import fpt.fall2025.posetrainer.Domain.Notification;
-import fpt.fall2025.posetrainer.FirebaseContext.FirebaseFirestoreContext;
+import fpt.fall2025.posetrainer.Service.firebaseContext.FirebaseFirestoreContext;
 
 /**
  * NotificationDAO - Data Access Object cho Notification
