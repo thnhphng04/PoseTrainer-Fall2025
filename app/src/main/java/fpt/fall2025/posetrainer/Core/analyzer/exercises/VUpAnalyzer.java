@@ -1,13 +1,13 @@
 package fpt.fall2025.posetrainer.Core.analyzer.exercises;
 
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
 
 /**
  * VUp Analyzer - Phân tích bài tập VUp
@@ -441,14 +441,14 @@ public class VUpAnalyzer implements ExerciseAnalyzerInterface {
         public static VUpThresholds defaultBeginner() {
             return new VUpThresholds(
                     150, 90,
-                    150, 45, 15.0, 50
+                    150, 65, 15.0, 50
             );
         }
 
         public static VUpThresholds defaultPro() {
             return new VUpThresholds(
                     160, 80,
-                    160, 45, 15.0, 50
+                    160, 65, 15.0, 50
             );
         }
 

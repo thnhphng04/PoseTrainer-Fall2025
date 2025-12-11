@@ -1,13 +1,13 @@
 package fpt.fall2025.posetrainer.Core.analyzer.exercises;
 
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
 
 /**
  * ButtBridge Analyzer - Phân tích bài tập
@@ -380,7 +380,7 @@ public class ButtBridgeAnalyzer implements ExerciseAnalyzerInterface {
                     160,
                     80,
                     70,
-                    45, 15.0, 50
+                    65, 15.0, 50
             );
         }
 
@@ -389,7 +389,7 @@ public class ButtBridgeAnalyzer implements ExerciseAnalyzerInterface {
                     165,
                     80,
                     75,
-                    45, 15.0, 50
+                    65, 15.0, 50
             );
         }
 

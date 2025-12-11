@@ -1,13 +1,13 @@
 package fpt.fall2025.posetrainer.Core.analyzer.exercises;
 
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
 
 /**
  * PushUp Analyzer - Phân tích bài tập Push-Up
@@ -471,7 +471,7 @@ public class BurpeeAnalyzer implements ExerciseAnalyzerInterface {
             return new BurpeesThresholds(
                     150, 120, new int[]{125, 150}, new int[]{155, 180},
                     120, 160, 150, 120,
-                    45, 15.0, 50
+                    65, 15.0, 50
             );
         }
 
@@ -479,7 +479,7 @@ public class BurpeeAnalyzer implements ExerciseAnalyzerInterface {
             return new BurpeesThresholds(
                     150, 120, new int[]{125, 150}, new int[]{155, 180},
                     135, 160, 160, 120,
-                    45, 15.0, 50
+                    65, 15.0, 50
             );
         }
 

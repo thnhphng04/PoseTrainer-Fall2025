@@ -1,13 +1,13 @@
 package fpt.fall2025.posetrainer.Core.analyzer.exercises;
 
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
 
 /**
  * GluteKickBack Analyzer - Phân tích bài tập GluteKickBack
@@ -549,7 +549,7 @@ public class GluteKickBackAnalyzer implements ExerciseAnalyzerInterface {
             return new GluteKickBackThresholds(
                     150, 95, new int[]{105, 160},
                     100, new int[]{105, 155}, 160,
-                    45, 15.0, 50
+                    65, 15.0, 50
             );
         }
 
@@ -557,7 +557,7 @@ public class GluteKickBackAnalyzer implements ExerciseAnalyzerInterface {
             return new GluteKickBackThresholds(
                     150, 85, new int[]{100, 165},
                     100, new int[]{105, 160}, 165,
-                    45, 15.0, 50
+                    65, 15.0, 50
             );
         }
 

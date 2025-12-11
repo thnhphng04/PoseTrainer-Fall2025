@@ -1,13 +1,13 @@
 package fpt.fall2025.posetrainer.Core.analyzer.exercises;
 
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
 
 /**
  * RussianTwist Analyzer - Phân tích bài tập Push-Up
@@ -451,14 +451,14 @@ public class RussianTwistAnalyzer implements ExerciseAnalyzerInterface {
         public static RussianTwistThresholds defaultBeginner() {
             return new RussianTwistThresholds(
                     new float[]{0.3f, 0.4f}, new int[]{60, 100}, new int[]{90, 140},
-                    45, 15.0, 50
+                    65, 15.0, 50
             );
         }
 
         public static RussianTwistThresholds defaultPro() {
             return new RussianTwistThresholds(
                     new float[]{0.3f, 0.5f}, new int[]{70, 90}, new int[]{90, 130},
-                    45, 15.0, 50
+                    65, 15.0, 50
             );
         }
 

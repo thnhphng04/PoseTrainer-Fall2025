@@ -1,12 +1,12 @@
 package fpt.fall2025.posetrainer.Core.analyzer.exercises;
 
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
 
 /**
  * SideArmRaise Analyzer - Phân tích bài tập SideArmRaise
@@ -389,14 +389,14 @@ public class SideArmRaiseAnalyzer implements ExerciseAnalyzerInterface {
         public static SideArmRaiseThresholds defaultBeginner() {
             return new SideArmRaiseThresholds(
                     new int[]{15, 90},
-                    150, 45, 15.0, 50
+                    150, 65, 15.0, 50
             );
         }
 
         public static SideArmRaiseThresholds defaultPro() {
             return new SideArmRaiseThresholds(
                     new int[]{15, 90},
-                    160, 45, 15.0, 50
+                    160, 65, 15.0, 50
             );
         }
 

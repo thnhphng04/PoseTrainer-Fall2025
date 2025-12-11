@@ -1,13 +1,13 @@
 package fpt.fall2025.posetrainer.Core.analyzer.exercises;
 
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
 
 /**
  * InchWormPushUp Analyzer - Phân tích bài tập Push-Up
@@ -495,7 +495,7 @@ public class InchWormPushUpAnalyzer implements ExerciseAnalyzerInterface {
                     150, 90, 30, 60,
                     200, 150,
                     120, new int[]{125, 150}, new int[]{155, 180},
-                    45, 15.0, 50
+                    65, 15.0, 50
             );
         }
 
@@ -504,7 +504,7 @@ public class InchWormPushUpAnalyzer implements ExerciseAnalyzerInterface {
                     160, 80, 20, 60,
                     190, 160,
                     120, new int[]{125, 150}, new int[]{155, 180},
-                    45, 15.0, 50
+                    65, 15.0, 50
             );
         }
 

@@ -1,13 +1,13 @@
 package fpt.fall2025.posetrainer.Core.analyzer.exercises;
 
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
 
 /**
  * ArmSwing Analyzer - Phân tích bài tập ArmSwing
@@ -428,14 +428,14 @@ public class ArmSwingAnalyzer implements ExerciseAnalyzerInterface {
         public static ArmSwingThresholds defaultBeginner() {
             return new ArmSwingThresholds(
                     new int[]{30, 150},
-                    150, 45, 15.0, 50
+                    150, 65, 15.0, 50
             );
         }
 
         public static ArmSwingThresholds defaultPro() {
             return new ArmSwingThresholds(
                     new int[]{30, 150},
-                    160, 45, 15.0, 50
+                    160, 65, 15.0, 50
             );
         }
 

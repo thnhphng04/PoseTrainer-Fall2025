@@ -1,13 +1,13 @@
 package fpt.fall2025.posetrainer.Core.analyzer.exercises;
 
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
 
 /**
  * ArmRaise Analyzer - Phân tích bài tập ArmRaise
@@ -428,14 +428,14 @@ public class ArmRaiseAnalyzer implements ExerciseAnalyzerInterface {
         public static ArmRaiseThresholds defaultBeginner() {
             return new ArmRaiseThresholds(
                     new int[]{20, 160},
-                    150, 45, 15.0, 50
+                    150, 65, 15.0, 50
             );
         }
 
         public static ArmRaiseThresholds defaultPro() {
             return new ArmRaiseThresholds(
                     new int[]{20, 160},
-                    160, 45, 15.0, 50
+                    160, 65, 15.0, 50
             );
         }
 

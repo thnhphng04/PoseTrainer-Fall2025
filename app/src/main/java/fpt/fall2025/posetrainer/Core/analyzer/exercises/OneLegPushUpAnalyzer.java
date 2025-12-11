@@ -1,13 +1,13 @@
 package fpt.fall2025.posetrainer.Core.analyzer.exercises;
 
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
 
 /**
  * OneLegPushUp Analyzer - Phân tích bài tập Push-Up
@@ -475,14 +475,14 @@ public class OneLegPushUpAnalyzer implements ExerciseAnalyzerInterface {
         public static OneLegPushUpThresholds defaultBeginner() {
             return new OneLegPushUpThresholds(
                     150, 120, new int[]{125, 150}, new int[]{155, 180},
-                    120, 200, 150, 25, 45, 15.0, 50
+                    120, 200, 150, 25, 65, 15.0, 50
             );
         }
 
         public static OneLegPushUpThresholds defaultPro() {
             return new OneLegPushUpThresholds(
                     150, 120, new int[]{125, 150}, new int[]{155, 180},
-                    130, 190, 160, 30, 45, 15.0, 50
+                    130, 190, 160, 30, 65, 15.0, 50
             );
         }
 

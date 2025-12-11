@@ -1,13 +1,13 @@
 package fpt.fall2025.posetrainer.Core.analyzer.exercises;
 
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
 
 /**
  * Squat Analyzer - Phân tích bài tập Squat
@@ -401,13 +401,13 @@ public class LungeAnalyzer implements ExerciseAnalyzerInterface {
         
         public static LungeThresholds defaultBeginner() {
             return new LungeThresholds(
-                160, new int[]{110, 150}, new int[]{90, 115}, 10, 50, 45, 45, 15.0, 50
+                160, new int[]{110, 150}, new int[]{90, 115}, 10, 50, 45, 65, 15.0, 50
             );
         }
         
         public static LungeThresholds defaultPro() {
             return new LungeThresholds(
-                160, new int[]{95, 150}, new int[]{90, 105}, 15, 50, 30, 45, 15.0, 50
+                160, new int[]{95, 150}, new int[]{90, 105}, 15, 50, 30, 65, 15.0, 50
             );
         }
         

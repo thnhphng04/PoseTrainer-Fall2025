@@ -1,13 +1,13 @@
 package fpt.fall2025.posetrainer.Core.analyzer.exercises;
 
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
 
 /**
  * Mountain Climber Analyzer - Phân tích bài tập Mountain Climber
@@ -487,14 +487,14 @@ public class PlankLegUpAnalyzer implements ExerciseAnalyzerInterface {
         public static PlankLegUpThresholds defaultBeginner() {
             return new PlankLegUpThresholds(
                     95, 150, 165, 25,
-                    45, 15.0, 50
+                    65, 15.0, 50
             );
         }
 
         public static PlankLegUpThresholds defaultPro() {
             return new PlankLegUpThresholds(
                     85, 150, 170, 30,
-                    45, 15.0, 50
+                    65, 15.0, 50
             );
         }
 

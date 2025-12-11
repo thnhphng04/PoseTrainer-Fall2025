@@ -1,13 +1,13 @@
 package fpt.fall2025.posetrainer.Core.analyzer.exercises;
 
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
 
 /**
  * LegRaise Analyzer - Phân tích bài tập Leg Raise
@@ -385,7 +385,7 @@ public class LegRaiseAnalyzer implements ExerciseAnalyzerInterface {
             return new LegRaiseThresholds(
                     new int[]{95, 150},
                     new int[]{140},
-                    45, 15.0, 50
+                    65, 15.0, 50
             );
         }
 
@@ -393,7 +393,7 @@ public class LegRaiseAnalyzer implements ExerciseAnalyzerInterface {
             return new LegRaiseThresholds(
                     new int[]{90, 160},
                     new int[]{145},
-                    45, 15.0, 50
+                    65, 15.0, 50
             );
         }
 

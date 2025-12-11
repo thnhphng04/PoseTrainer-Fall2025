@@ -1,12 +1,12 @@
 package fpt.fall2025.posetrainer.Core.analyzer.exercises;
 
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
 
 /**
  * SideLyingLegLift Analyzer - Phân tích bài tập SideLyingLegLift
@@ -340,14 +340,14 @@ public class SideLyingLegLiftAnalyzer implements ExerciseAnalyzerInterface {
         public static SideLyingLegLiftThresholds defaultBeginner() {
             return new SideLyingLegLiftThresholds(
                 new int[]{10, 30},
-                45, 15.0, 50
+                65, 15.0, 50
             );
         }
         
         public static SideLyingLegLiftThresholds defaultPro() {
             return new SideLyingLegLiftThresholds(
                 new int[]{10, 35},
-                45, 15.0, 50
+                65, 15.0, 50
             );
         }
         

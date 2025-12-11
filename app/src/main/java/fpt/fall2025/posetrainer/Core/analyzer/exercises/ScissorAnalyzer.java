@@ -1,13 +1,13 @@
 package fpt.fall2025.posetrainer.Core.analyzer.exercises;
 
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
 
 /**
  * Scissor Analyzer - Phân tích bài tập Leg Raise
@@ -396,7 +396,7 @@ public class ScissorAnalyzer implements ExerciseAnalyzerInterface {
             return new ScissorThresholds(
                     20,
                     150,
-                    45, 15.0, 50
+                    65, 15.0, 50
             );
         }
 
@@ -404,7 +404,7 @@ public class ScissorAnalyzer implements ExerciseAnalyzerInterface {
             return new ScissorThresholds(
                     20,
                     155,
-                    45, 15.0, 50
+                    65, 15.0, 50
             );
         }
 

@@ -1,13 +1,13 @@
 package fpt.fall2025.posetrainer.Core.analyzer.exercises;
 
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
 
 /**
  * SitUp Analyzer - Phân tích bài tập Sit-Up
@@ -396,7 +396,7 @@ public class SitUpAnalyzer implements ExerciseAnalyzerInterface {
             return new SitUpThresholds(
                     new int[]{70, 140},
                     new int[]{70, 110},
-                    45, 15.0, 50
+                    65, 15.0, 50
             );
         }
 
@@ -404,7 +404,7 @@ public class SitUpAnalyzer implements ExerciseAnalyzerInterface {
             return new SitUpThresholds(
                     new int[]{60, 150},
                     new int[]{75, 105},
-                    45, 15.0, 50
+                    65, 15.0, 50
             );
         }
 

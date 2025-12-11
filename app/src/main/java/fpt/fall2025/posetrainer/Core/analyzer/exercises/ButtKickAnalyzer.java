@@ -1,13 +1,13 @@
 package fpt.fall2025.posetrainer.Core.analyzer.exercises;
 
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
 
 /**
  * Mountain Climber Analyzer - Phân tích bài tập Mountain Climber
@@ -538,14 +538,14 @@ public class ButtKickAnalyzer implements ExerciseAnalyzerInterface {
         public static ButtKickThresholds defaultBeginner() {
             return new ButtKickThresholds(
                     150 , 160, new int[]{155, 90}, 90,
-                    45, 15.0, 50
+                    65, 15.0, 50
             );
         }
 
         public static ButtKickThresholds defaultPro() {
             return new ButtKickThresholds(
                     160 , 160, new int[]{155, 85}, 80,
-                    45, 15.0, 50
+                    65, 15.0, 50
             );
         }
 

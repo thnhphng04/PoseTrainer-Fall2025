@@ -1,13 +1,13 @@
 package fpt.fall2025.posetrainer.Core.analyzer.exercises;
 
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
 
 /**
  * PilatesLegPull Analyzer - Phân tích bài tập PilatesLegPull
@@ -484,7 +484,7 @@ public class PilatesLegPullAnalyzer implements ExerciseAnalyzerInterface {
             return new PilatesLegPullThresholds(
                     150,155,
                     new int[]{100, 160},
-                    45, 15.0, 50
+                    65, 15.0, 50
             );
         }
 
@@ -492,7 +492,7 @@ public class PilatesLegPullAnalyzer implements ExerciseAnalyzerInterface {
             return new PilatesLegPullThresholds(
                     150, 160,
                     new int[]{95, 160},
-                    45, 15.0, 50
+                    65, 15.0, 50
             );
         }
 

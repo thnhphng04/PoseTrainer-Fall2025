@@ -1,13 +1,13 @@
 package fpt.fall2025.posetrainer.Core.analyzer.exercises;
 
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
 
 /**
  * HipHinge Analyzer - Phân tích bài tập HipHinge
@@ -438,14 +438,14 @@ public class HipHingeAnalyzer implements ExerciseAnalyzerInterface {
         public static HipHingeThresholds defaultBeginner() {
             return new HipHingeThresholds(
                     150, 90,
-                    150, 45, 15.0, 50
+                    150, 65, 15.0, 50
             );
         }
 
         public static HipHingeThresholds defaultPro() {
             return new HipHingeThresholds(
                     160, 80,
-                    160, 45, 15.0, 50
+                    160, 65, 15.0, 50
             );
         }
 

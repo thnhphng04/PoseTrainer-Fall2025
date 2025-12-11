@@ -1,13 +1,13 @@
 package fpt.fall2025.posetrainer.Core.analyzer.exercises;
 
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
 
 /**
  * Squat Analyzer - Phân tích bài tập Squat
@@ -401,14 +401,14 @@ public class SquatAnalyzer implements ExerciseAnalyzerInterface {
         public static SquatThresholds defaultBeginner() {
             return new SquatThresholds(
                 new int[]{0, 32}, new int[]{35, 65}, new int[]{70, 95},
-                10, 50, 45, 95, 50, 45, 15.0, 50
+                10, 50, 45, 95, 50, 65, 15.0, 50
             );
         }
         
         public static SquatThresholds defaultPro() {
             return new SquatThresholds(
                 new int[]{0, 32}, new int[]{35, 65}, new int[]{80, 95},
-                15, 50, 30, 95, 50, 45, 15.0, 50
+                15, 50, 30, 95, 50, 65, 15.0, 50
             );
         }
         

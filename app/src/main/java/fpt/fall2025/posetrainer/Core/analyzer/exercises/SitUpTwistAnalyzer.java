@@ -1,13 +1,13 @@
 package fpt.fall2025.posetrainer.Core.analyzer.exercises;
 
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
 
 /**
  * SitUpTwist Analyzer - Phân tích bài tập Sit-Up Twist
@@ -433,7 +433,7 @@ public class SitUpTwistAnalyzer implements ExerciseAnalyzerInterface {
                     new int[]{60, 140},
                     new int[]{50, 110},
                     new float[]{0.3f, 0.45f},
-                    45, 15.0, 50
+                    65, 15.0, 50
             );
         }
 
@@ -442,7 +442,7 @@ public class SitUpTwistAnalyzer implements ExerciseAnalyzerInterface {
                     new int[]{50, 150},
                     new int[]{55, 105},
                     new float[]{0.3f, 0.5f},
-                    45, 15.0, 50
+                    65, 15.0, 50
             );
         }
 

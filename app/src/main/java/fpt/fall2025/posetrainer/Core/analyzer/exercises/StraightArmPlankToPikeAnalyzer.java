@@ -1,13 +1,13 @@
 package fpt.fall2025.posetrainer.Core.analyzer.exercises;
 
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
 
 /**
  * StraightArmPlankToPike Analyzer - Phân tích bài tập StraightArmPlankToPike
@@ -436,14 +436,14 @@ public class StraightArmPlankToPikeAnalyzer implements ExerciseAnalyzerInterface
         public static StraightArmPlankToPikeThresholds defaultBeginner() {
             return new StraightArmPlankToPikeThresholds(
                     new int[]{110, 155}, new int[]{90, 150},
-                    150, 45, 15.0, 50
+                    150, 65, 15.0, 50
             );
         }
 
         public static StraightArmPlankToPikeThresholds defaultPro() {
             return new StraightArmPlankToPikeThresholds(
                     new int[]{100, 155}, new int[]{90, 150},
-                    155, 45, 15.0, 50
+                    155, 65, 15.0, 50
             );
         }
 

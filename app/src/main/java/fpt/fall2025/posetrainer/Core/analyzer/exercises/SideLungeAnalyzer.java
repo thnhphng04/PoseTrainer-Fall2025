@@ -1,13 +1,13 @@
 package fpt.fall2025.posetrainer.Core.analyzer.exercises;
 
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
-import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface;
+import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback;
 
 /**
  * Jumping Jack Analyzer - Phân tích bài tập Jumping Jack
@@ -338,7 +338,7 @@ public class SideLungeAnalyzer implements ExerciseAnalyzerInterface {
             return new SideLungeThresholds(
                 110,
                 new int[]{0, 10}, new int[]{20, 50},
-                45, 15.0, 50
+                65, 15.0, 50
             );
         }
         
@@ -346,7 +346,7 @@ public class SideLungeAnalyzer implements ExerciseAnalyzerInterface {
             return new SideLungeThresholds(
                 100,
                 new int[]{0, 10}, new int[]{25, 50},
-                45, 15.0, 50
+                65, 15.0, 50
             );
         }
         
