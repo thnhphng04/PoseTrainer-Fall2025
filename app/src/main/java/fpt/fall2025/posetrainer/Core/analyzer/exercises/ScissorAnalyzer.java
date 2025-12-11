@@ -88,7 +88,7 @@ public class ScissorAnalyzer implements ExerciseAnalyzerInterface {
         int leftCheck = calculateAngleWithUpVertical(leftHip, leftKnee);
         int rightCheck = calculateAngleWithUpVertical(rightHip, rightKnee);
 
-        Boolean check = leftCheck > 30 && rightCheck > 30;
+        Boolean check = leftCheck > 45 && rightCheck > 45;
 
         cameraWarning = positionCheck < 60 || check;
 
@@ -118,17 +118,17 @@ public class ScissorAnalyzer implements ExerciseAnalyzerInterface {
             // Chọn bên để phân tích dựa trên visibility score
             // Tính average visibility cho mỗi bên
             float leftAvgVis = (
-                leftShoulder.getOrDefault("visibility", 0f) +
-                leftHip.getOrDefault("visibility", 0f) +
-                leftKnee.getOrDefault("visibility", 0f) +
-                leftAnkle.getOrDefault("visibility", 0f)
+                    leftShoulder.getOrDefault("visibility", 0f) +
+                            leftHip.getOrDefault("visibility", 0f) +
+                            leftKnee.getOrDefault("visibility", 0f) +
+                            leftAnkle.getOrDefault("visibility", 0f)
             ) / 4.0f;
-            
+
             float rightAvgVis = (
-                rightShoulder.getOrDefault("visibility", 0f) +
-                rightHip.getOrDefault("visibility", 0f) +
-                rightKnee.getOrDefault("visibility", 0f) +
-                rightAnkle.getOrDefault("visibility", 0f)
+                    rightShoulder.getOrDefault("visibility", 0f) +
+                            rightHip.getOrDefault("visibility", 0f) +
+                            rightKnee.getOrDefault("visibility", 0f) +
+                            rightAnkle.getOrDefault("visibility", 0f)
             ) / 4.0f;
 
             List<Map<String, Float>> points;
@@ -136,7 +136,7 @@ public class ScissorAnalyzer implements ExerciseAnalyzerInterface {
                 // Bên trái nhìn rõ hơn
                 points = Arrays.asList(
                         leftEar, leftShoulder, leftHip, leftKnee, leftAnkle, rightKnee, rightAnkle
-                        );
+                );
             } else {
                 // Bên phải nhìn rõ hơn
                 points = Arrays.asList(
@@ -158,7 +158,7 @@ public class ScissorAnalyzer implements ExerciseAnalyzerInterface {
             int nearKneeAngle = calculateAngle(hip, nearKnee, nearAnkle);
             int farKneeAngle = calculateAngle(hip, farKnee, farAnkle);
 
-            int thighSeparationAngle = calculateAngle(nearKnee, hip, farKnee);
+            int thighSeparationAngle = calculateAngle(nearAnkle, hip, farAnkle);
 
             currState = getState(thighSeparationAngle);
             updateStateSequence(currState);
@@ -166,7 +166,7 @@ public class ScissorAnalyzer implements ExerciseAnalyzerInterface {
             // Đếm Leg Raise đúng/sai
             String message = "";
             if ("s1".equals(currState)) {
-                //feedback khi đang đứng
+                //feedback
                 if (nearKneeAngle < thresholds.getKneeMin() || farKneeAngle < thresholds.getKneeMin()) {
                     displayText[0] = true;
                     incorrectPosture = true;
@@ -181,6 +181,7 @@ public class ScissorAnalyzer implements ExerciseAnalyzerInterface {
                         displayText[0] = true;
                         incorrectPosture = true;
                         feedbackList.add("Đầu gối bị gập");
+                        incorrectCount++;
                     }
                     // Nếu không có lỗi thì đếm là đúng
                     if (!incorrectPosture) {
@@ -394,7 +395,7 @@ public class ScissorAnalyzer implements ExerciseAnalyzerInterface {
 
         public static ScissorThresholds defaultBeginner() {
             return new ScissorThresholds(
-                    20,
+                    15,
                     150,
                     65, 15.0, 50
             );

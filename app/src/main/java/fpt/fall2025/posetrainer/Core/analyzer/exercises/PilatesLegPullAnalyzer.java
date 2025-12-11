@@ -93,7 +93,7 @@ public class PilatesLegPullAnalyzer implements ExerciseAnalyzerInterface {
         // Tính offset angle để phát hiện lệch camera
         offsetAngle = calculateOffsetAngle(leftShoulder, nose, rightShoulder);
         int positionCheck = calculateAngleWithUpVertical(leftHip, leftShoulder);
-        cameraWarning = offsetAngle > thresholds.getOffsetThresh() || positionCheck < 60;
+        cameraWarning = offsetAngle > thresholds.getOffsetThresh() || positionCheck < 30;
         feedbackList.clear();
 
         double now = System.nanoTime() / 1e9;
@@ -120,17 +120,17 @@ public class PilatesLegPullAnalyzer implements ExerciseAnalyzerInterface {
             // Chọn bên để phân tích dựa trên visibility score
             // Tính average visibility cho mỗi bên
             float leftAvgVis = (
-                leftShoulder.getOrDefault("visibility", 0f) +
-                leftElbow.getOrDefault("visibility", 0f) +
-                leftHip.getOrDefault("visibility", 0f) +
-                leftKnee.getOrDefault("visibility", 0f)
+                    leftShoulder.getOrDefault("visibility", 0f) +
+                            leftElbow.getOrDefault("visibility", 0f) +
+                            leftHip.getOrDefault("visibility", 0f) +
+                            leftKnee.getOrDefault("visibility", 0f)
             ) / 4.0f;
-            
+
             float rightAvgVis = (
-                rightShoulder.getOrDefault("visibility", 0f) +
-                rightElbow.getOrDefault("visibility", 0f) +
-                rightHip.getOrDefault("visibility", 0f) +
-                rightKnee.getOrDefault("visibility", 0f)
+                    rightShoulder.getOrDefault("visibility", 0f) +
+                            rightElbow.getOrDefault("visibility", 0f) +
+                            rightHip.getOrDefault("visibility", 0f) +
+                            rightKnee.getOrDefault("visibility", 0f)
             ) / 4.0f;
 
             List<Map<String, Float>> points;
@@ -204,7 +204,7 @@ public class PilatesLegPullAnalyzer implements ExerciseAnalyzerInterface {
             // Kiểm tra chân far
             if ("s3".equals(farCurrState)) {
                 // Kiểm tra nếu đã hoàn thành chu kỳ đầy đủ (có s1 và s2)
-                boolean farComplete = farStateSequence.contains("s2") && nearStateSequence.contains("s1");
+                boolean farComplete = farStateSequence.contains("s2") && farStateSequence.contains("s1");
                 if (farComplete && nearKneeAngle < thresholds.getKneeMin()) {
                     displayText[0] = true;
                     farIncorrectPosture = true;
@@ -223,9 +223,9 @@ public class PilatesLegPullAnalyzer implements ExerciseAnalyzerInterface {
 
 
             // Inactivity logic - kiểm tra nếu cả hai chân đều không thay đổi
-            boolean bothStatesUnchanged = (nearCurrState != null && nearCurrState.equals(prevState)) && 
-                                        (farCurrState != null && farCurrState.equals(prevState));
-            
+            boolean bothStatesUnchanged = (nearCurrState != null && nearCurrState.equals(prevState)) &&
+                    (farCurrState != null && farCurrState.equals(prevState));
+
             if (bothStatesUnchanged) {
                 inactiveTime += now - startInactiveTime;
                 startInactiveTime = now;
@@ -254,7 +254,7 @@ public class PilatesLegPullAnalyzer implements ExerciseAnalyzerInterface {
             );
             // Tạo state string kết hợp cho cả hai chân
             String combinedState = "Near:" + (nearCurrState != null ? nearCurrState : "null") +
-                                 " Far:" + (farCurrState != null ? farCurrState : "null");
+                    " Far:" + (farCurrState != null ? farCurrState : "null");
             System.out.println(combinedState);
             feedback.setCurrentState(combinedState);
 
@@ -419,8 +419,8 @@ public class PilatesLegPullAnalyzer implements ExerciseAnalyzerInterface {
 
     private String getState(int elbowAngle, int hipAngle, int backCheck) {
         if (elbowAngle > thresholds.getElbowNormal() &&
-            hipAngle > thresholds.getHipThresholds()[1] &&
-            backCheck < 75) {
+                hipAngle > thresholds.getHipThresholds()[1] &&
+                backCheck < 75) {
             return "s1";
         } else if ((hipAngle > thresholds.getHipThresholds()[0] && hipAngle < thresholds.getHipThresholds()[1])) {
             return "s2";
@@ -432,7 +432,10 @@ public class PilatesLegPullAnalyzer implements ExerciseAnalyzerInterface {
 
     private void updateNearStateSequence(String state) {
         if (state == null) return;
-        if ("s2".equals(state)) {
+        if ("s1".equals(state) && nearStateSequence.isEmpty()) {
+            nearStateSequence.add(state);
+        }
+        else if ("s2".equals(state) && nearStateSequence.contains("s1")) {
             if ((!nearStateSequence.contains("s3") && nearStateSequence.stream().filter(s -> s.equals("s2")).count() == 0) ||
                     (nearStateSequence.contains("s3") && nearStateSequence.stream().filter(s -> s.equals("s2")).count() == 1)) {
                 nearStateSequence.add(state);
@@ -446,7 +449,10 @@ public class PilatesLegPullAnalyzer implements ExerciseAnalyzerInterface {
 
     private void updateFarStateSequence(String state) {
         if (state == null) return;
-        if ("s2".equals(state)) {
+        if ("s1".equals(state) && farStateSequence.isEmpty()) {
+            farStateSequence.add(state);
+        }
+        else if ("s2".equals(state) && nearStateSequence.contains("s1")) {
             if ((!farStateSequence.contains("s3") && farStateSequence.stream().filter(s -> s.equals("s2")).count() == 0) ||
                     (farStateSequence.contains("s3") && farStateSequence.stream().filter(s -> s.equals("s2")).count() == 1)) {
                 farStateSequence.add(state);
@@ -470,8 +476,8 @@ public class PilatesLegPullAnalyzer implements ExerciseAnalyzerInterface {
         public PilatesLegPullThresholds() {}
 
         public PilatesLegPullThresholds(int elbowNormal, int kneeMin,
-                                    int[] hipThresholds,
-                                int offsetThresh, double inactiveThresh, int cntFrameThresh) {
+                                        int[] hipThresholds,
+                                        int offsetThresh, double inactiveThresh, int cntFrameThresh) {
             this.elbowNormal = elbowNormal;
             this.kneeMin = kneeMin;
             this.hipThresholds = hipThresholds;
@@ -483,7 +489,7 @@ public class PilatesLegPullAnalyzer implements ExerciseAnalyzerInterface {
         public static PilatesLegPullThresholds defaultBeginner() {
             return new PilatesLegPullThresholds(
                     150,155,
-                    new int[]{100, 160},
+                    new int[]{105, 150},
                     65, 15.0, 50
             );
         }
@@ -491,7 +497,7 @@ public class PilatesLegPullAnalyzer implements ExerciseAnalyzerInterface {
         public static PilatesLegPullThresholds defaultPro() {
             return new PilatesLegPullThresholds(
                     150, 160,
-                    new int[]{95, 160},
+                    new int[]{100, 155},
                     65, 15.0, 50
             );
         }

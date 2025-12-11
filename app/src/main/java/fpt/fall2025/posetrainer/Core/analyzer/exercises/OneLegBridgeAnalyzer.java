@@ -80,7 +80,7 @@ public class OneLegBridgeAnalyzer implements ExerciseAnalyzerInterface {
 
         // Tính offset angle để phát hiện lệch camera
         offsetAngle = calculateOffsetAngle(leftShoulder, nose, rightShoulder);
-        int positionCheck = calculateAngleWithUpVertical(leftAnkle, leftShoulder);
+        int positionCheck = calculateAngleWithUpVertical(leftHip, leftShoulder);
         cameraWarning = offsetAngle > thresholds.getOffsetThresh() || positionCheck < 45;
 
         feedbackList.clear();
@@ -137,14 +137,17 @@ public class OneLegBridgeAnalyzer implements ExerciseAnalyzerInterface {
             // Tính các góc
             int hipAngle = 0;
             int kneeAngle = 0;
+            int raisedKneeAngle = 0;
             Boolean check = false;
-            if (nearKneeAngle > 155 && farKneeAngle < 100){
+            if (nearKneeAngle > 130 && farKneeAngle < 100){
                 hipAngle = calculateAngle(shldr, hip, farKnee);
                 kneeAngle = calculateAngle(hip, farKnee, farAnkle);
+                raisedKneeAngle = calculateAngle(hip, nearKnee, nearAnkle);
                 check = true;
-            }else if(nearKneeAngle > 155 && farKneeAngle < 100){
+            }else if(farKneeAngle > 130 && nearKneeAngle < 100){
                 hipAngle = calculateAngle(shldr, hip, nearKnee);
                 kneeAngle = calculateAngle(hip, nearKnee, nearAnkle);
+                raisedKneeAngle = calculateAngle(hip, farKnee, farAnkle);
                 check = true;
             }
 
@@ -156,13 +159,17 @@ public class OneLegBridgeAnalyzer implements ExerciseAnalyzerInterface {
 
             // Đếm Sit-Up đúng/sai
             String message = "";
-            
+
             // Chỉ hiển thị feedback khi đang ở trạng thái s1 (nằm xuống)
             if ("s1".equals(currState)) {
                 // Feedback động tác khi nằm
-                if (kneeAngle > thresholds.getKneeThreshold()) {
+                if (kneeAngle < thresholds.getKneeThreshold()) {
                     displayText[0] = true;
-                    feedbackList.add("Duỗi đầu gối thêm");
+                    feedbackList.add("Duỗi đầu gối chân trụ thêm");
+                }
+                if (raisedKneeAngle < 160) {
+                    displayText[0] = true;
+                    feedbackList.add("Duỗi thẳng chân đang giơ");
                 }
             }
 
@@ -171,9 +178,12 @@ public class OneLegBridgeAnalyzer implements ExerciseAnalyzerInterface {
                 Boolean complete = stateSequence.contains("s1");
                 if (complete) {
                     // Kiểm tra lỗi khi lên
-                    if (kneeAngle > thresholds.getKneeThreshold()) {
+                    if (raisedKneeAngle < 160) {
                         displayText[0] = true;
-                        feedbackList.add("Duỗi thẳng chân trụ");
+                        incorrectPosture = true;
+                        feedbackList.add("Duỗi thẳng chân đang giơ");
+                        incorrectCount++;
+                        message = "INCORRECT";
                     }
 
                     if (!incorrectPosture) {
@@ -213,7 +223,7 @@ public class OneLegBridgeAnalyzer implements ExerciseAnalyzerInterface {
             ExerciseFeedback feedback = new ExerciseFeedback(
                     correctCount, incorrectCount, message, cameraWarning, offsetAngle, new ArrayList<>(feedbackList)
             );
-            feedback.setCurrentState(currState + " | Hip: " + hipAngle + "° | Knee: " + kneeAngle + "°" + positionCheck);
+            feedback.setCurrentState(currState + " | Hip: " + hipAngle + "° | Knee: " + kneeAngle + "°" + raisedKneeAngle);
 
             return feedback;
         }
@@ -378,7 +388,7 @@ public class OneLegBridgeAnalyzer implements ExerciseAnalyzerInterface {
         public OneLegBridgeThresholds() {}
 
         public OneLegBridgeThresholds(int hipThreshold, int torsoWithUpVerticalThreshold, int kneeThreshold,
-                              int offsetThresh, double inactiveThresh, int cntFrameThresh) {
+                                      int offsetThresh, double inactiveThresh, int cntFrameThresh) {
             this.hipThreshold = hipThreshold;
             this.torsoWithUpVerticalThreshold = torsoWithUpVerticalThreshold;
             this.kneeThreshold = kneeThreshold;
@@ -391,7 +401,7 @@ public class OneLegBridgeAnalyzer implements ExerciseAnalyzerInterface {
             return new OneLegBridgeThresholds(
                     160,
                     80,
-                    70,
+                    55,
                     65, 15.0, 50
             );
         }
@@ -400,7 +410,7 @@ public class OneLegBridgeAnalyzer implements ExerciseAnalyzerInterface {
             return new OneLegBridgeThresholds(
                     165,
                     80,
-                    75,
+                    55,
                     65, 15.0, 50
             );
         }
@@ -457,3 +467,4 @@ public class OneLegBridgeAnalyzer implements ExerciseAnalyzerInterface {
         }
     }
 }
+
