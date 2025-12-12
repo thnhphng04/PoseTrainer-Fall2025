@@ -3,7 +3,8 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:padding="8dp">
+    android:padding="8dp"
+    android:background="@color/mainColor">
 
     <!-- Avatar -->
     <ImageView
@@ -13,7 +14,7 @@
         android:layout_marginEnd="8dp"
         android:scaleType="centerCrop"
         android:src="@drawable/ic_person"
-        android:background="@drawable/bg_circle_lightgray"
+        android:background="@drawable/circle_background"
         android:clipToOutline="true" />
 
     <!-- Nội dung -->
@@ -27,6 +28,7 @@
             android:id="@+id/tvName"
             android:textStyle="bold"
             android:textSize="14sp"
+            android:textColor="@color/white"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"/>
 
@@ -34,14 +36,14 @@
             android:id="@+id/tvText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#333"
+            android:textColor="@color/white"
             android:layout_marginTop="2dp"/>
 
         <TextView
             android:id="@+id/tvTime"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#777"
+            android:textColor="#99FFFFFF"
             android:textSize="12sp"
             android:layout_marginTop="2dp"/>
     </LinearLayout>

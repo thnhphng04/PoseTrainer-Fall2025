@@ -51,8 +51,8 @@ public class SearchWorkoutAdapter extends RecyclerView.Adapter<SearchWorkoutAdap
                 .into(holder.binding.pic);
 
         int exerciseCount = (workoutTemplate.getItems() != null) ? workoutTemplate.getItems().size() : 0;
-        holder.binding.excerciseTxt.setText(exerciseCount + " Exercise");
-        holder.binding.durationTxt.setText(workoutTemplate.getEstDurationMin() + " min");
+        holder.binding.excerciseTxt.setText(exerciseCount + " bài tập");
+        holder.binding.durationTxt.setText(workoutTemplate.getEstDurationMin() + " phút");
 
         holder.binding.getRoot().setOnClickListener(v -> {
             if (context != null) {

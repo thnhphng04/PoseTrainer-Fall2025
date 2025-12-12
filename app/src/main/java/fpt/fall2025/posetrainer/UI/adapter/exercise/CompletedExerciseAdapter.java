@@ -91,7 +91,7 @@ public class CompletedExerciseAdapter extends RecyclerView.Adapter<CompletedExer
             // Tính toán và hiển thị thời gian ước tính cho bài tập
             int estimatedMinutes = calculateExerciseDuration(perExercise, exercise);
             if (estimatedMinutes > 0) {
-                holder.exerciseDurationTxt.setText("⏱️ " + estimatedMinutes + " min");
+                holder.exerciseDurationTxt.setText("⏱️ " + estimatedMinutes + " phút");
             } else {
                 holder.exerciseDurationTxt.setText("");
             }

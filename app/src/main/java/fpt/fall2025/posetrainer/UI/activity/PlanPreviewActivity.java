@@ -3,11 +3,12 @@ package fpt.fall2025.posetrainer.UI.activity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.appcompat.widget.AppCompatButton;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -38,7 +39,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
     
     private RecyclerView rvDays;
     private ProgressBar progress;
-    private Button btnGenerate, btnAccept;
+    private AppCompatButton btnGenerate, btnAccept;
     private TextView tvHeader, tvSub;
     private EditText etDesiredDays;
     private PlanModels.Plan currentPlan;

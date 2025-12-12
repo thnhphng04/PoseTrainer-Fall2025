@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/mainColor">
 
     <!-- Toolbar / Header -->
     <LinearLayout
@@ -11,7 +13,7 @@
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:padding="12dp"
-        android:background="?attr/colorPrimary">
+        android:background="@color/mainColor">
 
         <ImageView
             android:id="@+id/btnBack"
@@ -19,7 +21,7 @@
             android:layout_height="24dp"
             android:src="@drawable/ic_arrow_back"
             android:contentDescription="Back"
-            android:tint="@android:color/white" />
+            app:tint="@android:color/white" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -36,18 +38,20 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="12dp">
+        android:padding="12dp"
+        android:background="@color/mainColor">
 
         <TextView
             android:id="@+id/tvAuthor"
             android:textStyle="bold"
             android:textSize="16sp"
+            android:textColor="@color/white"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
 
         <TextView
             android:id="@+id/tvTime"
-            android:textColor="#777"
+            android:textColor="#99FFFFFF"
             android:textSize="12sp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -57,6 +61,7 @@
             android:id="@+id/tvContent"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:textColor="@color/white"
             android:layout_marginTop="8dp" />
 
         <ImageView
@@ -73,13 +78,15 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
-        android:padding="12dp">
+        android:padding="12dp"
+        android:background="@color/mainColor">
 
         <ImageView
             android:id="@+id/btnLike"
             android:layout_width="28dp"
             android:layout_height="28dp"
             android:src="@drawable/ic_favorite_filled"
+            app:tint="@color/white"
             android:contentDescription="@string/app_name" />
 
         <TextView
@@ -87,7 +94,8 @@
             android:layout_marginStart="6dp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="0" />
+            android:text="0"
+            android:textColor="@color/white" />
 
         <Space
             android:layout_width="16dp"
@@ -97,6 +105,7 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@drawable/ic_comment"
+            app:tint="@color/white"
             android:contentDescription="@string/app_name" />
 
         <TextView
@@ -104,7 +113,8 @@
             android:layout_marginStart="6dp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="0" />
+            android:text="0"
+            android:textColor="@color/white" />
     </LinearLayout>
 
     <!-- Comments list -->
@@ -113,14 +123,16 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:paddingHorizontal="12dp" />
+        android:paddingHorizontal="12dp"
+        android:background="@color/mainColor" />
 
     <!-- Input comment -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:padding="8dp"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:background="@color/mainColor">
 
         <EditText
             android:id="@+id/edtComment"
@@ -128,6 +140,10 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:hint="Viết bình luận..."
+            android:textColorHint="#99FFFFFF"
+            android:textColor="@color/white"
+            android:background="@drawable/edit_text_background"
+            android:padding="12dp"
             android:maxLength="500" />
 
         <ImageButton
@@ -135,6 +151,7 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:src="@drawable/ic_send"
+            app:tint="@color/white"
             android:contentDescription="@string/app_name"
             android:background="?attr/selectableItemBackgroundBorderless" />
     </LinearLayout>

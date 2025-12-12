@@ -71,9 +71,9 @@ public class SessionAdapter extends RecyclerView.Adapter<SessionAdapter.SessionV
             // Both startedAt and endedAt are in seconds
             long duration = session.getEndedAt() - session.getStartedAt();
             int minutes = (int) (duration / 60); // Convert seconds to minutes
-            holder.durationTxt.setText(minutes + " min");
+            holder.durationTxt.setText(minutes + " phút");
         } else {
-            holder.durationTxt.setText("In progress");
+            holder.durationTxt.setText("Đang thực hiện");
         }
         
         // Set progress
@@ -87,9 +87,9 @@ public class SessionAdapter extends RecyclerView.Adapter<SessionAdapter.SessionV
                 }
             }
             
-            holder.progressTxt.setText(completed + "/" + total + " completed");
+            holder.progressTxt.setText(completed + "/" + total + " đã hoàn thành");
         } else {
-            holder.progressTxt.setText("0/0 completed");
+            holder.progressTxt.setText("0/0 đã hoàn thành");
         }
         
         // Set default image

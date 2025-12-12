@@ -61,7 +61,7 @@ public class UserWorkoutAdapter extends RecyclerView.Adapter<UserWorkoutAdapter.
 
         // Show number of exercises
         int exerciseCount = userWorkout.getItems() != null ? userWorkout.getItems().size() : 0;
-        holder.binding.excerciseTxt.setText(exerciseCount + " Exercise");
+        holder.binding.excerciseTxt.setText(exerciseCount + " bài tập");
         
         // Show source and creation info
         String source = userWorkout.getSource() != null ? userWorkout.getSource() : "custom";

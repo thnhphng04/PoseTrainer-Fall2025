@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#F0F2F5">
+    android:background="@color/mainColor">
 
     <!-- Header -->
     <LinearLayout
@@ -12,7 +12,7 @@
         android:layout_height="56dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:background="@android:color/white"
+        android:background="@color/mainColor"
         android:paddingHorizontal="12dp"
         android:elevation="4dp">
 
@@ -23,7 +23,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_arrow_back"
             android:contentDescription="Quay lại"
-            app:tint="@android:color/black" />
+            app:tint="@color/white" />
 
         <TextView
             android:layout_width="0dp"
@@ -32,7 +32,7 @@
             android:text="Hồ sơ"
             android:textSize="20sp"
             android:textStyle="bold"
-            android:textColor="@android:color/black"
+            android:textColor="@color/white"
             android:layout_marginStart="8dp" />
     </LinearLayout>
 
@@ -41,7 +41,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="@android:color/white"
+        android:background="@color/mainColor"
         android:padding="16dp"
         android:layout_marginTop="4dp"
         android:elevation="2dp">
@@ -63,7 +63,7 @@
             android:text="Tên người dùng"
             android:textSize="20sp"
             android:textStyle="bold"
-            android:textColor="@android:color/black"
+            android:textColor="@color/white"
             android:layout_marginTop="12dp" />
 
         <TextView
@@ -73,7 +73,7 @@
             android:layout_gravity="center_horizontal"
             android:text="email@example.com"
             android:textSize="14sp"
-            android:textColor="#888"
+            android:textColor="#99FFFFFF"
             android:layout_marginTop="4dp" />
 
         <Button
@@ -84,6 +84,8 @@
             android:text="Theo dõi"
             android:layout_marginTop="16dp"
             android:minWidth="120dp"
+            android:background="@drawable/orange_bg"
+            android:textColor="@color/white"
             android:visibility="gone" />
     </LinearLayout>
 
@@ -94,9 +96,9 @@
         android:text="Bài viết"
         android:textSize="18sp"
         android:textStyle="bold"
-        android:textColor="@android:color/black"
+        android:textColor="@color/white"
         android:padding="16dp"
-        android:background="@android:color/white"
+        android:background="@color/mainColor"
         android:layout_marginTop="4dp" />
 
     <androidx.recyclerview.widget.RecyclerView
@@ -104,7 +106,8 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:padding="8dp" />
+        android:padding="8dp"
+        android:background="@color/mainColor" />
 
     <LinearLayout
         android:id="@+id/emptyState"
@@ -114,6 +117,7 @@
         android:orientation="vertical"
         android:gravity="center"
         android:padding="32dp"
+        android:background="@color/mainColor"
         android:visibility="gone">
 
         <TextView
@@ -121,7 +125,7 @@
             android:layout_height="wrap_content"
             android:text="Chưa có bài viết nào"
             android:textSize="16sp"
-            android:textColor="#888" />
+            android:textColor="#99FFFFFF" />
     </LinearLayout>
 
 </LinearLayout>

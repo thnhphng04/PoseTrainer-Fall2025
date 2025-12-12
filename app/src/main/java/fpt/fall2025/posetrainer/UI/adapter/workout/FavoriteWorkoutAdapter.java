@@ -55,10 +55,10 @@ public class FavoriteWorkoutAdapter extends RecyclerView.Adapter<FavoriteWorkout
         }
         
         // Set duration
-        holder.binding.tvDuration.setText(item.getDurationMin() + " min");
+        holder.binding.tvDuration.setText(item.getDurationMin() + " phút");
         
         // Set exercise count
-        holder.binding.tvExerciseCount.setText(item.getExerciseCount() + " Exercise");
+        holder.binding.tvExerciseCount.setText(item.getExerciseCount() + " bài tập");
         
         // Set image
         int resId = getImageResourceForWorkout(item);

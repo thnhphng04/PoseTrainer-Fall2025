@@ -418,9 +418,9 @@ public class EditWorkoutActivity extends AppCompatActivity implements EditWorkou
     private void updateDuration() {
         int totalMinutes = calculateTotalDurationMinutes();
         if (totalMinutes > 0) {
-            binding.durationTxt.setText(totalMinutes + " min");
+            binding.durationTxt.setText(totalMinutes + " phút");
         } else {
-            binding.durationTxt.setText("0 min");
+            binding.durationTxt.setText("0 phút");
         }
     }
 
