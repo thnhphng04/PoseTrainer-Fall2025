@@ -114,18 +114,6 @@
                 android:textColorHint="#80FFFFFF" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- Photo URL -->
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/til_photo_url"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:boxBackgroundMode="outline"
-            app:boxStrokeColor="@color/white"
-            app:boxStrokeWidth="1dp"
-            app:hintTextColor="@color/white">
-        </com.google.android.material.textfield.TextInputLayout>
-
         <!-- Register Button -->
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/btn_register"

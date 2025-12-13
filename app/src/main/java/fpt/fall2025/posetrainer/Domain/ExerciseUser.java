@@ -5,8 +5,12 @@ import com.google.firebase.firestore.IgnoreExtraProperties;
 import java.io.Serializable;
 import java.util.List;
 
+/**
+ * ExerciseUser - Domain class cho custom exercises của user
+ * Lưu trong collection "exerciseUser" trên Firestore
+ */
 @IgnoreExtraProperties
-public class Exercise implements Serializable {
+public class ExerciseUser implements Serializable {
     private String id;
     private String name;
     private String slug;
@@ -20,14 +24,14 @@ public class Exercise implements Serializable {
     private DefaultConfig defaultConfig;
     private boolean isPublic;
     private long updatedAt;
-    private String uid; // UID của user tạo custom exercise
+    private String uid; // UID của user tạo custom exercise (bắt buộc)
 
-    public Exercise() {}
+    public ExerciseUser() {}
 
-    public Exercise(String id, String name, String slug, List<String> category, 
+    public ExerciseUser(String id, String name, String slug, List<String> category, 
                    List<String> muscles, String level, List<String> equipment, 
                    List<String> tags, Media media, MediaPipe mediapipe, 
-                   DefaultConfig defaultConfig, boolean isPublic, long updatedAt) {
+                   DefaultConfig defaultConfig, boolean isPublic, long updatedAt, String uid) {
         this.id = id;
         this.name = name;
         this.slug = slug;
@@ -41,6 +45,7 @@ public class Exercise implements Serializable {
         this.defaultConfig = defaultConfig;
         this.isPublic = isPublic;
         this.updatedAt = updatedAt;
+        this.uid = uid;
     }
 
     // Getters and Setters
@@ -229,7 +234,6 @@ public class Exercise implements Serializable {
         private int reps;
         private int restSec;
         private String difficulty;
-        private double mets; // METs (Metabolic Equivalent of Task) - dùng để tính calo: calories = METs × weight(kg) × duration(hours)
 
         public DefaultConfig() {}
 
@@ -238,15 +242,6 @@ public class Exercise implements Serializable {
             this.reps = reps;
             this.restSec = restSec;
             this.difficulty = difficulty;
-            this.mets = 5.0; // Giá trị mặc định (calisthenics moderate effort)
-        }
-
-        public DefaultConfig(int sets, int reps, int restSec, String difficulty, double mets) {
-            this.sets = sets;
-            this.reps = reps;
-            this.restSec = restSec;
-            this.difficulty = difficulty;
-            this.mets = mets;
         }
 
         public int getSets() {
@@ -280,13 +275,54 @@ public class Exercise implements Serializable {
         public void setDifficulty(String difficulty) {
             this.difficulty = difficulty;
         }
+    }
 
-        public double getMets() {
-            return mets;
+    /**
+     * Convert ExerciseUser to Exercise để tương thích với các phần khác của app
+     * (ví dụ: Session, WorkoutTemplate sử dụng Exercise)
+     */
+    public Exercise toExercise() {
+        Exercise exercise = new Exercise();
+        exercise.setId(this.id);
+        exercise.setName(this.name);
+        exercise.setSlug(this.slug);
+        exercise.setCategory(this.category);
+        exercise.setMuscles(this.muscles);
+        exercise.setLevel(this.level);
+        exercise.setEquipment(this.equipment);
+        exercise.setTags(this.tags);
+        exercise.setPublic(this.isPublic);
+        exercise.setUpdatedAt(this.updatedAt);
+        exercise.setUid(this.uid);
+
+        // Convert Media
+        if (this.media != null) {
+            Exercise.Media exerciseMedia = new Exercise.Media();
+            exerciseMedia.setDemoVideoUrl(this.media.getDemoVideoUrl());
+            exerciseMedia.setThumbnailUrl(this.media.getThumbnailUrl());
+            exercise.setMedia(exerciseMedia);
         }
 
-        public void setMets(double mets) {
-            this.mets = mets;
+        // Convert MediaPipe
+        if (this.mediapipe != null) {
+            Exercise.MediaPipe exerciseMediaPipe = new Exercise.MediaPipe();
+            exerciseMediaPipe.setAnalyzerType(this.mediapipe.getAnalyzerType());
+            exerciseMediaPipe.setVersion(this.mediapipe.getVersion());
+            exerciseMediaPipe.setConfig(this.mediapipe.getConfig());
+            exercise.setMediapipe(exerciseMediaPipe);
         }
+
+        // Convert DefaultConfig
+        if (this.defaultConfig != null) {
+            Exercise.DefaultConfig exerciseDefaultConfig = new Exercise.DefaultConfig();
+            exerciseDefaultConfig.setSets(this.defaultConfig.getSets());
+            exerciseDefaultConfig.setReps(this.defaultConfig.getReps());
+            exerciseDefaultConfig.setRestSec(this.defaultConfig.getRestSec());
+            exerciseDefaultConfig.setDifficulty(this.defaultConfig.getDifficulty());
+            exercise.setDefaultConfig(exerciseDefaultConfig);
+        }
+
+        return exercise;
     }
 }
+

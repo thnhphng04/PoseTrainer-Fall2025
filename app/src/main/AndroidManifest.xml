@@ -98,6 +98,12 @@
         <activity
             android:name=".UI.activity.CollectionDetailActivity"
             android:exported="false" />
+        <activity
+            android:name=".UI.activity.CreateCustomExerciseActivity"
+            android:exported="false" />
+        <activity
+            android:name=".UI.activity.CustomExercisesActivity"
+            android:exported="false" />
 
         <!--        <activity-->
 <!--            android:name=".UI.activity.MainActivity"-->
