@@ -388,14 +388,14 @@ public class SideArmRaiseAnalyzer implements ExerciseAnalyzerInterface {
 
         public static SideArmRaiseThresholds defaultBeginner() {
             return new SideArmRaiseThresholds(
-                    new int[]{15, 90},
+                    new int[]{15, 85},
                     150, 65, 15.0, 50
             );
         }
 
         public static SideArmRaiseThresholds defaultPro() {
             return new SideArmRaiseThresholds(
-                    new int[]{15, 90},
+                    new int[]{15, 85},
                     160, 65, 15.0, 50
             );
         }

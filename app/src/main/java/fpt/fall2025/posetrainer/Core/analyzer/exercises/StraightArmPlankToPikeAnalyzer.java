@@ -87,7 +87,7 @@ public class StraightArmPlankToPikeAnalyzer implements ExerciseAnalyzerInterface
         // Tính offset angle để phát hiện lệch camera
         offsetAngle = calculateOffsetAngle(leftShoulder, nose, rightShoulder);
         int positionCheck = calculateAngleWithUpVertical(leftAnkle, leftShoulder);
-        cameraWarning = offsetAngle > thresholds.getOffsetThresh() || positionCheck < 60;
+        cameraWarning = offsetAngle > thresholds.getOffsetThresh() || positionCheck < 30;
         feedbackList.clear();
 
         double now = System.nanoTime() / 1e9;
@@ -114,17 +114,17 @@ public class StraightArmPlankToPikeAnalyzer implements ExerciseAnalyzerInterface
             // Chọn bên để phân tích dựa trên visibility score
             // Tính average visibility cho mỗi bên
             float leftAvgVis = (
-                leftShoulder.getOrDefault("visibility", 0f) +
-                leftElbow.getOrDefault("visibility", 0f) +
-                leftHip.getOrDefault("visibility", 0f) +
-                leftKnee.getOrDefault("visibility", 0f)
+                    leftShoulder.getOrDefault("visibility", 0f) +
+                            leftElbow.getOrDefault("visibility", 0f) +
+                            leftHip.getOrDefault("visibility", 0f) +
+                            leftKnee.getOrDefault("visibility", 0f)
             ) / 4.0f;
-            
+
             float rightAvgVis = (
-                rightShoulder.getOrDefault("visibility", 0f) +
-                rightElbow.getOrDefault("visibility", 0f) +
-                rightHip.getOrDefault("visibility", 0f) +
-                rightKnee.getOrDefault("visibility", 0f)
+                    rightShoulder.getOrDefault("visibility", 0f) +
+                            rightElbow.getOrDefault("visibility", 0f) +
+                            rightHip.getOrDefault("visibility", 0f) +
+                            rightKnee.getOrDefault("visibility", 0f)
             ) / 4.0f;
 
             List<Map<String, Float>> points;
@@ -424,7 +424,7 @@ public class StraightArmPlankToPikeAnalyzer implements ExerciseAnalyzerInterface
         public StraightArmPlankToPikeThresholds() {}
 
         public StraightArmPlankToPikeThresholds(int[] hipThresholds, int[] shldrThresholds,
-                                  int kneeMin, int offsetThresh, double inactiveThresh, int cntFrameThresh) {
+                                                int kneeMin, int offsetThresh, double inactiveThresh, int cntFrameThresh) {
             this.hipThresholds = hipThresholds;
             this.shldrThresholds = shldrThresholds;
             this.kneeMin = kneeMin;
@@ -435,14 +435,14 @@ public class StraightArmPlankToPikeAnalyzer implements ExerciseAnalyzerInterface
 
         public static StraightArmPlankToPikeThresholds defaultBeginner() {
             return new StraightArmPlankToPikeThresholds(
-                    new int[]{110, 155}, new int[]{90, 150},
+                    new int[]{110, 155}, new int[]{90, 135},
                     150, 65, 15.0, 50
             );
         }
 
         public static StraightArmPlankToPikeThresholds defaultPro() {
             return new StraightArmPlankToPikeThresholds(
-                    new int[]{100, 155}, new int[]{90, 150},
+                    new int[]{100, 155}, new int[]{90, 140},
                     155, 65, 15.0, 50
             );
         }

@@ -120,17 +120,17 @@ public class GluteKickBackAnalyzer implements ExerciseAnalyzerInterface {
             // Chọn bên để phân tích dựa trên visibility score
             // Tính average visibility cho mỗi bên
             float leftAvgVis = (
-                leftShoulder.getOrDefault("visibility", 0f) +
-                leftElbow.getOrDefault("visibility", 0f) +
-                leftHip.getOrDefault("visibility", 0f) +
-                leftKnee.getOrDefault("visibility", 0f)
+                    leftShoulder.getOrDefault("visibility", 0f) +
+                            leftElbow.getOrDefault("visibility", 0f) +
+                            leftHip.getOrDefault("visibility", 0f) +
+                            leftKnee.getOrDefault("visibility", 0f)
             ) / 4.0f;
-            
+
             float rightAvgVis = (
-                rightShoulder.getOrDefault("visibility", 0f) +
-                rightElbow.getOrDefault("visibility", 0f) +
-                rightHip.getOrDefault("visibility", 0f) +
-                rightKnee.getOrDefault("visibility", 0f)
+                    rightShoulder.getOrDefault("visibility", 0f) +
+                            rightElbow.getOrDefault("visibility", 0f) +
+                            rightHip.getOrDefault("visibility", 0f) +
+                            rightKnee.getOrDefault("visibility", 0f)
             ) / 4.0f;
 
             List<Map<String, Float>> points;
@@ -173,8 +173,8 @@ public class GluteKickBackAnalyzer implements ExerciseAnalyzerInterface {
 
 
             // State machine
-            nearCurrState = getState(elbowAngle, nearHipAngle);
-            farCurrState = getState(elbowAngle, farHipAngle);
+            nearCurrState = getState(elbowAngle, nearHipAngle, nearKneeAngle);
+            farCurrState = getState(elbowAngle, farHipAngle, farKneeAngle);
 
 
             updateNearStateSequence(nearCurrState);
@@ -185,15 +185,9 @@ public class GluteKickBackAnalyzer implements ExerciseAnalyzerInterface {
             // Kiểm tra chân near
             if ("s3".equals(nearCurrState)) {
                 // Kiểm tra nếu đã hoàn thành chu kỳ đầy đủ (có s2 và s1)
-                boolean nearComplete = nearStateSequence.contains("s2") && nearStateSequence.contains("s1");
-                if (nearComplete && nearKneeAngle < thresholds.getKneeThresholds()[1]) {
-                    displayText[0] = true;
-                    nearIncorrectPosture = true;
-                    feedbackList.add("Duỗi đầu gối thêm");
-                    incorrectCount++;
-                    message = "INCORRECT";
-                }
-                else if (nearComplete && !nearIncorrectPosture) {
+                boolean nearComplete = nearStateSequence.contains("s2");
+
+                if (nearComplete && !nearIncorrectPosture) {
                     correctCount++;
                     message = "CORRECT";
                 }
@@ -204,15 +198,9 @@ public class GluteKickBackAnalyzer implements ExerciseAnalyzerInterface {
             // Kiểm tra chân far
             if ("s3".equals(farCurrState)) {
                 // Kiểm tra nếu đã hoàn thành chu kỳ đầy đủ (có s1 và s2)
-                boolean farComplete = farStateSequence.contains("s2") && nearStateSequence.contains("s1");
-                if (farComplete && nearKneeAngle < thresholds.getKneeThresholds()[1]) {
-                    displayText[0] = true;
-                    farIncorrectPosture = true;
-                    feedbackList.add("Duỗi đầu gối thêm");
-                    incorrectCount++;
-                    message = "INCORRECT";
-                }
-                else if (farComplete && !farIncorrectPosture) {
+                boolean farComplete = farStateSequence.contains("s2");
+
+                if (farComplete && !farIncorrectPosture) {
                     correctCount++;
                     message = "CORRECT";
                 }
@@ -246,7 +234,7 @@ public class GluteKickBackAnalyzer implements ExerciseAnalyzerInterface {
                     feedbackList.add("Hông nâng quá cao");
                 }
             }
-            
+
             // Kiểm tra chân far
             if ("s1".equals(farCurrState)) {
                 // Kiểm tra nếu đã hoàn thành chu kỳ đầy đủ (có s2 và s3)
@@ -273,9 +261,9 @@ public class GluteKickBackAnalyzer implements ExerciseAnalyzerInterface {
              */
 
             // Inactivity logic - kiểm tra nếu cả hai chân đều không thay đổi
-            boolean bothStatesUnchanged = (nearCurrState != null && nearCurrState.equals(prevState)) && 
-                                        (farCurrState != null && farCurrState.equals(prevState));
-            
+            boolean bothStatesUnchanged = (nearCurrState != null && nearCurrState.equals(prevState)) &&
+                    (farCurrState != null && farCurrState.equals(prevState));
+
             if (bothStatesUnchanged) {
                 inactiveTime += now - startInactiveTime;
                 startInactiveTime = now;
@@ -304,7 +292,7 @@ public class GluteKickBackAnalyzer implements ExerciseAnalyzerInterface {
             );
             // Tạo state string kết hợp cho cả hai chân
             String combinedState = "Near:" + (nearCurrState != null ? nearCurrState : "null") +
-                                 " Far:" + (farCurrState != null ? farCurrState : "null");
+                    " Far:" + (farCurrState != null ? farCurrState : "null");
             System.out.println(combinedState);
             feedback.setCurrentState(combinedState);
 
@@ -477,13 +465,13 @@ public class GluteKickBackAnalyzer implements ExerciseAnalyzerInterface {
         return (int) Math.toDegrees(theta);
     }
 
-    private String getState(int elbowAngle, int hipAngle) {
+    private String getState(int elbowAngle, int hipAngle, int kneeAngle) {
         if (elbowAngle > thresholds.getElbowNormal() &&
-            hipAngle < thresholds.getHipNormal()) {
+                hipAngle < thresholds.getHipNormal()) {
             return "s1";
         } else if ((hipAngle > thresholds.getHipTrans()[0] && hipAngle < thresholds.getHipTrans()[1])) {
             return "s2";
-        } else if (hipAngle > thresholds.getHipPass()) {
+        } else if (hipAngle > thresholds.getHipPass() && kneeAngle > thresholds.getKneeThresholds()[1]) {
             return "s3";
         }
         return null;
@@ -532,8 +520,8 @@ public class GluteKickBackAnalyzer implements ExerciseAnalyzerInterface {
         public GluteKickBackThresholds() {}
 
         public GluteKickBackThresholds(int elbowNormal, int backNormal, int[] kneeThresholds,
-                                    int hipNormal, int[] hipTrans, int hipPass,
-                                int offsetThresh, double inactiveThresh, int cntFrameThresh) {
+                                       int hipNormal, int[] hipTrans, int hipPass,
+                                       int offsetThresh, double inactiveThresh, int cntFrameThresh) {
             this.elbowNormal = elbowNormal;
             this.backNormal = backNormal;
             this.kneeThresholds = kneeThresholds;
@@ -547,16 +535,16 @@ public class GluteKickBackAnalyzer implements ExerciseAnalyzerInterface {
 
         public static GluteKickBackThresholds defaultBeginner() {
             return new GluteKickBackThresholds(
-                    150, 95, new int[]{105, 160},
-                    100, new int[]{105, 155}, 160,
+                    150, 95, new int[]{105, 150},
+                    100, new int[]{105, 140}, 160,
                     65, 15.0, 50
             );
         }
 
         public static GluteKickBackThresholds defaultPro() {
             return new GluteKickBackThresholds(
-                    150, 85, new int[]{100, 165},
-                    100, new int[]{105, 160}, 165,
+                    150, 85, new int[]{100, 155},
+                    100, new int[]{105, 140}, 165,
                     65, 15.0, 50
             );
         }

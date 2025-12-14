@@ -55,14 +55,14 @@ public class PileSquatAnalyzer implements ExerciseAnalyzerInterface {
         this();
         this.thresholds = thresholds;
     }
-    
+
     @Override
     public ExerciseFeedback analyze(List<Map<String, Float>> landmarks) {
-        
+
         if (landmarks == null || landmarks.size() < 33) {
             return new ExerciseFeedback();
         }
-        
+
         // Lấy các điểm cần thiết từ toàn bộ landmarks (33 điểm MediaPipe)
         Map<String, Float> nose = getLandmark(landmarks, 0);
         Map<String, Float> leftShoulder = getLandmark(landmarks, 11);
@@ -77,12 +77,12 @@ public class PileSquatAnalyzer implements ExerciseAnalyzerInterface {
         Map<String, Float> rightKnee = getLandmark(landmarks, 26);
         Map<String, Float> leftAnkle = getLandmark(landmarks, 27);
         Map<String, Float> rightAnkle = getLandmark(landmarks, 28);
-        
+
         // Tính offset angle để phát hiện lệch camera
         offsetAngle = calculateOffsetAngle(leftShoulder, nose, rightShoulder);
         cameraWarning = offsetAngle < 80;
         feedbackList.clear();
-        
+
         double now = System.nanoTime() / 1e9;
         if (cameraWarning) {
             // Đếm thời gian lệch camera
@@ -103,7 +103,7 @@ public class PileSquatAnalyzer implements ExerciseAnalyzerInterface {
         } else {
             inactiveTimeFront = 0.0;
             startInactiveTimeFront = now;
-            
+
             // Tính các góc mới
             int leftLegAngle = calculateAngleWithDownVertical(leftHip, leftAnkle);
             int rightLegAngle = calculateAngleWithDownVertical(rightHip, rightAnkle);
@@ -115,7 +115,7 @@ public class PileSquatAnalyzer implements ExerciseAnalyzerInterface {
             // State machine
             currState = getState(leftLegAngle, rightLegAngle, leftKneeAngle, rightKneeAngle);
             updateStateSequence(currState);
-            
+
             // Đếm jumping jack đúng/sai
             String message = "";
             if ("s3".equals(currState)) {
@@ -133,9 +133,9 @@ public class PileSquatAnalyzer implements ExerciseAnalyzerInterface {
                 stateSequence.clear();
                 incorrectPosture = false;
             } else {
-                
+
             }
-            
+
             // Inactivity logic
             if (currState != null && currState.equals(prevState)) {
                 inactiveTime += now - startInactiveTime;
@@ -148,9 +148,9 @@ public class PileSquatAnalyzer implements ExerciseAnalyzerInterface {
                 startInactiveTime = now;
                 inactiveTime = 0.0;
             }
-            
+
             prevState = currState;
-            
+
             // Reset feedback nếu quá lâu
             for (int i = 0; i < displayText.length; i++) {
                 if (countFrames[i] > thresholds.getCntFrameThresh()) {
@@ -159,33 +159,33 @@ public class PileSquatAnalyzer implements ExerciseAnalyzerInterface {
                 }
                 if (displayText[i]) countFrames[i]++;
             }
-            
+
             // Tạo ExerciseFeedback
             ExerciseFeedback feedback = new ExerciseFeedback(
-                correctCount, incorrectCount, message, cameraWarning, offsetAngle, new ArrayList<>(feedbackList)
+                    correctCount, incorrectCount, message, cameraWarning, offsetAngle, new ArrayList<>(feedbackList)
             );
 
             feedback.setCurrentState(currState + " " + leftKneeAngle + " " + rightKneeAngle);
-            
+
             return feedback;
         }
-        
+
         // Nếu lệch camera, trả về feedback cảnh báo
         return new ExerciseFeedback(
-            correctCount, incorrectCount, "", cameraWarning, offsetAngle, new ArrayList<>(feedbackList)
+                correctCount, incorrectCount, "", cameraWarning, offsetAngle, new ArrayList<>(feedbackList)
         );
     }
-    
+
     @Override
     public String getExerciseType() {
         return "PileSquat";
     }
-    
+
     @Override
     public int[] getRequiredLandmarks() {
         return new int[]{0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28}; // All required landmarks
     }
-    
+
     @Override
     public Map<String, Object> getThresholds(String level) {
         Map<String, Object> result = new HashMap<>();
@@ -199,14 +199,14 @@ public class PileSquatAnalyzer implements ExerciseAnalyzerInterface {
         }
         return result;
     }
-    
+
     @Override
     public void updateThresholds(Map<String, Object> thresholds) {
         if (thresholds.containsKey("legNormal")) {
             this.thresholds.setLegNormal((int) thresholds.get("legNormal"));
         }
     }
-    
+
     @Override
     public void reset() {
         this.correctCount = 0;
@@ -228,7 +228,7 @@ public class PileSquatAnalyzer implements ExerciseAnalyzerInterface {
             countFrames[i] = 0;
         }
     }
-    
+
     // Helper methods
     private Map<String, Float> getLandmark(List<Map<String, Float>> landmarks, int idx) {
         if (landmarks == null || idx >= landmarks.size()) {
@@ -239,10 +239,10 @@ public class PileSquatAnalyzer implements ExerciseAnalyzerInterface {
         }
         return landmarks.get(idx);
     }
-    
+
     private int calculateOffsetAngle(Map<String, Float> p1, Map<String, Float> p2, Map<String, Float> p3) {
         if (p1 == null || p2 == null || p3 == null) return 0;
-        
+
         float[] a = {p1.get("x") - p2.get("x"), p1.get("y") - p2.get("y")};
         float[] b = {p3.get("x") - p2.get("x"), p3.get("y") - p2.get("y")};
         float dot = a[0] * b[0] + a[1] * b[1];
@@ -252,10 +252,10 @@ public class PileSquatAnalyzer implements ExerciseAnalyzerInterface {
         double theta = Math.acos(cosTheta);
         return (int) Math.toDegrees(theta);
     }
-    
+
     private int calculateAngle(Map<String, Float> p1, Map<String, Float> p2, Map<String, Float> p3) {
         if (p1 == null || p2 == null || p3 == null) return 0;
-        
+
         float[] a = {p1.get("x") - p2.get("x"), p1.get("y") - p2.get("y")};
         float[] b = {p3.get("x") - p2.get("x"), p3.get("y") - p2.get("y")};
         float dot = a[0] * b[0] + a[1] * b[1];
@@ -265,10 +265,10 @@ public class PileSquatAnalyzer implements ExerciseAnalyzerInterface {
         double theta = Math.acos(cosTheta);
         return (int) Math.toDegrees(theta);
     }
-    
+
     private int calculateAngleWithDownVertical(Map<String, Float> from, Map<String, Float> to) {
         if (from == null || to == null) return 0;
-        
+
         float[] v1 = {0f, 1f}; // vector thẳng đứng hướng xuống
         float[] v2 = {to.get("x") - from.get("x"), to.get("y") - from.get("y")};
         float dot = v1[0] * v2[0] + v1[1] * v2[1];
@@ -278,28 +278,28 @@ public class PileSquatAnalyzer implements ExerciseAnalyzerInterface {
         double theta = Math.acos(cosTheta);
         return (int) Math.toDegrees(theta);
     }
-    
+
     private String getState(int leftLegAngle, int rightLegAngle, int leftKneeAngle, int rightKneeAngle) {
         if (leftLegAngle >= thresholds.getLegNormal() && rightLegAngle >= thresholds.getLegNormal() &&
-            leftKneeAngle >= thresholds.getKneeThresholds()[0] && rightKneeAngle >= thresholds.getKneeThresholds()[0]) {
+                leftKneeAngle >= thresholds.getKneeThresholds()[0] && rightKneeAngle >= thresholds.getKneeThresholds()[0]) {
             return "s1";
         } else if (leftKneeAngle <= thresholds.getKneeThresholds()[0] && rightKneeAngle <= thresholds.getKneeThresholds()[0] &&
-                   leftKneeAngle >= thresholds.getKneeThresholds()[1] && rightKneeAngle >= thresholds.getKneeThresholds()[1]) {
+                leftKneeAngle >= thresholds.getKneeThresholds()[1] && rightKneeAngle >= thresholds.getKneeThresholds()[1]) {
             return "s2";
         } else if (leftKneeAngle <= thresholds.getKneeThresholds()[1] && rightKneeAngle <= thresholds.getKneeThresholds()[1]) {
             return "s3";
         }
-        return null;
+        return prevState;
     }
-    
+
     private void updateStateSequence(String state) {
         if (state == null) return;
         if ("s1".equals(state) && stateSequence.isEmpty()) {
             stateSequence.add(state);
         }
-        if ("s2".equals(state)) {
+        if ("s2".equals(state) && stateSequence.contains("s1")) {
             if ((!stateSequence.contains("s3") && stateSequence.stream().filter(s -> s.equals("s2")).count() == 0) ||
-                (stateSequence.contains("s3") && stateSequence.stream().filter(s -> s.equals("s2")).count() == 1)) {
+                    (stateSequence.contains("s3") && stateSequence.stream().filter(s -> s.equals("s2")).count() == 1)) {
                 stateSequence.add(state);
             }
         } else if ("s3".equals(state)) {
@@ -308,7 +308,7 @@ public class PileSquatAnalyzer implements ExerciseAnalyzerInterface {
             }
         }
     }
-    
+
     // Inner class for PileSquatThresholds
     public static class PileSquatThresholds {
         private int legNormal;
@@ -316,32 +316,32 @@ public class PileSquatAnalyzer implements ExerciseAnalyzerInterface {
         private int offsetThresh;
         private double inactiveThresh;
         private int cntFrameThresh;
-        
+
         public PileSquatThresholds() {}
-        
+
         public PileSquatThresholds(int legNormal, int[] kneeThresholds,
-                                    int offsetThresh, double inactiveThresh, int cntFrameThresh) {
+                                   int offsetThresh, double inactiveThresh, int cntFrameThresh) {
             this.legNormal = legNormal;
             this.kneeThresholds = kneeThresholds;
             this.offsetThresh = offsetThresh;
             this.inactiveThresh = inactiveThresh;
             this.cntFrameThresh = cntFrameThresh;
         }
-        
+
         public static PileSquatThresholds defaultBeginner() {
             return new PileSquatThresholds(
-                10, new int[]{160, 100},
-                65, 15.0, 50
+                    10, new int[]{160, 100},
+                    65, 15.0, 50
             );
         }
-        
+
         public static PileSquatThresholds defaultPro() {
             return new PileSquatThresholds(
-                10, new int[]{160, 95},
-                65, 15.0, 50
+                    10, new int[]{160, 95},
+                    65, 15.0, 50
             );
         }
-        
+
         // Getters and Setters
 
 

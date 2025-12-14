@@ -160,13 +160,8 @@ public class SitUpAnalyzer implements ExerciseAnalyzerInterface {
                 Boolean complete = stateSequence.contains("s1");
                 if (complete) {
                     // Kiểm tra lỗi khi ngồi lên
-                    if (kneeAngle < thresholds.getKneeThresholds()[0]) {
-                        displayText[0] = true;
-                        incorrectPosture = true;
-                        feedbackList.add("Giữ gối ở góc 90°");
-                        incorrectCount++;
-                        message = "INCORRECT";
-                    } else if (kneeAngle > thresholds.getKneeThresholds()[1]) {
+
+                    if (kneeAngle > thresholds.getKneeThresholds()[1]) {
                         displayText[1] = true;
                         incorrectPosture = true;
                         feedbackList.add("Gập gối nhiều hơn");

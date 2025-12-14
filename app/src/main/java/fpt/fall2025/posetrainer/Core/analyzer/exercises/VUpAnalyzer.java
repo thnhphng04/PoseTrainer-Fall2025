@@ -114,17 +114,17 @@ public class VUpAnalyzer implements ExerciseAnalyzerInterface {
             // Chọn bên để phân tích dựa trên visibility score
             // Tính average visibility cho mỗi bên
             float leftAvgVis = (
-                leftShoulder.getOrDefault("visibility", 0f) +
-                leftElbow.getOrDefault("visibility", 0f) +
-                leftHip.getOrDefault("visibility", 0f) +
-                leftKnee.getOrDefault("visibility", 0f)
+                    leftShoulder.getOrDefault("visibility", 0f) +
+                            leftElbow.getOrDefault("visibility", 0f) +
+                            leftHip.getOrDefault("visibility", 0f) +
+                            leftKnee.getOrDefault("visibility", 0f)
             ) / 4.0f;
-            
+
             float rightAvgVis = (
-                rightShoulder.getOrDefault("visibility", 0f) +
-                rightElbow.getOrDefault("visibility", 0f) +
-                rightHip.getOrDefault("visibility", 0f) +
-                rightKnee.getOrDefault("visibility", 0f)
+                    rightShoulder.getOrDefault("visibility", 0f) +
+                            rightElbow.getOrDefault("visibility", 0f) +
+                            rightHip.getOrDefault("visibility", 0f) +
+                            rightKnee.getOrDefault("visibility", 0f)
             ) / 4.0f;
 
             List<Map<String, Float>> points;
@@ -402,7 +402,7 @@ public class VUpAnalyzer implements ExerciseAnalyzerInterface {
             return "s2";
         }
 
-        return null;
+        return prevState;
     }
 
     private void updateStateSequence(String state) {
@@ -411,7 +411,7 @@ public class VUpAnalyzer implements ExerciseAnalyzerInterface {
             stateSequence.add(state);
         }
         if ("s2".equals(state)) {
-            if (!stateSequence.contains("s2")) {
+            if (!stateSequence.contains("s2") && stateSequence.contains("s1")) {
                 stateSequence.add(state);
             }
         }
@@ -429,7 +429,7 @@ public class VUpAnalyzer implements ExerciseAnalyzerInterface {
         public VUpThresholds() {}
 
         public VUpThresholds(int hipNormal, int hipTran,
-                                  int kneeMin, int offsetThresh, double inactiveThresh, int cntFrameThresh) {
+                             int kneeMin, int offsetThresh, double inactiveThresh, int cntFrameThresh) {
             this.hipNormal = hipNormal;
             this.hipTran = hipTran;
             this.kneeMin = kneeMin;
@@ -447,8 +447,8 @@ public class VUpAnalyzer implements ExerciseAnalyzerInterface {
 
         public static VUpThresholds defaultPro() {
             return new VUpThresholds(
-                    160, 80,
-                    160, 65, 15.0, 50
+                    150, 80,
+                    150, 65, 15.0, 50
             );
         }
 
@@ -502,3 +502,4 @@ public class VUpAnalyzer implements ExerciseAnalyzerInterface {
 
     }
 }
+
