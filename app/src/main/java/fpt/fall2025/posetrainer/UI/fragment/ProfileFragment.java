@@ -15,6 +15,8 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import fpt.fall2025.posetrainer.UI.activity.AchievementsActivity;
+import fpt.fall2025.posetrainer.UI.activity.CreateCustomExerciseActivity;
+import fpt.fall2025.posetrainer.UI.activity.CustomExercisesActivity;
 import fpt.fall2025.posetrainer.UI.activity.EditGoalsActivity;
 import fpt.fall2025.posetrainer.UI.activity.EditProfileActivity;
 import fpt.fall2025.posetrainer.UI.activity.LoginActivity;
@@ -95,10 +97,14 @@ public class ProfileFragment extends Fragment {
         binding.menuWorkouts.setOnClickListener(openWorkoutHistory);   // bấm cả hàng
         binding.areaMyWorkouts.setOnClickListener(openWorkoutHistory); // bấm vùng chữ
 
+        // Menu Tạo bài tập mới - mở CreateCustomExerciseActivity (màn hình tạo với AI)
+        binding.menuCreateExercise.setOnClickListener(v ->
+                startActivity(new Intent(requireContext(), CreateCustomExerciseActivity.class))
+        );
 
-        // Menu Sync
+        // Menu Bài tập đã tạo - mở CustomExercisesActivity (danh sách bài tập đã tạo)
         binding.menuSync.setOnClickListener(v ->
-                Toast.makeText(requireContext(), "Đồng bộ dữ liệu", Toast.LENGTH_SHORT).show()
+                startActivity(new Intent(requireContext(), CustomExercisesActivity.class))
         );
 
         // Logout
