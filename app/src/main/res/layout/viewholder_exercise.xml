@@ -16,6 +16,19 @@
         android:layout_height="wrap_content"
         android:padding="16dp">
 
+        <!-- More Options Button (3 dots) -->
+        <ImageButton
+            android:id="@+id/btn_more_options"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="@drawable/round_button_bg"
+            android:contentDescription="More options"
+            android:padding="6dp"
+            android:src="@drawable/ic_more_vert"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="@color/white" />
+
         <!-- Exercise Image -->
         <androidx.cardview.widget.CardView
             android:id="@+id/imageCard"

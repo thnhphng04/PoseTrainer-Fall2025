@@ -6,6 +6,7 @@ import android.graphics.PorterDuff;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.*;
+import android.view.MenuItem;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -15,6 +16,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.widget.PopupMenu;
 import androidx.appcompat.widget.SearchView;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
@@ -38,6 +40,7 @@ import fpt.fall2025.posetrainer.UI.activity.MainActivity;
 import fpt.fall2025.posetrainer.UI.activity.PostDetailActivity;
 import fpt.fall2025.posetrainer.UI.activity.UserProfileActivity;
 import fpt.fall2025.posetrainer.UI.dialog.LikeListDialog;
+import fpt.fall2025.posetrainer.UI.dialog.PostFeedbackDialog;
 import fpt.fall2025.posetrainer.Domain.Community;
 import fpt.fall2025.posetrainer.Domain.User;
 import fpt.fall2025.posetrainer.R;
@@ -375,7 +378,7 @@ public class CommunityFragment extends Fragment {
             public PostVH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
                 View item = LayoutInflater.from(parent.getContext())
                         .inflate(R.layout.item_post, parent, false);
-                return new PostVH(item);
+                return new PostVH(item, CommunityFragment.this);
             }
 
             @Override
@@ -442,7 +445,7 @@ public class CommunityFragment extends Fragment {
                         public PostVH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
                             View item = LayoutInflater.from(parent.getContext())
                                     .inflate(R.layout.item_post, parent, false);
-                            return new PostVH(item);
+                            return new PostVH(item, CommunityFragment.this);
                         }
 
                         @Override
@@ -625,18 +628,22 @@ public class CommunityFragment extends Fragment {
     public static class PostVH extends RecyclerView.ViewHolder {
         private final TextView tvAuthor, tvContent, tvCounts, tvTime, tvLike, tvComment, tvLikesCount;
         private final ImageView ivAuthorAvatar, ivImage, iconLike, iconComment;
+        private final ImageButton btnMoreOptions;
         private final LinearLayout btnLike, btnComment;
         private final RecyclerView rvImages;
         private final LinearLayout containerMultipleImages;
         private final LinearLayout indicatorDots;
         private boolean isLiked = false;
         private String currentPostId = null;
+        private String currentPostContent = null;
         private long currentLikesCount = 0;
         private long currentCommentsCount = 0;
         private CommunityDAO communityDAO;
+        private Fragment fragment;
 
-        public PostVH(@NonNull View itemView) {
+        public PostVH(@NonNull View itemView, Fragment fragment) {
             super(itemView);
+            this.fragment = fragment;
             communityDAO = new CommunityDAO();
             tvAuthor = itemView.findViewById(R.id.tvAuthor);
             tvContent = itemView.findViewById(R.id.tvContent);
@@ -651,6 +658,7 @@ public class CommunityFragment extends Fragment {
 
             btnLike = itemView.findViewById(R.id.btnLike);
             btnComment = itemView.findViewById(R.id.btnComment);
+            btnMoreOptions = itemView.findViewById(R.id.btn_more_options);
             iconLike = itemView.findViewById(R.id.iconLike);
             iconComment = itemView.findViewById(R.id.iconComment);
             tvLike = itemView.findViewById(R.id.tvLike);
@@ -759,9 +767,32 @@ public class CommunityFragment extends Fragment {
             // Like state
             isLiked = currentUser != null && p.likedBy != null && p.likedBy.contains(currentUser.getUid());
             currentPostId = p.id;
+            currentPostContent = p.content != null ? p.content : "";
             currentLikesCount = p.likesCount;
             currentCommentsCount = p.commentsCount;
             renderLike(isLiked);
+            
+            // More options button (3 dots) - show popup menu
+            if (btnMoreOptions != null) {
+                btnMoreOptions.setOnClickListener(v -> {
+                    PopupMenu popupMenu = new PopupMenu(itemView.getContext(), v);
+                    popupMenu.getMenuInflater().inflate(R.menu.post_options_menu, popupMenu.getMenu());
+                    
+                    popupMenu.setOnMenuItemClickListener(item -> {
+                        if (item.getItemId() == R.id.menu_report_post) {
+                            // Show PostFeedbackDialog
+                            if (currentPostId != null && fragment != null) {
+                                PostFeedbackDialog dialog = PostFeedbackDialog.newInstance(currentPostId, currentPostContent);
+                                dialog.show(fragment.getParentFragmentManager(), "PostFeedbackDialog");
+                            }
+                            return true;
+                        }
+                        return false;
+                    });
+                    
+                    popupMenu.show();
+                });
+            }
 
             // Like button
             btnLike.setOnClickListener(v -> {

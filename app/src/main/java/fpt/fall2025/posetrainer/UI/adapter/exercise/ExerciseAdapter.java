@@ -3,15 +3,19 @@ package fpt.fall2025.posetrainer.UI.adapter.exercise;
 import android.content.Context;
 import android.content.Intent;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.widget.PopupMenu;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+
 import fpt.fall2025.posetrainer.UI.activity.ExerciseActivity;
 import fpt.fall2025.posetrainer.UI.activity.ExerciseDetailActivity;
+import fpt.fall2025.posetrainer.UI.activity.FeedbackActivity;
 import fpt.fall2025.posetrainer.Domain.Exercise;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
 import fpt.fall2025.posetrainer.Util.GlideImageLoader;
@@ -127,6 +131,26 @@ public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.Viewho
         holder.binding.getRoot().setOnClickListener(v -> {
             // Use Dialog instead of Activity
             ExerciseDetailActivity.show(context, exercise);
+        });
+
+        // More options button (3 dots) - show popup menu
+        holder.binding.btnMoreOptions.setOnClickListener(v -> {
+            PopupMenu popupMenu = new PopupMenu(context, v);
+            popupMenu.getMenuInflater().inflate(R.menu.exercise_options_menu, popupMenu.getMenu());
+            
+            popupMenu.setOnMenuItemClickListener(item -> {
+                if (item.getItemId() == R.id.menu_feedback) {
+                    // Open FeedbackActivity with exercise data (using Serializable)
+                    Intent intent = new Intent(context, FeedbackActivity.class);
+                    intent.putExtra("exercise", exercise);
+                    intent.putExtra("auto_show_dialog", true);
+                    context.startActivity(intent);
+                    return true;
+                }
+                return false;
+            });
+            
+            popupMenu.show();
         });
     }
 

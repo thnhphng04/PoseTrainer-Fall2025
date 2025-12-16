@@ -107,6 +107,9 @@
         <activity
             android:name=".UI.activity.CustomExercisesActivity"
             android:exported="false" />
+        <activity
+            android:name=".UI.activity.FeedbackActivity"
+            android:exported="false" />
 
         <!--        <activity-->
 <!--            android:name=".UI.activity.MainActivity"-->
