@@ -19,6 +19,7 @@ import fpt.fall2025.posetrainer.UI.activity.CreateCustomExerciseActivity;
 import fpt.fall2025.posetrainer.UI.activity.CustomExercisesActivity;
 import fpt.fall2025.posetrainer.UI.activity.EditGoalsActivity;
 import fpt.fall2025.posetrainer.UI.activity.EditProfileActivity;
+import fpt.fall2025.posetrainer.UI.activity.FeedbackActivity;
 import fpt.fall2025.posetrainer.UI.activity.LoginActivity;
 import fpt.fall2025.posetrainer.UI.activity.WorkoutHistoryActivity;
 import fpt.fall2025.posetrainer.Domain.Session;
@@ -105,6 +106,11 @@ public class ProfileFragment extends Fragment {
         // Menu Bài tập đã tạo - mở CustomExercisesActivity (danh sách bài tập đã tạo)
         binding.menuSync.setOnClickListener(v ->
                 startActivity(new Intent(requireContext(), CustomExercisesActivity.class))
+        );
+
+        // Menu Gửi góp ý - mở FeedbackActivity
+        binding.menuFeedback.setOnClickListener(v ->
+                startActivity(new Intent(requireContext(), fpt.fall2025.posetrainer.UI.activity.FeedbackActivity.class))
         );
 
         // Logout
