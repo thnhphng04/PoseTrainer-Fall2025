@@ -14,6 +14,7 @@ import fpt.fall2025.posetrainer.UI.activity.UserWorkoutDetailActivity;
 import fpt.fall2025.posetrainer.Domain.FavoriteWorkoutItem;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
+import fpt.fall2025.posetrainer.Util.GlideImageLoader;
 import fpt.fall2025.posetrainer.databinding.ItemFavoriteWorkoutBinding;
 
 import java.util.ArrayList;
@@ -60,11 +61,29 @@ public class FavoriteWorkoutAdapter extends RecyclerView.Adapter<FavoriteWorkout
         // Set exercise count
         holder.binding.tvExerciseCount.setText(item.getExerciseCount() + " bài tập");
         
-        // Set image
-        int resId = getImageResourceForWorkout(item);
-        Glide.with(holder.itemView.getContext())
-                .load(resId)
-                .into(holder.binding.ivThumbnail);
+        // Set image: ưu tiên thumbnailUrl cho WorkoutTemplate, nếu null hoặc lỗi thì fallback về pic_1
+        int defaultPicResId = context.getResources().getIdentifier("pic_1", "drawable", context.getPackageName());
+        if (!item.isUserWorkout()) {
+            // Cho WorkoutTemplate
+            WorkoutTemplate workoutTemplate = item.getWorkoutTemplate();
+            if (workoutTemplate != null && workoutTemplate.getThumbnailUrl() != null && !workoutTemplate.getThumbnailUrl().isEmpty()) {
+                // Sử dụng GlideImageLoader với error fallback về pic_1
+                GlideImageLoader.loadImage(context, workoutTemplate.getThumbnailUrl(), 
+                        holder.binding.ivThumbnail, null, defaultPicResId);
+            } else {
+                // Fallback về logic cũ dựa trên focus
+                int resId = getImageResourceForWorkout(item);
+                Glide.with(holder.itemView.getContext())
+                        .load(resId)
+                        .into(holder.binding.ivThumbnail);
+            }
+        } else {
+            // Cho UserWorkout, sử dụng logic cũ
+            int resId = getImageResourceForWorkout(item);
+            Glide.with(holder.itemView.getContext())
+                    .load(resId)
+                    .into(holder.binding.ivThumbnail);
+        }
 
         // Set click listener
         holder.binding.getRoot().setOnClickListener(v -> {

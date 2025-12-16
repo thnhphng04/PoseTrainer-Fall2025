@@ -62,6 +62,8 @@ import fpt.fall2025.posetrainer.Core.mediapipe.PoseLandmarkerHelper
 import fpt.fall2025.posetrainer.UI.activity.ExerciseActivity
 import fpt.fall2025.posetrainer.UI.view.UnifiedOverlayView
 import fpt.fall2025.posetrainer.databinding.FragmentUnifiedCameraBinding
+import fpt.fall2025.posetrainer.Service.AuthService
+import fpt.fall2025.posetrainer.DAL.UserDAO
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import java.util.Locale
 import java.util.concurrent.ExecutorService
@@ -123,6 +125,11 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
     private var isTtsReady: Boolean = false
     private var isSpeakingFeedback: Boolean = false
     private var lastFeedbackSignature: String? = null
+    
+    // User settings
+    private var selectedPoseModel: Int = 0 // Default to full model (0)
+    private lateinit var authService: AuthService
+    private lateinit var userDAO: UserDAO
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -176,6 +183,10 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
 
         // Initialize background executor
         backgroundExecutor = Executors.newSingleThreadExecutor()
+        
+        // Initialize services
+        authService = AuthService()
+        userDAO = UserDAO()
 
         // Initialize analyzer based on exercise type
         initializeAnalyzer()
@@ -204,23 +215,72 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
             setUpCamera()
         }
 
-        // Create the PoseLandmarkerHelper
+        // Load user's selectedPoseModel first, then create PoseLandmarkerHelper
+        loadUserPoseModelSetting()
+
+        initTextToSpeech()
+    }
+
+    /**
+     * Load selectedPoseModel từ User document
+     */
+    private fun loadUserPoseModelSetting() {
+        val currentUser = authService.getCurrentUser()
+        if (currentUser == null) {
+            Log.w(TAG, "User chưa đăng nhập, sử dụng model mặc định (Full)")
+            createPoseLandmarkerHelper(0) // Default to full model
+            return
+        }
+        
+        val uid = currentUser.uid
+        Log.d(TAG, "Đang load pose model setting cho user: $uid")
+        
+        userDAO.getById(uid) { task ->
+            if (!task.isSuccessful || task.result == null) {
+                Log.w(TAG, "Không thể load user, sử dụng model mặc định (Full)")
+                createPoseLandmarkerHelper(0) // Default to full model
+                return@getById
+            }
+            
+            val user = task.result
+            if (user != null) {
+                // Get selectedPoseModel, default to 0 (full model) if null
+                val model = user.selectedPoseModel ?: 0
+                
+                // Validate model value (0-2)
+                selectedPoseModel = when {
+                    model < 0 -> 0
+                    model > 2 -> 0
+                    else -> model
+                }
+                
+                Log.d(TAG, "✓ Đã load pose model setting: $selectedPoseModel (0=Full, 1=Lite, 2=Heavy)")
+                createPoseLandmarkerHelper(selectedPoseModel)
+            } else {
+                Log.w(TAG, "User không tồn tại, sử dụng model mặc định (Full)")
+                createPoseLandmarkerHelper(0) // Default to full model
+            }
+        }
+    }
+    
+    /**
+     * Create PoseLandmarkerHelper với model được chọn
+     */
+    private fun createPoseLandmarkerHelper(model: Int) {
         backgroundExecutor.execute {
             poseLandmarkerHelper = PoseLandmarkerHelper(
                 minPoseDetectionConfidence = 0.5f,
                 minPoseTrackingConfidence = 0.5f,
                 minPosePresenceConfidence = 0.5f,
-                currentModel = PoseLandmarkerHelper.MODEL_POSE_LANDMARKER_FULL,
+                currentModel = model,
                 currentDelegate = PoseLandmarkerHelper.DELEGATE_CPU,
                 runningMode = RunningMode.LIVE_STREAM,
                 context = requireContext(),
                 poseLandmarkerHelperListener = this
             )
         }
-
-        initTextToSpeech()
     }
-
+    
     private fun initializeAnalyzer() {
         currentAnalyzer = when (exerciseType) {
             "ex_squat" -> SquatAnalyzer()

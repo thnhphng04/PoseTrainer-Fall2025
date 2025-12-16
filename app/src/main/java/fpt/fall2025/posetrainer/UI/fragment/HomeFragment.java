@@ -49,11 +49,15 @@ public class HomeFragment extends Fragment {
     private WorkoutTemplateDAO workoutTemplateDAO;
     private WorkoutTemplateAdapter adapter; // Reuse adapter thay vì tạo mới mỗi lần
     private WorkoutTemplateAdapter featuredAdapter; // Adapter cho featured workouts
-    private WorkoutTemplateAdapter personalizedAdapter; // Adapter cho personalized workouts
+    private WorkoutTemplateAdapter personalizedAdapter; // Adapter cho personalized workouts (gain_muscle)
+    private WorkoutTemplateAdapter loseFatAdapter; // Adapter cho lose_fat workouts
+    private WorkoutTemplateAdapter generalFitnessAdapter; // Adapter cho general_fitness workouts
     private SessionAdapter recentActivityAdapter; // Adapter cho recent activity
     private CollectionAdapter collectionAdapter; // Adapter cho collections
     private ArrayList<Session> recentSessions; // Recent sessions list
     private ArrayList<Collection> collections; // Collections list
+    private ArrayList<WorkoutTemplate> loseFatWorkouts; // Lose fat workouts list
+    private ArrayList<WorkoutTemplate> generalFitnessWorkouts; // General fitness workouts list
     
     // Filter states
     private String selectedCategory = "Latest Updates";
@@ -87,6 +91,8 @@ public class HomeFragment extends Fragment {
         filteredWorkoutTemplates = new ArrayList<>();
         featuredWorkouts = new ArrayList<>();
         personalizedWorkouts = new ArrayList<>();
+        loseFatWorkouts = new ArrayList<>();
+        generalFitnessWorkouts = new ArrayList<>();
         recentSessions = new ArrayList<>();
         collections = new ArrayList<>();
 
@@ -120,7 +126,7 @@ public class HomeFragment extends Fragment {
             }
         }
 
-        // Setup RecyclerView cho Personalized Workouts (rv_workouts)
+        // Setup RecyclerView cho Personalized Workouts (rv_workouts) - Gain Muscle
         binding.rvWorkouts.setLayoutManager(
                 new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false)
         );
@@ -131,6 +137,34 @@ public class HomeFragment extends Fragment {
             personalizedAdapter.updateList(personalizedWorkouts);
             if (binding.rvWorkouts.getAdapter() == null) {
                 binding.rvWorkouts.setAdapter(personalizedAdapter);
+            }
+        }
+
+        // Setup RecyclerView cho Lose Fat Workouts (rv_lose_fat_workouts)
+        binding.rvLoseFatWorkouts.setLayoutManager(
+                new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false)
+        );
+        if (loseFatAdapter == null) {
+            loseFatAdapter = new WorkoutTemplateAdapter(loseFatWorkouts);
+            binding.rvLoseFatWorkouts.setAdapter(loseFatAdapter);
+        } else {
+            loseFatAdapter.updateList(loseFatWorkouts);
+            if (binding.rvLoseFatWorkouts.getAdapter() == null) {
+                binding.rvLoseFatWorkouts.setAdapter(loseFatAdapter);
+            }
+        }
+
+        // Setup RecyclerView cho General Fitness Workouts (rv_general_fitness_workouts)
+        binding.rvGeneralFitnessWorkouts.setLayoutManager(
+                new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false)
+        );
+        if (generalFitnessAdapter == null) {
+            generalFitnessAdapter = new WorkoutTemplateAdapter(generalFitnessWorkouts);
+            binding.rvGeneralFitnessWorkouts.setAdapter(generalFitnessAdapter);
+        } else {
+            generalFitnessAdapter.updateList(generalFitnessWorkouts);
+            if (binding.rvGeneralFitnessWorkouts.getAdapter() == null) {
+                binding.rvGeneralFitnessWorkouts.setAdapter(generalFitnessAdapter);
             }
         }
 
@@ -165,7 +199,7 @@ public class HomeFragment extends Fragment {
         setupSearchListeners();
         setupFilterListeners();
         setupNotificationButton();
-        setupSeeAllButton();
+        setupSeeAllButtons();
         setupPullToRefresh();
         setupQuickActionFAB();
         loadCurrentUserInfo();
@@ -452,6 +486,8 @@ public class HomeFragment extends Fragment {
             // Load recommended và personalized workouts sau khi có data
             loadRecommendedWorkouts();
             loadPersonalizedWorkouts();
+            loadLoseFatWorkouts();
+            loadGeneralFitnessWorkouts();
         });
     }
 
@@ -499,8 +535,8 @@ public class HomeFragment extends Fragment {
     }
 
     /**
-     * Load và hiển thị Personalized Workouts (Bài tập dành cho bạn)
-     * Logic: Dựa trên level của user, hoặc workouts phù hợp với user
+     * Load và hiển thị Personalized Workouts (Tăng cơ bắp)
+     * Logic: Filter theo goalFit = "gain_muscle", sort theo thời gian tạo, chỉ hiển thị 5 workouts
      */
     private void loadPersonalizedWorkouts() {
         if (workoutTemplates == null || workoutTemplates.isEmpty()) {
@@ -508,45 +544,32 @@ public class HomeFragment extends Fragment {
             if (personalizedAdapter != null) {
                 personalizedAdapter.updateList(personalizedWorkouts);
             }
+            updateGainMuscleCount(0);
             showEmptyStateForPersonalized();
             return;
         }
 
         personalizedWorkouts.clear();
-        FirebaseUser currentUser = authService.getCurrentUser();
         
-        // Strategy: Lấy workouts phù hợp với level của user
-        // Nếu chưa có user level, lấy beginner workouts
-        String userLevel = "Beginner"; // Default
-        
-        if (currentUser != null) {
-            // Có thể load user level từ Firestore nếu có
-            // Tạm thời dùng default
-        }
-        
-        // Filter workouts theo level
-        ArrayList<WorkoutTemplate> levelFiltered = new ArrayList<>();
+        // Filter workouts theo goalFit = "gain_muscle"
+        ArrayList<WorkoutTemplate> gainMuscleWorkouts = new ArrayList<>();
         for (WorkoutTemplate template : workoutTemplates) {
-            if (template.getLevel() != null && 
-                template.getLevel().equalsIgnoreCase(userLevel)) {
-                levelFiltered.add(template);
+            if (template.getGoalFit() != null && 
+                template.getGoalFit().equalsIgnoreCase("gain_muscle")) {
+                gainMuscleWorkouts.add(template);
             }
         }
         
-        // Nếu không có đủ workouts theo level, thêm các workouts khác
-        if (levelFiltered.size() < 5) {
-            for (WorkoutTemplate template : workoutTemplates) {
-                if (!levelFiltered.contains(template)) {
-                    levelFiltered.add(template);
-                    if (levelFiltered.size() >= 10) break; // Tối đa 10 workouts
-                }
-            }
-        }
+        // Sort theo thời gian tạo (updatedAt - giảm dần, mới nhất trước)
+        gainMuscleWorkouts.sort((a, b) -> Long.compare(
+            b.getUpdatedAt() != 0 ? b.getUpdatedAt() : 0,
+            a.getUpdatedAt() != 0 ? a.getUpdatedAt() : 0
+        ));
         
-        // Lấy 5-8 workouts đầu tiên
-        int count = Math.min(8, levelFiltered.size());
+        // Lấy 5 workouts đầu tiên (mới nhất)
+        int count = Math.min(5, gainMuscleWorkouts.size());
         for (int i = 0; i < count; i++) {
-            personalizedWorkouts.add(levelFiltered.get(i));
+            personalizedWorkouts.add(gainMuscleWorkouts.get(i));
         }
         
         // Update adapter
@@ -556,21 +579,169 @@ public class HomeFragment extends Fragment {
             personalizedAdapter = new WorkoutTemplateAdapter(personalizedWorkouts);
             binding.rvWorkouts.setAdapter(personalizedAdapter);
         }
+        
+        // Update số lượng workouts (tổng số workouts có goalFit = "gain_muscle")
+        updateGainMuscleCount(gainMuscleWorkouts.size());
 
         // Hide empty state nếu có data
         if (personalizedWorkouts.isEmpty()) {
             showEmptyStateForPersonalized();
         }
     }
+    
+    /**
+     * Cập nhật số lượng workouts hiển thị trong "Tăng cơ bắp" section
+     */
+    private void updateGainMuscleCount(int count) {
+        if (binding != null && binding.tvGainMuscleCount != null) {
+            binding.tvGainMuscleCount.setText(count + " Bài tập");
+        }
+    }
+    
+    /**
+     * Load và hiển thị Lose Fat Workouts (Giảm mỡ)
+     * Logic: Filter theo goalFit = "lose_fat", sort theo thời gian tạo, chỉ hiển thị 5 workouts
+     */
+    private void loadLoseFatWorkouts() {
+        if (workoutTemplates == null || workoutTemplates.isEmpty()) {
+            loseFatWorkouts.clear();
+            if (loseFatAdapter != null) {
+                loseFatAdapter.updateList(loseFatWorkouts);
+            }
+            updateLoseFatCount(0);
+            return;
+        }
+
+        loseFatWorkouts.clear();
+        
+        // Filter workouts theo goalFit = "lose_fat"
+        ArrayList<WorkoutTemplate> loseFatFiltered = new ArrayList<>();
+        for (WorkoutTemplate template : workoutTemplates) {
+            if (template.getGoalFit() != null && 
+                template.getGoalFit().equalsIgnoreCase("lose_fat")) {
+                loseFatFiltered.add(template);
+            }
+        }
+        
+        // Sort theo thời gian tạo (updatedAt - giảm dần, mới nhất trước)
+        loseFatFiltered.sort((a, b) -> Long.compare(
+            b.getUpdatedAt() != 0 ? b.getUpdatedAt() : 0,
+            a.getUpdatedAt() != 0 ? a.getUpdatedAt() : 0
+        ));
+        
+        // Lấy 5 workouts đầu tiên (mới nhất)
+        int count = Math.min(5, loseFatFiltered.size());
+        for (int i = 0; i < count; i++) {
+            loseFatWorkouts.add(loseFatFiltered.get(i));
+        }
+        
+        // Update adapter
+        if (loseFatAdapter != null) {
+            loseFatAdapter.updateList(loseFatWorkouts);
+        } else {
+            loseFatAdapter = new WorkoutTemplateAdapter(loseFatWorkouts);
+            binding.rvLoseFatWorkouts.setAdapter(loseFatAdapter);
+        }
+        
+        // Update số lượng workouts (tổng số workouts có goalFit = "lose_fat")
+        updateLoseFatCount(loseFatFiltered.size());
+    }
+    
+    /**
+     * Cập nhật số lượng workouts hiển thị trong "Giảm mỡ" section
+     */
+    private void updateLoseFatCount(int count) {
+        if (binding != null && binding.tvLoseFatCount != null) {
+            binding.tvLoseFatCount.setText(count + " Bài tập");
+        }
+    }
+    
+    /**
+     * Load và hiển thị General Fitness Workouts (Thể dục tổng quát)
+     * Logic: Filter theo goalFit = "general_fitness", sort theo thời gian tạo, chỉ hiển thị 5 workouts
+     */
+    private void loadGeneralFitnessWorkouts() {
+        if (workoutTemplates == null || workoutTemplates.isEmpty()) {
+            generalFitnessWorkouts.clear();
+            if (generalFitnessAdapter != null) {
+                generalFitnessAdapter.updateList(generalFitnessWorkouts);
+            }
+            updateGeneralFitnessCount(0);
+            return;
+        }
+
+        generalFitnessWorkouts.clear();
+        
+        // Filter workouts theo goalFit = "general_fitness"
+        ArrayList<WorkoutTemplate> generalFitnessFiltered = new ArrayList<>();
+        for (WorkoutTemplate template : workoutTemplates) {
+            if (template.getGoalFit() != null && 
+                template.getGoalFit().equalsIgnoreCase("general_fitness")) {
+                generalFitnessFiltered.add(template);
+            }
+        }
+        
+        // Sort theo thời gian tạo (updatedAt - giảm dần, mới nhất trước)
+        generalFitnessFiltered.sort((a, b) -> Long.compare(
+            b.getUpdatedAt() != 0 ? b.getUpdatedAt() : 0,
+            a.getUpdatedAt() != 0 ? a.getUpdatedAt() : 0
+        ));
+        
+        // Lấy 5 workouts đầu tiên (mới nhất)
+        int count = Math.min(5, generalFitnessFiltered.size());
+        for (int i = 0; i < count; i++) {
+            generalFitnessWorkouts.add(generalFitnessFiltered.get(i));
+        }
+        
+        // Update adapter
+        if (generalFitnessAdapter != null) {
+            generalFitnessAdapter.updateList(generalFitnessWorkouts);
+        } else {
+            generalFitnessAdapter = new WorkoutTemplateAdapter(generalFitnessWorkouts);
+            binding.rvGeneralFitnessWorkouts.setAdapter(generalFitnessAdapter);
+        }
+        
+        // Update số lượng workouts (tổng số workouts có goalFit = "general_fitness")
+        updateGeneralFitnessCount(generalFitnessFiltered.size());
+    }
+    
+    /**
+     * Cập nhật số lượng workouts hiển thị trong "Thể dục tổng quát" section
+     */
+    private void updateGeneralFitnessCount(int count) {
+        if (binding != null && binding.tvGeneralFitnessCount != null) {
+            binding.tvGeneralFitnessCount.setText(count + " Bài tập");
+        }
+    }
 
     /**
-     * Setup click listener cho button "Xem tất cả"
+     * Setup click listeners cho các button "Xem tất cả"
      */
-    private void setupSeeAllButton() {
+    private void setupSeeAllButtons() {
+        // Button "Xem tất cả" cho Gain Muscle
         binding.btnSeeAll.setOnClickListener(v -> {
-            // Navigate đến SearchActivity để xem tất cả workouts
-            Intent intent = new Intent(getActivity(), SearchActivity.class);
-            // Có thể pass thêm filter nếu cần (ví dụ: filter theo goal "Tăng cơ bắp")
+            Intent intent = new Intent(getActivity(), fpt.fall2025.posetrainer.UI.activity.GoalWorkoutListActivity.class);
+            intent.putExtra("goalFit", "gain_muscle");
+            intent.putExtra("goalFitTitle", "Tăng cơ bắp");
+            intent.putExtra("goalFitDescription", "Các bài tập giúp bạn tăng cơ bắp hiệu quả");
+            startActivity(intent);
+        });
+        
+        // Button "Xem tất cả" cho Lose Fat
+        binding.btnSeeAllLoseFat.setOnClickListener(v -> {
+            Intent intent = new Intent(getActivity(), fpt.fall2025.posetrainer.UI.activity.GoalWorkoutListActivity.class);
+            intent.putExtra("goalFit", "lose_fat");
+            intent.putExtra("goalFitTitle", "Giảm mỡ");
+            intent.putExtra("goalFitDescription", "Các bài tập giúp bạn giảm mỡ và đốt cháy calo");
+            startActivity(intent);
+        });
+        
+        // Button "Xem tất cả" cho General Fitness
+        binding.btnSeeAllGeneralFitness.setOnClickListener(v -> {
+            Intent intent = new Intent(getActivity(), fpt.fall2025.posetrainer.UI.activity.GoalWorkoutListActivity.class);
+            intent.putExtra("goalFit", "general_fitness");
+            intent.putExtra("goalFitTitle", "Thể dục tổng quát");
+            intent.putExtra("goalFitDescription", "Các bài tập thể dục tổng quát cho sức khỏe");
             startActivity(intent);
         });
     }
@@ -606,6 +777,8 @@ public class HomeFragment extends Fragment {
         loadUserStreak();
         loadCollections();
         loadRecentActivity();
+        // loadPersonalizedWorkouts, loadLoseFatWorkouts, loadGeneralFitnessWorkouts 
+        // sẽ được gọi tự động trong loadWorkoutTemplates()
 
         // Stop refresh indicator sau khi load xong (với delay nhỏ)
         binding.swipeRefreshLayout.postDelayed(() -> {
@@ -901,6 +1074,8 @@ public class HomeFragment extends Fragment {
         adapter = null; // Clear adapter reference
         featuredAdapter = null;
         personalizedAdapter = null;
+        loseFatAdapter = null;
+        generalFitnessAdapter = null;
         recentActivityAdapter = null;
     }
 }

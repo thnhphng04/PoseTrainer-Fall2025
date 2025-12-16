@@ -16,6 +16,7 @@ public class User implements Serializable {
     private long lastLoginAt;
     private NotificationSettings notification;
     private List<String> roles;
+    private Integer selectedPoseModel; // 0=full, 1=lite, 2=heavy (PoseLandmarkerHelper constants)
 
     public User() {}
 
@@ -31,6 +32,22 @@ public class User implements Serializable {
         this.lastLoginAt = lastLoginAt;
         this.notification = notification;
         this.roles = roles;
+        this.selectedPoseModel = 0; // Default to full model
+    }
+    
+    public User(String uid, String email, String displayName, String photoURL, 
+                List<String> providerIds, long createdAt, long lastLoginAt, 
+                NotificationSettings notification, List<String> roles, Integer selectedPoseModel) {
+        this.uid = uid;
+        this.email = email;
+        this.displayName = displayName;
+        this.photoURL = photoURL;
+        this.providerIds = providerIds;
+        this.createdAt = createdAt;
+        this.lastLoginAt = lastLoginAt;
+        this.notification = notification;
+        this.roles = roles;
+        this.selectedPoseModel = selectedPoseModel != null ? selectedPoseModel : 0; // Default to full model
     }
 
     // Getters and Setters
@@ -104,6 +121,14 @@ public class User implements Serializable {
 
     public void setRoles(List<String> roles) {
         this.roles = roles;
+    }
+
+    public Integer getSelectedPoseModel() {
+        return selectedPoseModel;
+    }
+
+    public void setSelectedPoseModel(Integer selectedPoseModel) {
+        this.selectedPoseModel = selectedPoseModel != null ? selectedPoseModel : 0; // Default to full model if null
     }
 
     // Inner class for notification settings

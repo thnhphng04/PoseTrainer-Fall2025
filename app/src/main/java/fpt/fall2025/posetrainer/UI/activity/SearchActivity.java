@@ -39,9 +39,35 @@ public class SearchActivity extends AppCompatActivity {
     // Filter states
     private String selectedCategory = "Tất cả";
     private String selectedDuration = "Tất cả";
-    private String selectedExerciseCategory = "Tất cả";
-    private String selectedBodyPart = "Tất cả";
+    private String selectedGoalFit = "Tất cả";
+    private Set<String> selectedBodyParts = new HashSet<>(); // Multiple body parts can be selected
     private String searchQuery = "";
+    
+    // GoalFit mapping (English -> Vietnamese)
+    private static final Map<String, String> GOAL_FIT_MAP = new HashMap<String, String>() {{
+        put("general_fitness", "Thể dục tổng quát");
+        put("gain_muscle", "Tăng cơ");
+        put("lose_fat", "Giảm mỡ");
+    }};
+    
+    // GoalFit reverse mapping (Vietnamese -> English)
+    private static final Map<String, String> GOAL_FIT_REVERSE_MAP = new HashMap<String, String>() {{
+        put("Thể dục tổng quát", "general_fitness");
+        put("Tăng cơ", "gain_muscle");
+        put("Giảm mỡ", "lose_fat");
+    }};
+    
+    // Body Part mapping (Vietnamese text -> English body part name)
+    private static final Map<String, String> BODY_PART_MAP = new HashMap<String, String>() {{
+        put("Toàn thân", "fullbody");
+        put("Chân", "legs");
+        put("Tay", "arms");
+        put("Ngực", "chest");
+        put("Bụng", "core");
+        put("Hông", "hips");
+        put("Vai", "shoulders");
+        put("Lưng", "back");
+    }};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,8 +85,9 @@ public class SearchActivity extends AppCompatActivity {
         setupRecyclerView();
         setupSearchBar();
         setupFilterChips();
+        setupBodyPartGridClicks();
         setupBackButton();
-        loadExercises(); // Load exercises first
+        loadExercises(); // Load exercises for search functionality
         loadWorkouts();
     }
 
@@ -99,137 +126,159 @@ public class SearchActivity extends AppCompatActivity {
         binding.chip815min.setOnClickListener(v -> selectDuration("8-15 min"));
         binding.chip15minPlus.setOnClickListener(v -> selectDuration(">15 min"));
         
-        // Exercise category and body part filters will be added dynamically after exercises are loaded
+        // GoalFit chips
+        binding.chipGoalFitAll.setOnClickListener(v -> selectGoalFit("Tất cả"));
+        binding.chipGeneralFitness.setOnClickListener(v -> selectGoalFit("Thể dục tổng quát"));
+        binding.chipGainMuscle.setOnClickListener(v -> selectGoalFit("Tăng cơ"));
+        binding.chipLoseFat.setOnClickListener(v -> selectGoalFit("Giảm mỡ"));
+        
+        // Body part filters will be added dynamically after exercises are loaded
     }
     
     /**
-     * Setup dynamic filter chips based on available exercise categories and muscles
+     * Setup body part grid clicks (using GridLayout CardViews)
      */
-    private void setupDynamicFilterChips() {
-        if (allExercises == null || allExercises.isEmpty()) {
-            return;
-        }
+    private void setupBodyPartGridClicks() {
+        // Full Body
+        binding.bodyPartFullBody.setOnClickListener(v -> selectBodyPartFromGrid("Toàn thân"));
         
-        // Collect unique exercise categories
-        Set<String> exerciseCategories = new HashSet<>();
-        Set<String> bodyParts = new HashSet<>();
+        // Legs (core CardView with "Chân" text)
+        binding.bodyPartCore.setOnClickListener(v -> selectBodyPartFromGrid("Chân"));
         
-        for (Exercise exercise : allExercises) {
-            if (exercise.getCategory() != null) {
-                for (String category : exercise.getCategory()) {
-                    if (category != null && !category.isEmpty()) {
-                        exerciseCategories.add(category);
-                    }
-                }
+        // Arms
+        binding.bodyPartArm.setOnClickListener(v -> selectBodyPartFromGrid("Tay"));
+        
+        // Chest
+        binding.bodyPartChest.setOnClickListener(v -> selectBodyPartFromGrid("Ngực"));
+        
+        // Core (butt_leg CardView with "Bụng" text)
+        binding.bodyPartButtLeg.setOnClickListener(v -> selectBodyPartFromGrid("Bụng"));
+        
+        // Hips (back CardView with "Hông" text)
+        binding.bodyPartBack.setOnClickListener(v -> selectBodyPartFromGrid("Hông"));
+        
+        // Shoulders
+        binding.bodyPartShoulder.setOnClickListener(v -> selectBodyPartFromGrid("Vai"));
+        
+        // Back (custom CardView with "Lưng" text)
+        binding.bodyPartCustom.setOnClickListener(v -> selectBodyPartFromGrid("Lưng"));
+    }
+    
+    /**
+     * Select body part from grid (convert Vietnamese to English)
+     * Toggle behavior: if already selected, remove it; if not selected, add it
+     */
+    private void selectBodyPartFromGrid(String vietnameseText) {
+        // Convert Vietnamese text to English body part name
+        String englishBodyPart = BODY_PART_MAP.get(vietnameseText);
+        if (englishBodyPart != null) {
+            // Toggle: if already in set, remove it; otherwise add it
+            if (selectedBodyParts.contains(englishBodyPart)) {
+                selectedBodyParts.remove(englishBodyPart);
+            } else {
+                selectedBodyParts.add(englishBodyPart);
             }
-            if (exercise.getMuscles() != null) {
-                for (String muscle : exercise.getMuscles()) {
-                    if (muscle != null && !muscle.isEmpty()) {
-                        bodyParts.add(muscle);
-                    }
-                }
-            }
         }
-        
-        // Setup exercise category chips
-        setupExerciseCategoryChips(new ArrayList<>(exerciseCategories));
-        
-        // Setup body part chips
-        setupBodyPartChips(new ArrayList<>(bodyParts));
+        updateBodyPartGridStates();
+        filterWorkouts();
     }
     
-    private void setupExerciseCategoryChips(ArrayList<String> categories) {
-        binding.llExerciseCategoryFilter.removeAllViews();
-        
-        // Add "Tất cả" chip
-        TextView allChip = createFilterChip("Tất cả", true);
-        allChip.setOnClickListener(v -> selectExerciseCategory("Tất cả"));
-        binding.llExerciseCategoryFilter.addView(allChip);
-        
-        // Sort categories for better UX
-        java.util.Collections.sort(categories);
-        
-        // Add category chips
-        for (String category : categories) {
-            TextView chip = createFilterChip(category, false);
-            chip.setOnClickListener(v -> selectExerciseCategory(category));
-            binding.llExerciseCategoryFilter.addView(chip);
-        }
-    }
     
-    private void setupBodyPartChips(ArrayList<String> bodyParts) {
-        binding.llBodyPartFilter.removeAllViews();
-        
-        // Add "Tất cả" chip
-        TextView allChip = createFilterChip("Tất cả", true);
-        allChip.setOnClickListener(v -> selectBodyPart("Tất cả"));
-        binding.llBodyPartFilter.addView(allChip);
-        
-        // Sort body parts for better UX
-        java.util.Collections.sort(bodyParts);
-        
-        // Add body part chips
-        for (String bodyPart : bodyParts) {
-            TextView chip = createFilterChip(bodyPart, false);
-            chip.setOnClickListener(v -> selectBodyPart(bodyPart));
-            binding.llBodyPartFilter.addView(chip);
-        }
-    }
     
-    private TextView createFilterChip(String text, boolean isSelected) {
-        TextView chip = new TextView(this);
-        chip.setText(text);
-        chip.setPadding(24, 12, 24, 12);
-        chip.setTextColor(getResources().getColor(R.color.white, null));
-        chip.setTextSize(12);
-        chip.setBackgroundResource(isSelected ? R.drawable.chip_selected_bg : R.drawable.chip_bg);
-        chip.setLayoutParams(new android.widget.LinearLayout.LayoutParams(
-                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
-                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-        ));
-        android.widget.LinearLayout.LayoutParams params = (android.widget.LinearLayout.LayoutParams) chip.getLayoutParams();
-        params.setMargins(0, 0, 8, 0);
-        chip.setLayoutParams(params);
-        chip.setClickable(true);
-        chip.setFocusable(true);
-        return chip;
-    }
-    
-    private void selectExerciseCategory(String category) {
-        selectedExerciseCategory = category;
-        updateExerciseCategoryChipStates();
+    private void selectGoalFit(String goalFit) {
+        selectedGoalFit = goalFit;
+        updateGoalFitChipStates();
         filterWorkouts();
     }
     
     private void selectBodyPart(String bodyPart) {
-        selectedBodyPart = bodyPart;
-        updateBodyPartChipStates();
+        // Legacy method - not used anymore, but kept for compatibility
+        if (bodyPart == null || bodyPart.equals("Tất cả")) {
+            selectedBodyParts.clear();
+        } else {
+            selectedBodyParts.clear();
+            selectedBodyParts.add(bodyPart);
+        }
+        updateBodyPartGridStates();
         filterWorkouts();
     }
     
-    private void updateExerciseCategoryChipStates() {
-        for (int i = 0; i < binding.llExerciseCategoryFilter.getChildCount(); i++) {
-            View child = binding.llExerciseCategoryFilter.getChildAt(i);
-            if (child instanceof TextView) {
-                TextView chip = (TextView) child;
-                if (chip.getText().toString().equals(selectedExerciseCategory)) {
-                    chip.setBackgroundResource(R.drawable.chip_selected_bg);
-                } else {
-                    chip.setBackgroundResource(R.drawable.chip_bg);
-                }
-            }
+    private void updateGoalFitChipStates() {
+        // Reset all
+        binding.chipGoalFitAll.setBackgroundResource(R.drawable.chip_bg);
+        binding.chipGeneralFitness.setBackgroundResource(R.drawable.chip_bg);
+        binding.chipGainMuscle.setBackgroundResource(R.drawable.chip_bg);
+        binding.chipLoseFat.setBackgroundResource(R.drawable.chip_bg);
+
+        // Set selected
+        switch (selectedGoalFit) {
+            case "Tất cả":
+                binding.chipGoalFitAll.setBackgroundResource(R.drawable.chip_selected_bg);
+                break;
+            case "Thể dục tổng quát":
+                binding.chipGeneralFitness.setBackgroundResource(R.drawable.chip_selected_bg);
+                break;
+            case "Tăng cơ":
+                binding.chipGainMuscle.setBackgroundResource(R.drawable.chip_selected_bg);
+                break;
+            case "Giảm mỡ":
+                binding.chipLoseFat.setBackgroundResource(R.drawable.chip_selected_bg);
+                break;
         }
     }
     
-    private void updateBodyPartChipStates() {
-        for (int i = 0; i < binding.llBodyPartFilter.getChildCount(); i++) {
-            View child = binding.llBodyPartFilter.getChildAt(i);
-            if (child instanceof TextView) {
-                TextView chip = (TextView) child;
-                if (chip.getText().toString().equals(selectedBodyPart)) {
-                    chip.setBackgroundResource(R.drawable.chip_selected_bg);
-                } else {
-                    chip.setBackgroundResource(R.drawable.chip_bg);
+    private void updateBodyPartGridStates() {
+        // Default card background color (#ff2a3142)
+        int defaultColor = 0xff2a3142;
+        // Selected color (slightly lighter or use primary color)
+        int selectedColor = 0xff4d9df2; // Primary blue color
+        
+        // Reset all cards to default
+        binding.bodyPartFullBody.setCardBackgroundColor(defaultColor);
+        binding.bodyPartCore.setCardBackgroundColor(defaultColor);
+        binding.bodyPartArm.setCardBackgroundColor(defaultColor);
+        binding.bodyPartChest.setCardBackgroundColor(defaultColor);
+        binding.bodyPartButtLeg.setCardBackgroundColor(defaultColor);
+        binding.bodyPartBack.setCardBackgroundColor(defaultColor);
+        binding.bodyPartShoulder.setCardBackgroundColor(defaultColor);
+        binding.bodyPartCustom.setCardBackgroundColor(defaultColor);
+        
+        // If no body parts selected, all remain default
+        if (selectedBodyParts == null || selectedBodyParts.isEmpty()) {
+            return;
+        }
+        
+        // Highlight all selected body parts
+        // Reverse lookup: English body part -> Vietnamese text -> CardView
+        for (Map.Entry<String, String> entry : BODY_PART_MAP.entrySet()) {
+            String englishBodyPart = entry.getValue();
+            if (selectedBodyParts.contains(englishBodyPart)) {
+                String vietnameseText = entry.getKey();
+                switch (vietnameseText) {
+                    case "Toàn thân":
+                        binding.bodyPartFullBody.setCardBackgroundColor(selectedColor);
+                        break;
+                    case "Chân":
+                        binding.bodyPartCore.setCardBackgroundColor(selectedColor);
+                        break;
+                    case "Tay":
+                        binding.bodyPartArm.setCardBackgroundColor(selectedColor);
+                        break;
+                    case "Ngực":
+                        binding.bodyPartChest.setCardBackgroundColor(selectedColor);
+                        break;
+                    case "Bụng":
+                        binding.bodyPartButtLeg.setCardBackgroundColor(selectedColor);
+                        break;
+                    case "Hông":
+                        binding.bodyPartBack.setCardBackgroundColor(selectedColor);
+                        break;
+                    case "Vai":
+                        binding.bodyPartShoulder.setCardBackgroundColor(selectedColor);
+                        break;
+                    case "Lưng":
+                        binding.bodyPartCustom.setCardBackgroundColor(selectedColor);
+                        break;
                 }
             }
         }
@@ -315,7 +364,6 @@ public class SearchActivity extends AppCompatActivity {
                     }
                 }
                 Log.d(TAG, "Loaded " + exercises.size() + " exercises");
-                setupDynamicFilterChips(); // Setup dynamic filter chips after exercises are loaded
                 filterWorkouts(); // Re-filter after exercises are loaded
             } else {
                 allExercises = new ArrayList<>();
@@ -388,36 +436,31 @@ public class SearchActivity extends AppCompatActivity {
     }
 
     /**
-     * Check if workout has exercises matching the selected exercise category
+     * Check if workout matches the selected goalFit
      */
-    private boolean workoutMatchesExerciseCategory(WorkoutTemplate workout, String category) {
-        if (category == null || category.equals("Tất cả")) {
+    private boolean workoutMatchesGoalFit(WorkoutTemplate workout, String goalFitVietnamese) {
+        if (goalFitVietnamese == null || goalFitVietnamese.equals("Tất cả")) {
             return true;
         }
         
-        if (workout.getItems() == null || workout.getItems().isEmpty()) {
-            return false;
-        }
-
-        for (WorkoutTemplate.WorkoutItem item : workout.getItems()) {
-            Exercise exercise = exerciseMap.get(item.getExerciseId());
-            if (exercise != null && exercise.getCategory() != null) {
-                for (String cat : exercise.getCategory()) {
-                    if (cat != null && cat.equalsIgnoreCase(category)) {
-                        return true;
-                    }
-                }
-            }
+        // Convert Vietnamese to English
+        String goalFitEnglish = GOAL_FIT_REVERSE_MAP.get(goalFitVietnamese);
+        if (goalFitEnglish == null) {
+            return true; // If mapping not found, show all
         }
         
-        return false;
+        // Check if workout's goalFit matches
+        String workoutGoalFit = workout.getGoalFit();
+        return workoutGoalFit != null && workoutGoalFit.equalsIgnoreCase(goalFitEnglish);
     }
 
     /**
-     * Check if workout has exercises matching the selected body part
+     * Check if workout has exercises matching any of the selected body parts
+     * Returns true if workout matches ANY selected body part (OR logic)
      */
-    private boolean workoutMatchesBodyPart(WorkoutTemplate workout, String bodyPart) {
-        if (bodyPart == null || bodyPart.equals("Tất cả")) {
+    private boolean workoutMatchesBodyPart(WorkoutTemplate workout, Set<String> selectedBodyParts) {
+        // If no body parts selected, show all workouts
+        if (selectedBodyParts == null || selectedBodyParts.isEmpty()) {
             return true;
         }
         
@@ -425,18 +468,27 @@ public class SearchActivity extends AppCompatActivity {
             return false;
         }
 
+        // Collect all muscles from all exercises in this workout
+        Set<String> workoutMuscles = new HashSet<>();
         for (WorkoutTemplate.WorkoutItem item : workout.getItems()) {
             Exercise exercise = exerciseMap.get(item.getExerciseId());
             if (exercise != null && exercise.getMuscles() != null) {
                 for (String muscle : exercise.getMuscles()) {
-                    if (muscle != null && muscle.equalsIgnoreCase(bodyPart)) {
-                        return true;
+                    if (muscle != null && !muscle.isEmpty()) {
+                        workoutMuscles.add(muscle.toLowerCase());
                     }
                 }
             }
         }
         
-        return false;
+        // Check if any selected body part matches any muscle in the workout
+        for (String selectedBodyPart : selectedBodyParts) {
+            if (workoutMuscles.contains(selectedBodyPart.toLowerCase())) {
+                return true; // Match found
+            }
+        }
+        
+        return false; // No match
     }
 
     private void filterWorkouts() {
@@ -446,7 +498,7 @@ public class SearchActivity extends AppCompatActivity {
             boolean matchesSearch = true;
             boolean matchesCategory = true;
             boolean matchesDuration = true;
-            boolean matchesExerciseCategory = true;
+            boolean matchesGoalFit = true;
             boolean matchesBodyPart = true;
 
             // Filter by search query (workout title, description, and exercise names)
@@ -486,18 +538,16 @@ public class SearchActivity extends AppCompatActivity {
                 }
             }
 
-            // Filter by exercise category
-            if (!selectedExerciseCategory.equals("Tất cả")) {
-                matchesExerciseCategory = workoutMatchesExerciseCategory(workout, selectedExerciseCategory);
+            // Filter by goalFit
+            if (!selectedGoalFit.equals("Tất cả")) {
+                matchesGoalFit = workoutMatchesGoalFit(workout, selectedGoalFit);
             }
 
-            // Filter by body part (muscles)
-            if (!selectedBodyPart.equals("Tất cả")) {
-                matchesBodyPart = workoutMatchesBodyPart(workout, selectedBodyPart);
-            }
+            // Filter by body parts (muscles) - multiple selection supported
+            matchesBodyPart = workoutMatchesBodyPart(workout, selectedBodyParts);
 
             if (matchesSearch && matchesCategory && matchesDuration && 
-                matchesExerciseCategory && matchesBodyPart) {
+                matchesGoalFit && matchesBodyPart) {
                 filteredWorkouts.add(workout);
             }
         }
@@ -521,3 +571,4 @@ public class SearchActivity extends AppCompatActivity {
         Log.d(TAG, "Filtered workouts: " + filteredWorkouts.size() + " / " + allWorkouts.size());
     }
 }
+

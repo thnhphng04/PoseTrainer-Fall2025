@@ -19,6 +19,7 @@ public class WorkoutTemplate implements Serializable {
     private String createdBy;
     private int version;
     private long updatedAt;
+    private String thumbnailUrl;
 
     public WorkoutTemplate() {}
 
@@ -135,6 +136,14 @@ public class WorkoutTemplate implements Serializable {
 
     public void setUpdatedAt(long updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getThumbnailUrl() {
+        return thumbnailUrl;
+    }
+
+    public void setThumbnailUrl(String thumbnailUrl) {
+        this.thumbnailUrl = thumbnailUrl;
     }
 
     // Inner class for WorkoutItem

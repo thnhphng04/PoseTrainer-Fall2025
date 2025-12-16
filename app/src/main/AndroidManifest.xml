@@ -99,6 +99,9 @@
             android:name=".UI.activity.CollectionDetailActivity"
             android:exported="false" />
         <activity
+            android:name=".UI.activity.GoalWorkoutListActivity"
+            android:exported="false" />
+        <activity
             android:name=".UI.activity.CreateCustomExerciseActivity"
             android:exported="false" />
         <activity
