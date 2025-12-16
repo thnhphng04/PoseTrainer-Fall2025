@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import fpt.fall2025.posetrainer.UI.activity.WorkoutActivity;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
+import fpt.fall2025.posetrainer.Util.GlideImageLoader;
 import fpt.fall2025.posetrainer.databinding.ItemSearchBinding;
 
 import java.util.ArrayList;
@@ -45,10 +46,19 @@ public class SearchWorkoutAdapter extends RecyclerView.Adapter<SearchWorkoutAdap
 
         holder.binding.titleTxt.setText(workoutTemplate.getTitle());
 
-        int resId = getImageResourceForWorkout(workoutTemplate);
-        Glide.with(holder.itemView.getContext())
-                .load(resId)
-                .into(holder.binding.pic);
+        // Load image: ưu tiên thumbnailUrl, nếu null hoặc lỗi thì fallback về pic_1
+        int defaultPicResId = context.getResources().getIdentifier("pic_1", "drawable", context.getPackageName());
+        if (workoutTemplate.getThumbnailUrl() != null && !workoutTemplate.getThumbnailUrl().isEmpty()) {
+            // Sử dụng GlideImageLoader với error fallback về pic_1
+            GlideImageLoader.loadImage(context, workoutTemplate.getThumbnailUrl(), 
+                    holder.binding.pic, null, defaultPicResId);
+        } else {
+            // Fallback về logic cũ dựa trên focus
+            int resId = getImageResourceForWorkout(workoutTemplate);
+            Glide.with(holder.itemView.getContext())
+                    .load(resId)
+                    .into(holder.binding.pic);
+        }
 
         int exerciseCount = (workoutTemplate.getItems() != null) ? workoutTemplate.getItems().size() : 0;
         holder.binding.excerciseTxt.setText(exerciseCount + " bài tập");
