@@ -72,6 +72,7 @@ public class CommunityFragment extends Fragment {
     // Tab state
     private int currentTab = 0; // 0: Tất cả, 1: Phổ biến, 2: Mới nhất, 3: Theo dõi
     private String currentSearchQuery = "";
+    private boolean isAutoSwitchingTab = false; // Flag để tránh clear search khi tự động chuyển tab
     
     // Cache để tránh reload không cần thiết
     private String cachedUserId = null;
@@ -233,7 +234,14 @@ public class CommunityFragment extends Fragment {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
                 currentTab = tab.getPosition();
-                loadFeed();
+                // Chỉ clear search khi user chuyển tab thủ công, không clear khi auto switch
+                if (!isAutoSwitchingTab) {
+                    currentSearchQuery = "";
+                    searchView.setQuery("", false);
+                    searchView.clearFocus();
+                    loadFeed();
+                }
+                isAutoSwitchingTab = false;
             }
 
             @Override
@@ -329,8 +337,10 @@ public class CommunityFragment extends Fragment {
         
         Query baseQuery = communityDAO.getCollection();
         
-        // Apply search filter
-        if (!TextUtils.isEmpty(currentSearchQuery)) {
+        // Apply search filter - chỉ áp dụng cho tab Tất cả và Mới nhất
+        // Tab Phổ biến không hỗ trợ search vì Firestore cần composite index
+        boolean hasSearch = !TextUtils.isEmpty(currentSearchQuery);
+        if (hasSearch && (currentTab == 0 || currentTab == 2)) {
             // Note: Firestore doesn't support full-text search natively
             // This is a simple implementation - for production, consider using Algolia or similar
             baseQuery = baseQuery.whereGreaterThanOrEqualTo("content", currentSearchQuery)
@@ -343,20 +353,39 @@ public class CommunityFragment extends Fragment {
                 baseQuery = baseQuery.orderBy("createdAt", Query.Direction.DESCENDING);
                 break;
             case 1: // Phổ biến
-                // Sort by likesCount only (đơn giản hóa để tránh cần composite index)
-                // Lưu ý: Nếu muốn sort chính xác hơn, cần tạo composite index hoặc dùng engagementScore field
-                baseQuery = baseQuery.orderBy("likesCount", Query.Direction.DESCENDING);
+                // Sort by likesCount only - không hỗ trợ search, chuyển về tab Tất cả
+                if (hasSearch) {
+                    currentTab = 0;
+                    isAutoSwitchingTab = true;
+                    tabLayout.getTabAt(0).select();
+                    // Apply search filter
+                    baseQuery = baseQuery.whereGreaterThanOrEqualTo("content", currentSearchQuery)
+                            .whereLessThanOrEqualTo("content", currentSearchQuery + "\uf8ff")
+                            .orderBy("createdAt", Query.Direction.DESCENDING);
+                } else {
+                    baseQuery = baseQuery.orderBy("likesCount", Query.Direction.DESCENDING);
+                }
                 break;
             case 2: // Mới nhất
                 baseQuery = baseQuery.orderBy("createdAt", Query.Direction.DESCENDING);
                 break;
             case 3: // Theo dõi
+                // Không hỗ trợ search, chuyển về tab Tất cả
+                if (hasSearch) {
+                    currentTab = 0;
+                    isAutoSwitchingTab = true;
+                    tabLayout.getTabAt(0).select();
+                    // Apply search filter
+                    baseQuery = baseQuery.whereGreaterThanOrEqualTo("content", currentSearchQuery)
+                            .whereLessThanOrEqualTo("content", currentSearchQuery + "\uf8ff")
+                            .orderBy("createdAt", Query.Direction.DESCENDING);
+                    break;
+                }
                 FirebaseUser currentUser = authService.getCurrentUser();
                 if (currentUser == null) {
                     showEmptyState("Bạn cần đăng nhập để xem bài viết từ người đang theo dõi");
                     return;
                 }
-                // Get following list and filter
                 loadFollowingFeed(currentUser.getUid());
                 return;
         }
