@@ -1,7 +1,6 @@
 package fpt.fall2025.posetrainer.UI.adapter.feedback;
 
 import android.content.Context;
-import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -72,6 +71,37 @@ public class FeedbackHistoryAdapter extends RecyclerView.Adapter<FeedbackHistory
         return feedbacks.size();
     }
     
+    /**
+     * Format timestamp (milliseconds) to relative time in Vietnamese
+     * @param timestampMillis Timestamp in milliseconds
+     * @return Formatted string like "5 phút trước", "2 giờ trước"
+     */
+    private static String formatRelativeTimeVietnamese(long timestampMillis) {
+        if (timestampMillis == 0) return "Không xác định";
+        
+        long now = System.currentTimeMillis();
+        long diffMillis = now - timestampMillis;
+        
+        if (diffMillis < 60000) { // Less than 1 minute
+            return "Vừa xong";
+        } else if (diffMillis < 3600000) { // Less than 1 hour
+            long minutes = diffMillis / 60000;
+            return minutes + " phút trước";
+        } else if (diffMillis < 86400000) { // Less than 1 day
+            long hours = diffMillis / 3600000;
+            return hours + " giờ trước";
+        } else if (diffMillis < 2592000000L) { // Less than 30 days
+            long days = diffMillis / 86400000;
+            return days + " ngày trước";
+        } else if (diffMillis < 31104000000L) { // Less than 1 year
+            long months = diffMillis / 2592000000L;
+            return months + " tháng trước";
+        } else {
+            long years = diffMillis / 31104000000L;
+            return years + " năm trước";
+        }
+    }
+
     /**
      * ViewHolder class
      */
@@ -157,12 +187,7 @@ public class FeedbackHistoryAdapter extends RecyclerView.Adapter<FeedbackHistory
             // Set thời gian
             if (feedback.getCreatedAt() > 0) {
                 long createdAtMillis = feedback.getCreatedAt() * 1000; // Convert từ seconds sang milliseconds
-                CharSequence timeAgo = DateUtils.getRelativeTimeSpanString(
-                    createdAtMillis,
-                    System.currentTimeMillis(),
-                    DateUtils.MINUTE_IN_MILLIS,
-                    DateUtils.FORMAT_ABBREV_RELATIVE
-                );
+                String timeAgo = formatRelativeTimeVietnamese(createdAtMillis);
                 tvFeedbackTime.setText(timeAgo);
             } else {
                 tvFeedbackTime.setText("");
