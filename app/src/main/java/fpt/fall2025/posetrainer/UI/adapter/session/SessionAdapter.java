@@ -67,14 +67,18 @@ public class SessionAdapter extends RecyclerView.Adapter<SessionAdapter.SessionV
         }
         
         // Set duration
-        if (session.getEndedAt() > 0 && session.getStartedAt() > 0) {
-            // Both startedAt and endedAt are in seconds
-            long duration = session.getEndedAt() - session.getStartedAt();
-            int minutes = (int) (duration / 60); // Convert seconds to minutes
-            holder.durationTxt.setText(minutes + " phút");
-        } else {
-            holder.durationTxt.setText("Đang thực hiện");
+        int durationMinutes = 0;
+        if (session.getSummary() != null && session.getSummary().getDurationSec() > 0) {
+            durationMinutes = session.getSummary().getDurationSec() / 60;
+        } else if (session.getEndedAt() > 0 && session.getStartedAt() > 0) {
+            // Fallback: tính từ startedAt và endedAt (cả hai đều là seconds)
+            long durationSec = session.getEndedAt() - session.getStartedAt();
+            durationMinutes = (int) (durationSec / 60);
         }
+
+        holder.durationTxt.setText(durationMinutes + " phút");
+
+
         
         // Set progress
         if (session.getPerExercise() != null) {

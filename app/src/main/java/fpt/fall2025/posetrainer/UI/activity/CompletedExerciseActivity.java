@@ -533,35 +533,23 @@ public class CompletedExerciseActivity extends AppCompatActivity {
                 });
     }
 
-    /**
-     * Tính calories cho session bằng METs formula
-     * Ưu tiên sử dụng calculateTotalCaloriesForSession nếu có exercises, 
-     * fallback sang calculateCaloriesByDuration
-     */
     private int calculateCaloriesForSession(double weightKg) {
         if (currentSession == null || currentSession.getSummary() == null) {
             return 0;
         }
-        
-        int durationSec = currentSession.getSummary().getDurationSec();
-        if (durationSec <= 0) {
+
+        if (exercises == null || exercises.isEmpty() || currentSession.getPerExercise() == null) {
             return 0;
         }
-        
-        double durationMinutes = durationSec / 60.0;
-        
-        // Nếu có exercises đã load, sử dụng calculateTotalCaloriesForSession
-        if (exercises != null && !exercises.isEmpty() && currentSession.getPerExercise() != null) {
-            Exercise[] exerciseArray = exercises.toArray(new Exercise[0]);
-            int totalCalories = CalorieCalculator.calculateTotalCaloriesForSession(currentSession, weightKg, exerciseArray);
-            if (totalCalories > 0) {
-                return totalCalories;
-            }
-        }
-        
-        // Fallback: tính bằng average METs
-        double averageMets = calculateAverageMets();
-        return CalorieCalculator.calculateCaloriesByDuration(averageMets, weightKg, durationMinutes);
+
+        Exercise[] exerciseArray = exercises.toArray(new Exercise[0]);
+
+        // ✅ CHỈ tính calories từ exercise đã completed + thời gian thực
+        return CalorieCalculator.calculateTotalCaloriesForSession(
+                currentSession,
+                weightKg,
+                exerciseArray
+        );
     }
 
     /**
