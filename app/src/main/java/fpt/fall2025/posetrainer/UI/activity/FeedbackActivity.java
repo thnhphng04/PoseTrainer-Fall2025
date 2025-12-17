@@ -16,6 +16,7 @@ import fpt.fall2025.posetrainer.Domain.Exercise;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.UI.dialog.ExerciseFeedbackDialog;
 import fpt.fall2025.posetrainer.UI.dialog.AppFeedbackDialog;
+import fpt.fall2025.posetrainer.UI.dialog.FeedbackHistoryDialog;
 
 /**
  * FeedbackActivity - Màn hình gửi feedback
@@ -27,6 +28,7 @@ public class FeedbackActivity extends AppCompatActivity {
     private Toolbar toolbar;
     private LinearLayout btnExerciseFeedback;
     private LinearLayout btnAppFeedback;
+    private LinearLayout btnFeedbackHistory;
 
     private FirebaseAuth mAuth;
 
@@ -63,6 +65,7 @@ public class FeedbackActivity extends AppCompatActivity {
         toolbar = findViewById(R.id.toolbar);
         btnExerciseFeedback = findViewById(R.id.btn_exercise_feedback);
         btnAppFeedback = findViewById(R.id.btn_app_feedback);
+        btnFeedbackHistory = findViewById(R.id.btn_feedback_history);
     }
 
     private void setupToolbar() {
@@ -99,6 +102,18 @@ public class FeedbackActivity extends AppCompatActivity {
             
             AppFeedbackDialog dialog = new AppFeedbackDialog();
             dialog.show(getSupportFragmentManager(), "AppFeedbackDialog");
+        });
+
+        // Nút lịch sử phản hồi
+        btnFeedbackHistory.setOnClickListener(v -> {
+            FirebaseUser currentUser = mAuth.getCurrentUser();
+            if (currentUser == null) {
+                Toast.makeText(this, "Vui lòng đăng nhập", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
+            FeedbackHistoryDialog dialog = new FeedbackHistoryDialog();
+            dialog.show(getSupportFragmentManager(), "FeedbackHistoryDialog");
         });
     }
 
