@@ -80,7 +80,8 @@
                 android:foreground="?android:attr/selectableItemBackground"
                 android:padding="20dp"
                 android:clickable="true"
-                android:focusable="true">
+                android:focusable="true"
+                android:layout_marginBottom="16dp">
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -95,6 +96,35 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Gửi phản hồi về ứng dụng nói chung"
+                    android:textColor="#999999"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <!-- Nút Lịch sử -->
+            <LinearLayout
+                android:id="@+id/btn_feedback_history"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/profile_item_background"
+                android:foreground="?android:attr/selectableItemBackground"
+                android:padding="20dp"
+                android:clickable="true"
+                android:focusable="true">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Lịch sử phản hồi"
+                    android:textColor="@color/white"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Xem lại các phản hồi đã gửi và trạng thái xử lý"
                     android:textColor="#999999"
                     android:textSize="14sp" />
             </LinearLayout>

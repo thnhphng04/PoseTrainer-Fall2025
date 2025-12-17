@@ -8,6 +8,12 @@ import androidx.annotation.Nullable;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import fpt.fall2025.posetrainer.Domain.Feedback;
 import fpt.fall2025.posetrainer.Service.firebaseContext.FirebaseFirestoreContext;
@@ -133,6 +139,68 @@ public class FeedbackDAO {
     @NonNull
     public com.google.firebase.firestore.CollectionReference getCollection() {
         return firestoreContext.getCollection(COLLECTION_NAME);
+    }
+    
+    /**
+     * Lấy danh sách feedback của user theo UID
+     * Sắp xếp theo thời gian tạo mới nhất trước
+     */
+    public void getByUserId(@NonNull String uid, @Nullable OnCompleteListener<List<Feedback>> listener) {
+        Log.d(TAG, "Đang lấy feedback của user: " + uid);
+        firestoreContext.getCollection(COLLECTION_NAME)
+            .whereEqualTo("uid", uid)
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .get()
+            .addOnSuccessListener(querySnapshot -> {
+                List<Feedback> feedbacks = new ArrayList<>();
+                for (QueryDocumentSnapshot doc : querySnapshot) {
+                    Feedback feedback = doc.toObject(Feedback.class);
+                    if (feedback != null) {
+                        feedback.setId(doc.getId());
+                        feedbacks.add(feedback);
+                    }
+                }
+                Log.d(TAG, "✅ Lấy " + feedbacks.size() + " feedback thành công");
+                if (listener != null) {
+                    listener.onComplete(Tasks.forResult(feedbacks));
+                }
+            })
+            .addOnFailureListener(e -> {
+                // Nếu thiếu index, thử query đơn giản hơn và sort client-side
+                if (e.getMessage() != null && (e.getMessage().contains("index") || e.getMessage().contains("requires an index"))) {
+                    Log.w(TAG, "⚠ Thiếu index cho feedback query, dùng query đơn giản cho user " + uid);
+                    firestoreContext.getCollection(COLLECTION_NAME)
+                        .whereEqualTo("uid", uid)
+                        .get()
+                        .addOnSuccessListener(querySnapshot -> {
+                            List<Feedback> feedbacks = new ArrayList<>();
+                            for (QueryDocumentSnapshot doc : querySnapshot) {
+                                Feedback feedback = doc.toObject(Feedback.class);
+                                if (feedback != null) {
+                                    feedback.setId(doc.getId());
+                                    feedbacks.add(feedback);
+                                }
+                            }
+                            // Sort client-side theo createdAt giảm dần
+                            feedbacks.sort((a, b) -> Long.compare(b.getCreatedAt(), a.getCreatedAt()));
+                            Log.d(TAG, "✅ Lấy " + feedbacks.size() + " feedback thành công (client-side sort)");
+                            if (listener != null) {
+                                listener.onComplete(Tasks.forResult(feedbacks));
+                            }
+                        })
+                        .addOnFailureListener(fallbackError -> {
+                            Log.e(TAG, "❌ Lỗi lấy feedback của user: " + uid, fallbackError);
+                            if (listener != null) {
+                                listener.onComplete(Tasks.<List<Feedback>>forException(fallbackError));
+                            }
+                        });
+                } else {
+                    Log.e(TAG, "❌ Lỗi lấy feedback của user: " + uid, e);
+                    if (listener != null) {
+                        listener.onComplete(Tasks.<List<Feedback>>forException(e));
+                    }
+                }
+            });
     }
 }
 
