@@ -932,6 +932,12 @@ public class CommunityFragment extends Fragment {
                 return;
             }
             
+            // Clear old decorations and listeners to avoid inconsistency
+            while (recyclerView.getItemDecorationCount() > 0) {
+                recyclerView.removeItemDecorationAt(0);
+            }
+            recyclerView.clearOnScrollListeners();
+            
             // Setup LinearLayoutManager horizontal
             LinearLayoutManager layoutManager = new LinearLayoutManager(itemView.getContext(), LinearLayoutManager.HORIZONTAL, false);
             recyclerView.setLayoutManager(layoutManager);
