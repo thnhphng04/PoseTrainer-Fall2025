@@ -336,16 +336,16 @@ public class SideLungeAnalyzer implements ExerciseAnalyzerInterface {
         
         public static SideLungeThresholds defaultBeginner() {
             return new SideLungeThresholds(
-                110,
-                new int[]{0, 10}, new int[]{20, 50},
+                120,
+                new int[]{0, 15}, new int[]{20, 50},
                 65, 15.0, 50
             );
         }
         
         public static SideLungeThresholds defaultPro() {
             return new SideLungeThresholds(
-                100,
-                new int[]{0, 10}, new int[]{25, 50},
+                110,
+                new int[]{0, 15}, new int[]{25, 50},
                 65, 15.0, 50
             );
         }
