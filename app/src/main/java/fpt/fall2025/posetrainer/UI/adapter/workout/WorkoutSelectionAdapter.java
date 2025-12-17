@@ -9,6 +9,10 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
 
+import com.bumptech.glide.Glide;
+import fpt.fall2025.posetrainer.Util.GlideImageLoader;
+
+
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
 import fpt.fall2025.posetrainer.databinding.ItemWorkoutSelectionBinding;
@@ -68,44 +72,71 @@ public class WorkoutSelectionAdapter extends RecyclerView.Adapter<WorkoutSelecti
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Object workout = workouts.get(position);
-        
+
+        String title = "";
+        int exerciseCount = 0;
+        int duration = 0;
+        String thumbnailUrl = null;
+
         if (workout instanceof WorkoutTemplate) {
             WorkoutTemplate template = (WorkoutTemplate) workout;
-            holder.binding.tvWorkoutTitle.setText(template.getTitle());
-            
-            int exerciseCount = (template.getItems() != null) ? template.getItems().size() : 0;
-            holder.binding.tvExerciseCount.setText(exerciseCount + " bài tập");
-            holder.binding.tvDuration.setText(template.getEstDurationMin() + " phút");
+            title = template.getTitle();
+            exerciseCount = template.getItems() != null ? template.getItems().size() : 0;
+            duration = template.getEstDurationMin();
+            thumbnailUrl = template.getThumbnailUrl();
+
         } else if (workout instanceof UserWorkout) {
             UserWorkout userWorkout = (UserWorkout) workout;
-            holder.binding.tvWorkoutTitle.setText(userWorkout.getTitle());
-            
-            int exerciseCount = (userWorkout.getItems() != null) ? userWorkout.getItems().size() : 0;
-            holder.binding.tvExerciseCount.setText(exerciseCount + " bài tập");
-            
-            // Calculate estimated duration: ~3 minutes per exercise
-            int estimatedDuration = exerciseCount * 3;
-            holder.binding.tvDuration.setText(estimatedDuration + " phút");
+            title = userWorkout.getTitle();
+            exerciseCount = userWorkout.getItems() != null ? userWorkout.getItems().size() : 0;
+            duration = exerciseCount * 3;
         }
 
-        // Show/hide selected indicator
-        if (position == selectedPosition) {
-            holder.binding.ivSelected.setVisibility(View.VISIBLE);
+        // Bind UI
+        holder.binding.titleTxt.setText(title);
+        holder.binding.excerciseTxt.setText(exerciseCount + " bài tập");
+        holder.binding.durationTxt.setText(duration + " phút");
+
+        // Load thumbnail
+        int defaultPicResId = holder.itemView.getContext()
+                .getResources()
+                .getIdentifier("pic_1", "drawable",
+                        holder.itemView.getContext().getPackageName());
+
+        if (thumbnailUrl != null && !thumbnailUrl.isEmpty()) {
+            GlideImageLoader.loadImage(
+                    holder.itemView.getContext(),
+                    thumbnailUrl,
+                    holder.binding.pic,
+                    null,
+                    defaultPicResId
+            );
         } else {
-            holder.binding.ivSelected.setVisibility(View.GONE);
+            Glide.with(holder.itemView.getContext())
+                    .load(defaultPicResId)
+                    .into(holder.binding.pic);
         }
 
+        // Selected indicator
+        holder.binding.ivSelected.setVisibility(
+                holder.getAdapterPosition() == selectedPosition
+                        ? View.VISIBLE
+                        : View.GONE
+        );
+
+        // Click listener — KHÔNG dùng position
         holder.itemView.setOnClickListener(v -> {
-            int oldPosition = selectedPosition;
-            selectedPosition = position;
-            
-            if (oldPosition >= 0) {
-                notifyItemChanged(oldPosition);
-            }
+            int clickedPos = holder.getAdapterPosition();
+            if (clickedPos == RecyclerView.NO_POSITION) return;
+
+            int oldPos = selectedPosition;
+            selectedPosition = clickedPos;
+
+            if (oldPos >= 0) notifyItemChanged(oldPos);
             notifyItemChanged(selectedPosition);
-            
+
             if (listener != null) {
-                listener.onWorkoutSelected(workout, position);
+                listener.onWorkoutSelected(workouts.get(clickedPos), clickedPos);
             }
         });
     }

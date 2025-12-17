@@ -281,7 +281,7 @@ public class CommunityFragment extends Fragment {
                     currentSearchQuery = "";
                     searchView.setQuery("", false);
                     searchView.clearFocus();
-                    loadFeed();
+                loadFeed();
                 }
                 isAutoSwitchingTab = false;
             }
@@ -402,7 +402,7 @@ public class CommunityFragment extends Fragment {
                     // Search filter sẽ được thực hiện ở client side
                     baseQuery = baseQuery.orderBy("createdAt", Query.Direction.DESCENDING);
                 } else {
-                    baseQuery = baseQuery.orderBy("likesCount", Query.Direction.DESCENDING);
+                baseQuery = baseQuery.orderBy("likesCount", Query.Direction.DESCENDING);
                 }
                 break;
             case 2: // Mới nhất
