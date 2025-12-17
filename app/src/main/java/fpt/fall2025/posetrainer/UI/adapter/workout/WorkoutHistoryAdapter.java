@@ -98,8 +98,17 @@ public class WorkoutHistoryAdapter extends RecyclerView.Adapter<WorkoutHistoryAd
         }
         holder.caloriesTxt.setText(calories + " Calo");
         
-        // Hiển thị thumbnail (sử dụng ảnh mặc định)
-        holder.thumbnailImg.setImageResource(R.drawable.pic_1);
+        // Hiển thị thumbnail từ session
+        String thumbnailUrl = session.getThumbnailUrl();
+        if (thumbnailUrl != null && !thumbnailUrl.isEmpty()) {
+            Glide.with(context)
+                    .load(thumbnailUrl)
+                    .placeholder(R.drawable.pic_1)
+                    .error(R.drawable.pic_1)
+                    .into(holder.thumbnailImg);
+        } else {
+            holder.thumbnailImg.setImageResource(R.drawable.pic_1);
+        }
         
         // Xử lý click vào item để mở SessionResultActivity (chỉ hiển thị kết quả)
         holder.itemView.setOnClickListener(v -> {

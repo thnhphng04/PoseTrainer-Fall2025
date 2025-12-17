@@ -22,6 +22,9 @@ import android.widget.VideoView;
 
 import fpt.fall2025.posetrainer.UI.activity.ExerciseActivity;
 import fpt.fall2025.posetrainer.Domain.Exercise;
+
+import java.util.HashMap;
+import java.util.Map;
 import fpt.fall2025.posetrainer.Util.GlideImageLoader;
 import fpt.fall2025.posetrainer.Util.VideoPlayerHelper;
 import fpt.fall2025.posetrainer.Util.VideoUrlHelper;
@@ -34,6 +37,26 @@ import fpt.fall2025.posetrainer.databinding.DialogExerciseDetailBinding;
  */
 public class ExerciseDetailDialog extends Dialog {
     private static final String TAG = "ExerciseDetailDialog";
+    
+    // Level mapping (English -> Vietnamese)
+    private static final Map<String, String> LEVEL_MAP = new HashMap<String, String>() {{
+        put("beginner", "Dễ");
+        put("intermediate", "Trung bình");
+        put("pro", "Khó");
+        put("advanced", "Khó");
+    }};
+    
+    // Muscle mapping (English -> Vietnamese)
+    private static final Map<String, String> MUSCLE_MAP = new HashMap<String, String>() {{
+        put("fullbody", "Toàn thân");
+        put("legs", "Chân");
+        put("arms", "Tay");
+        put("chest", "Ngực");
+        put("core", "Bụng");
+        put("hips", "Hông");
+        put("shoulders", "Vai");
+        put("back", "Lưng");
+    }};
 
     private DialogExerciseDetailBinding binding;
     private Exercise exercise;
@@ -151,15 +174,17 @@ public class ExerciseDetailDialog extends Dialog {
         // Set exercise name
         binding.exerciseNameTxt.setText(exercise.getName());
 
-        // Set level
-        binding.exerciseLevelTxt.setText(exercise.getLevel());
-
-        // Set category (first category if available)
-        if (exercise.getCategory() != null && !exercise.getCategory().isEmpty()) {
-            binding.exerciseCategoryTxt.setText(exercise.getCategory().get(0));
+        // Set level in Vietnamese
+        String level = exercise.getLevel();
+        if (level != null) {
+            String vietnameseLevel = LEVEL_MAP.get(level.toLowerCase());
+            binding.exerciseLevelTxt.setText(vietnameseLevel != null ? vietnameseLevel : "Trung bình");
         } else {
-            binding.exerciseCategoryTxt.setText("Tổng quát");
+            binding.exerciseLevelTxt.setText("Trung bình");
         }
+
+        // Hide category - not used anymore
+        binding.exerciseCategoryTxt.setVisibility(View.GONE);
 
         // Set sets x reps - use custom config if available, otherwise use default
         int sets, reps;
@@ -176,12 +201,14 @@ public class ExerciseDetailDialog extends Dialog {
         String setsReps = sets + " x " + reps;
         binding.exerciseSetsRepsTxt.setText(setsReps);
 
-        // Set muscles (if available)
+        // Set muscles in Vietnamese
         if (exercise.getMuscles() != null && !exercise.getMuscles().isEmpty()) {
             StringBuilder musclesText = new StringBuilder();
             for (int i = 0; i < exercise.getMuscles().size(); i++) {
                 if (i > 0) musclesText.append(", ");
-                musclesText.append(exercise.getMuscles().get(i));
+                String muscle = exercise.getMuscles().get(i);
+                String vietnameseMuscle = MUSCLE_MAP.get(muscle.toLowerCase());
+                musclesText.append(vietnameseMuscle != null ? vietnameseMuscle : muscle);
             }
             binding.exerciseMusclesTxt.setText(musclesText.toString());
         } else {

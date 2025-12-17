@@ -37,7 +37,6 @@ import java.util.ArrayList;
 public class HomeFragment extends Fragment {
     private FragmentHomeBinding binding;
     private ArrayList<WorkoutTemplate> workoutTemplates;
-    private ArrayList<WorkoutTemplate> filteredWorkoutTemplates;
     private ArrayList<WorkoutTemplate> featuredWorkouts; // Featured/Recommended workouts
     private ArrayList<WorkoutTemplate> personalizedWorkouts; // Personalized workouts
     private AuthService authService;
@@ -47,7 +46,6 @@ public class HomeFragment extends Fragment {
     private StreakDAO streakDAO;
     private CollectionDAO collectionDAO;
     private WorkoutTemplateDAO workoutTemplateDAO;
-    private WorkoutTemplateAdapter adapter; // Reuse adapter thay vì tạo mới mỗi lần
     private WorkoutTemplateAdapter featuredAdapter; // Adapter cho featured workouts
     private WorkoutTemplateAdapter personalizedAdapter; // Adapter cho personalized workouts (gain_muscle)
     private WorkoutTemplateAdapter loseFatAdapter; // Adapter cho lose_fat workouts
@@ -58,10 +56,6 @@ public class HomeFragment extends Fragment {
     private ArrayList<Collection> collections; // Collections list
     private ArrayList<WorkoutTemplate> loseFatWorkouts; // Lose fat workouts list
     private ArrayList<WorkoutTemplate> generalFitnessWorkouts; // General fitness workouts list
-    
-    // Filter states
-    private String selectedCategory = "Latest Updates";
-    private String selectedDuration = null;
     
     // Cache để tránh reload không cần thiết
     private boolean isWorkoutTemplatesLoaded = false;
@@ -88,29 +82,12 @@ public class HomeFragment extends Fragment {
         workoutTemplateDAO = new WorkoutTemplateDAO();
 
         workoutTemplates = new ArrayList<>();
-        filteredWorkoutTemplates = new ArrayList<>();
         featuredWorkouts = new ArrayList<>();
         personalizedWorkouts = new ArrayList<>();
         loseFatWorkouts = new ArrayList<>();
         generalFitnessWorkouts = new ArrayList<>();
         recentSessions = new ArrayList<>();
         collections = new ArrayList<>();
-
-        // Setup RecyclerView cho filtered workouts (view1)
-        binding.view1.setLayoutManager(
-                new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false)
-        );
-        // Khởi tạo adapter một lần và reuse thay vì tạo mới mỗi lần
-        if (adapter == null) {
-            adapter = new WorkoutTemplateAdapter(filteredWorkoutTemplates);
-            binding.view1.setAdapter(adapter);
-        } else {
-            // Adapter đã tồn tại, chỉ cần update data
-            adapter.updateList(filteredWorkoutTemplates);
-            if (binding.view1.getAdapter() == null) {
-                binding.view1.setAdapter(adapter);
-            }
-        }
 
         // Setup RecyclerView cho Featured Workouts (rv_featured_workouts)
         binding.rvFeaturedWorkouts.setLayoutManager(
@@ -197,7 +174,6 @@ public class HomeFragment extends Fragment {
         }
 
         setupSearchListeners();
-        setupFilterListeners();
         setupNotificationButton();
         setupSeeAllButtons();
         setupPullToRefresh();
@@ -209,10 +185,6 @@ public class HomeFragment extends Fragment {
         loadCollections();
         loadRecentActivity();
         isDataLoaded = true;
-        
-        // Initialize chip states
-        updateCategoryChipStates();
-        updateDurationChipStates();
     }
 
     private void setupSearchListeners() {
@@ -462,7 +434,6 @@ public class HomeFragment extends Fragment {
     private void loadWorkoutTemplates() {
         // Kiểm tra xem đã load chưa để tránh reload không cần thiết
         if (isWorkoutTemplatesLoaded && workoutTemplates != null && !workoutTemplates.isEmpty()) {
-            applyFilters();
             loadRecommendedWorkouts();
             loadPersonalizedWorkouts();
             return;
@@ -482,7 +453,6 @@ public class HomeFragment extends Fragment {
                 workoutTemplates = new ArrayList<>();
                 isWorkoutTemplatesLoaded = true;
             }
-            applyFilters();
             // Load recommended và personalized workouts sau khi có data
             loadRecommendedWorkouts();
             loadPersonalizedWorkouts();
@@ -910,160 +880,6 @@ public class HomeFragment extends Fragment {
         startActivity(intent);
     }
 
-    /**
-     * Setup click listeners for category and duration filter chips
-     */
-    private void setupFilterListeners() {
-        // Category chips
-        binding.chipLatest.setOnClickListener(v -> selectCategory("Latest Updates"));
-        binding.chipBeginner.setOnClickListener(v -> selectCategory("Beginner"));
-        binding.chipIntermediate.setOnClickListener(v -> selectCategory("Intermediate"));
-        binding.chipAdvanced.setOnClickListener(v -> selectCategory("Advanced"));
-
-        // Duration chips
-        binding.chip17min.setOnClickListener(v -> selectDuration("1-7 min"));
-        binding.chip815min.setOnClickListener(v -> selectDuration("8-15 min"));
-        binding.chip15minPlus.setOnClickListener(v -> selectDuration(">15 min"));
-        binding.chipStretching.setOnClickListener(v -> selectDuration("Stretching & Warm-up"));
-    }
-
-    /**
-     * Handle category chip selection
-     */
-    private void selectCategory(String category) {
-        selectedCategory = category;
-        updateCategoryChipStates();
-        applyFilters();
-    }
-
-    /**
-     * Handle duration chip selection
-     */
-    private void selectDuration(String duration) {
-        if (selectedDuration != null && selectedDuration.equals(duration)) {
-            // Deselect if same duration is clicked again
-            selectedDuration = null;
-        } else {
-            selectedDuration = duration;
-        }
-        updateDurationChipStates();
-        applyFilters();
-    }
-
-    /**
-     * Update visual states of category chips
-     */
-    private void updateCategoryChipStates() {
-        // Reset all chips to unselected state
-        binding.chipLatest.setBackgroundResource(R.drawable.chip_bg);
-        binding.chipBeginner.setBackgroundResource(R.drawable.chip_bg);
-        binding.chipIntermediate.setBackgroundResource(R.drawable.chip_bg);
-        binding.chipAdvanced.setBackgroundResource(R.drawable.chip_bg);
-
-        // Set selected chip
-        switch (selectedCategory) {
-            case "Latest Updates":
-                binding.chipLatest.setBackgroundResource(R.drawable.chip_selected_bg);
-                break;
-            case "Beginner":
-                binding.chipBeginner.setBackgroundResource(R.drawable.chip_selected_bg);
-                break;
-            case "Intermediate":
-                binding.chipIntermediate.setBackgroundResource(R.drawable.chip_selected_bg);
-                break;
-            case "Advanced":
-                binding.chipAdvanced.setBackgroundResource(R.drawable.chip_selected_bg);
-                break;
-        }
-    }
-
-    /**
-     * Update visual states of duration chips
-     */
-    private void updateDurationChipStates() {
-        // Reset all chips to unselected state
-        binding.chip17min.setBackgroundResource(R.drawable.chip_bg);
-        binding.chip815min.setBackgroundResource(R.drawable.chip_bg);
-        binding.chip15minPlus.setBackgroundResource(R.drawable.chip_bg);
-        binding.chipStretching.setBackgroundResource(R.drawable.chip_bg);
-
-        // Set selected chip if any
-        if (selectedDuration != null) {
-            switch (selectedDuration) {
-                case "1-7 min":
-                    binding.chip17min.setBackgroundResource(R.drawable.chip_selected_bg);
-                    break;
-                case "8-15 min":
-                    binding.chip815min.setBackgroundResource(R.drawable.chip_selected_bg);
-                    break;
-                case ">15 min":
-                    binding.chip15minPlus.setBackgroundResource(R.drawable.chip_selected_bg);
-                    break;
-                case "Stretching & Warm-up":
-                    binding.chipStretching.setBackgroundResource(R.drawable.chip_selected_bg);
-                    break;
-            }
-        }
-    }
-
-    /**
-     * Apply filters based on selected category and duration
-     */
-    private void applyFilters() {
-        filteredWorkoutTemplates.clear();
-
-        for (WorkoutTemplate template : workoutTemplates) {
-            boolean matchesCategory = false;
-            boolean matchesDuration = false;
-
-            // Check category filter
-            if (selectedCategory.equals("Latest Updates")) {
-                matchesCategory = true; // Show all for latest updates
-            } else {
-                matchesCategory = template.getLevel() != null && 
-                    template.getLevel().equalsIgnoreCase(selectedCategory);
-            }
-
-            // Check duration filter
-            if (selectedDuration == null) {
-                matchesDuration = true; // No duration filter
-            } else {
-                int duration = template.getEstDurationMin();
-                switch (selectedDuration) {
-                    case "1-7 min":
-                        matchesDuration = duration >= 1 && duration <= 7;
-                        break;
-                    case "8-15 min":
-                        matchesDuration = duration >= 8 && duration <= 15;
-                        break;
-                    case ">15 min":
-                        matchesDuration = duration > 15;
-                        break;
-                    case "Stretching & Warm-up":
-                        // For stretching, we might want to check focus or title
-                        matchesDuration = template.getFocus() != null && 
-                            template.getFocus().contains("Stretching") ||
-                            template.getTitle() != null && 
-                            template.getTitle().toLowerCase().contains("stretch");
-                        break;
-                }
-            }
-
-            if (matchesCategory && matchesDuration) {
-                filteredWorkoutTemplates.add(template);
-            }
-        }
-
-        // Update RecyclerView bằng cách update adapter thay vì tạo mới
-        if (adapter != null) {
-            adapter.updateList(filteredWorkoutTemplates);
-        } else {
-            // Nếu adapter chưa tồn tại, tạo mới
-            adapter = new WorkoutTemplateAdapter(filteredWorkoutTemplates);
-            binding.view1.setAdapter(adapter);
-        }
-    }
-
     @Override
     public void onDestroyView() {
         super.onDestroyView();
@@ -1071,7 +887,6 @@ public class HomeFragment extends Fragment {
         isDataLoaded = false;
         // Không reset isWorkoutTemplatesLoaded và cachedUserId để cache vẫn hoạt động khi fragment bị recreate
         binding = null;
-        adapter = null; // Clear adapter reference
         featuredAdapter = null;
         personalizedAdapter = null;
         loseFatAdapter = null;

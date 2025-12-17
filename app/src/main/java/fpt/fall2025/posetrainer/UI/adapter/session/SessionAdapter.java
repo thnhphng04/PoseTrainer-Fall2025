@@ -92,8 +92,17 @@ public class SessionAdapter extends RecyclerView.Adapter<SessionAdapter.SessionV
             holder.progressTxt.setText("0/0 đã hoàn thành");
         }
         
-        // Set default image
-        holder.imageView.setImageResource(R.drawable.pic_1);
+        // Set session thumbnail image
+        String thumbnailUrl = session.getThumbnailUrl();
+        if (thumbnailUrl != null && !thumbnailUrl.isEmpty()) {
+            Glide.with(context)
+                    .load(thumbnailUrl)
+                    .placeholder(R.drawable.pic_1)
+                    .error(R.drawable.pic_1)
+                    .into(holder.imageView);
+        } else {
+            holder.imageView.setImageResource(R.drawable.pic_1);
+        }
         
         // Set click listener
         holder.itemView.setOnClickListener(v -> {

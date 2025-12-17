@@ -104,7 +104,43 @@
 
             </androidx.cardview.widget.CardView>
 
-            <!-- Category Filter - Enhanced -->
+            <!-- Difficulty Filter -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Độ khó"
+                android:textColor="#B3FFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:scrollbars="none"
+                android:fadeScrollbars="false">
+
+                <LinearLayout
+                    android:id="@+id/layout_difficulty_chips"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp" />
+
+            </HorizontalScrollView>
+
+            <!-- Muscle Filter -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Nhóm cơ tác động"
+                android:textColor="#B3FFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
             <HorizontalScrollView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -113,7 +149,7 @@
                 android:fadeScrollbars="false">
 
                 <LinearLayout
-                    android:id="@+id/layout_category_chips"
+                    android:id="@+id/layout_muscle_chips"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"

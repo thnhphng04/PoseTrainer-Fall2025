@@ -21,7 +21,9 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import fpt.fall2025.posetrainer.UI.adapter.exercise.ExerciseSelectionAdapter;
@@ -35,11 +37,32 @@ import fpt.fall2025.posetrainer.DAL.ExerciseDAO;
 public class ExerciseSelectionDialog extends DialogFragment {
     private static final String TAG = "ExerciseSelectionDialog";
     
+    // Muscle mapping (English -> Vietnamese)
+    private static final Map<String, String> MUSCLE_MAP = new HashMap<String, String>() {{
+        put("fullbody", "Toàn thân");
+        put("legs", "Chân");
+        put("arms", "Tay");
+        put("chest", "Ngực");
+        put("core", "Bụng");
+        put("hips", "Hông");
+        put("shoulders", "Vai");
+        put("back", "Lưng");
+    }};
+    
+    // Level mapping (English -> Vietnamese)
+    private static final Map<String, String> LEVEL_MAP = new HashMap<String, String>() {{
+        put("beginner", "Dễ");
+        put("intermediate", "Trung bình");
+        put("pro", "Khó");
+        put("advanced", "Khó");
+    }};
+    
     private RecyclerView recyclerViewExercises;
     private SearchView searchView;
     private ProgressBar progressBar;
     private LinearLayout layoutEmptyState;
-    private LinearLayout layoutCategoryChips;
+    private LinearLayout layoutDifficultyChips;
+    private LinearLayout layoutMuscleChips;
     private TextView tvEmptyState;
     private ImageButton btnClose;
     private ExerciseSelectionAdapter adapter;
@@ -48,9 +71,11 @@ public class ExerciseSelectionDialog extends DialogFragment {
     private ArrayList<Exercise> filteredExercises;
     private OnExerciseSelectedListener listener;
     private ExerciseDAO exerciseDAO;
-    private String selectedCategory = null;
+    private String selectedDifficulty = null;
+    private String selectedMuscle = null;
     private String currentSearchQuery = "";
-    private ArrayList<TextView> categoryChips = new ArrayList<>();
+    private ArrayList<TextView> difficultyChips = new ArrayList<>();
+    private ArrayList<TextView> muscleChips = new ArrayList<>();
 
     /**
      * Interface for exercise selection callback
@@ -90,7 +115,8 @@ public class ExerciseSelectionDialog extends DialogFragment {
         searchView = view.findViewById(R.id.search_view);
         progressBar = view.findViewById(R.id.progress_bar);
         layoutEmptyState = view.findViewById(R.id.layout_empty_state);
-        layoutCategoryChips = view.findViewById(R.id.layout_category_chips);
+        layoutDifficultyChips = view.findViewById(R.id.layout_difficulty_chips);
+        layoutMuscleChips = view.findViewById(R.id.layout_muscle_chips);
         tvEmptyState = view.findViewById(R.id.tv_empty_state);
         btnClose = view.findViewById(R.id.btn_close);
 
@@ -159,8 +185,9 @@ public class ExerciseSelectionDialog extends DialogFragment {
                 allExercises = exercises;
                 filteredExercises = new ArrayList<>(exercises);
                 
-                // Setup category chips
-                setupCategoryChips();
+                // Setup filter chips
+                setupDifficultyChips();
+                setupMuscleChips();
                 
                 recyclerViewExercises.setVisibility(View.VISIBLE);
                 layoutEmptyState.setVisibility(View.GONE);
@@ -176,46 +203,46 @@ public class ExerciseSelectionDialog extends DialogFragment {
     }
 
     /**
-     * Setup category filter chips
+     * Setup difficulty filter chips (hardcoded: Dễ, Trung bình, Khó)
      */
-    private void setupCategoryChips() {
-        layoutCategoryChips.removeAllViews();
-        categoryChips.clear();
+    private void setupDifficultyChips() {
+        layoutDifficultyChips.removeAllViews();
+        difficultyChips.clear();
         
-        // Extract unique categories from exercises
-        Set<String> uniqueCategories = new HashSet<>();
-        for (Exercise exercise : allExercises) {
-            if (exercise.getCategory() != null) {
-                for (String category : exercise.getCategory()) {
-                    if (category != null && !category.trim().isEmpty()) {
-                        uniqueCategories.add(category.trim());
-                    }
-                }
-            }
-        }
+        // Hardcoded difficulty levels in Vietnamese
+        String[] difficultyNames = {"Tất cả", "Dễ", "Trung bình", "Khó"};
         
-        // Create "Tất cả" (All) chip
-        TextView allChip = createCategoryChip("Tất cả", true);
-        layoutCategoryChips.addView(allChip);
-        categoryChips.add(allChip);
-        
-        // Create chips for each unique category
-        ArrayList<String> sortedCategories = new ArrayList<>(uniqueCategories);
-        java.util.Collections.sort(sortedCategories);
-        
-        for (String category : sortedCategories) {
-            TextView chip = createCategoryChip(category, false);
-            layoutCategoryChips.addView(chip);
-            categoryChips.add(chip);
+        for (int i = 0; i < difficultyNames.length; i++) {
+            TextView chip = createChip(difficultyNames[i], i == 0, true);
+            layoutDifficultyChips.addView(chip);
+            difficultyChips.add(chip);
         }
     }
     
     /**
-     * Create a category chip TextView
+     * Setup muscle filter chips (hardcoded 8 muscles in Vietnamese)
      */
-    private TextView createCategoryChip(String categoryName, boolean isSelected) {
+    private void setupMuscleChips() {
+        layoutMuscleChips.removeAllViews();
+        muscleChips.clear();
+        
+        // Hardcoded muscle types in Vietnamese
+        String[] muscleNames = {"Tất cả", "Toàn thân", "Chân", "Tay", "Ngực", "Bụng", "Hông", "Vai", "Lưng"};
+        
+        for (int i = 0; i < muscleNames.length; i++) {
+            TextView chip = createChip(muscleNames[i], i == 0, false);
+            layoutMuscleChips.addView(chip);
+            muscleChips.add(chip);
+        }
+    }
+    
+    /**
+     * Create a chip TextView
+     * @param isDifficultyChip true for difficulty chips, false for muscle chips
+     */
+    private TextView createChip(String chipName, boolean isSelected, boolean isDifficultyChip) {
         TextView chip = new TextView(getContext());
-        chip.setText(categoryName);
+        chip.setText(chipName);
         chip.setPadding(
             (int) (16 * getResources().getDisplayMetrics().density),
             (int) (8 * getResources().getDisplayMetrics().density),
@@ -233,20 +260,17 @@ public class ExerciseSelectionDialog extends DialogFragment {
         chip.setLayoutParams(params);
         
         // Set background based on selection
-        if (isSelected && categoryName.equals("Tất cả")) {
-            chip.setBackgroundResource(R.drawable.chip_selected_bg);
-        } else {
-            chip.setBackgroundResource(R.drawable.chip_bg);
-        }
+        chip.setBackgroundResource(isSelected ? R.drawable.chip_selected_bg : R.drawable.chip_bg);
         
         // Set click listener
         chip.setOnClickListener(v -> {
-            if (categoryName.equals("Tất cả")) {
-                selectedCategory = null;
+            if (isDifficultyChip) {
+                selectedDifficulty = chipName.equals("Tất cả") ? null : chipName;
+                updateDifficultyChipStates();
             } else {
-                selectedCategory = categoryName;
+                selectedMuscle = chipName.equals("Tất cả") ? null : chipName;
+                updateMuscleChipStates();
             }
-            updateCategoryChipStates();
             applyFilters();
         });
         
@@ -257,14 +281,14 @@ public class ExerciseSelectionDialog extends DialogFragment {
     }
     
     /**
-     * Update visual states of category chips
+     * Update visual states of difficulty chips
      */
-    private void updateCategoryChipStates() {
-        for (TextView chip : categoryChips) {
+    private void updateDifficultyChipStates() {
+        for (TextView chip : difficultyChips) {
             String chipText = chip.getText().toString();
-            if (chipText.equals("Tất cả") && selectedCategory == null) {
+            if (chipText.equals("Tất cả") && selectedDifficulty == null) {
                 chip.setBackgroundResource(R.drawable.chip_selected_bg);
-            } else if (chipText.equals(selectedCategory)) {
+            } else if (chipText.equals(selectedDifficulty)) {
                 chip.setBackgroundResource(R.drawable.chip_selected_bg);
             } else {
                 chip.setBackgroundResource(R.drawable.chip_bg);
@@ -273,25 +297,85 @@ public class ExerciseSelectionDialog extends DialogFragment {
     }
     
     /**
-     * Apply both search and category filters
+     * Update visual states of muscle chips
+     */
+    private void updateMuscleChipStates() {
+        for (TextView chip : muscleChips) {
+            String chipText = chip.getText().toString();
+            if (chipText.equals("Tất cả") && selectedMuscle == null) {
+                chip.setBackgroundResource(R.drawable.chip_selected_bg);
+            } else if (chipText.equals(selectedMuscle)) {
+                chip.setBackgroundResource(R.drawable.chip_selected_bg);
+            } else {
+                chip.setBackgroundResource(R.drawable.chip_bg);
+            }
+        }
+    }
+    
+    /**
+     * Convert Vietnamese muscle name to English
+     */
+    private String getEnglishMuscle(String vietnameseMuscle) {
+        for (Map.Entry<String, String> entry : MUSCLE_MAP.entrySet()) {
+            if (entry.getValue().equals(vietnameseMuscle)) {
+                return entry.getKey();
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Convert Vietnamese difficulty to English
+     */
+    private String getEnglishDifficulty(String vietnameseDifficulty) {
+        for (Map.Entry<String, String> entry : LEVEL_MAP.entrySet()) {
+            if (entry.getValue().equals(vietnameseDifficulty)) {
+                return entry.getKey();
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Apply search, difficulty and muscle filters
      */
     private void applyFilters() {
         filteredExercises = new ArrayList<>();
         String lowerQuery = (currentSearchQuery != null) ? currentSearchQuery.toLowerCase().trim() : "";
+        
+        // Convert selected Vietnamese muscle to English
+        String selectedMuscleEnglish = (selectedMuscle != null) ? getEnglishMuscle(selectedMuscle) : null;
         
         for (Exercise exercise : allExercises) {
             if (exercise == null || exercise.getName() == null) {
                 continue;
             }
             
-            // Check category filter
-            boolean matchesCategory = true;
-            if (selectedCategory != null && !selectedCategory.isEmpty()) {
-                matchesCategory = false;
-                if (exercise.getCategory() != null) {
-                    for (String category : exercise.getCategory()) {
-                        if (category != null && category.equals(selectedCategory)) {
-                            matchesCategory = true;
+            // Check difficulty filter
+            boolean matchesDifficulty = true;
+            if (selectedDifficulty != null) {
+                matchesDifficulty = false;
+                String exerciseLevel = exercise.getLevel();
+                if (exerciseLevel != null) {
+                    String lowerLevel = exerciseLevel.toLowerCase();
+                    if (selectedDifficulty.equals("Dễ") && lowerLevel.contains("beginner")) {
+                        matchesDifficulty = true;
+                    } else if (selectedDifficulty.equals("Trung bình") && lowerLevel.contains("intermediate")) {
+                        matchesDifficulty = true;
+                    } else if (selectedDifficulty.equals("Khó") && (lowerLevel.contains("advanced") || lowerLevel.contains("pro"))) {
+                        matchesDifficulty = true;
+                    }
+                }
+            }
+            
+            // Check muscle filter
+            boolean matchesMuscle = true;
+            if (selectedMuscleEnglish != null) {
+                matchesMuscle = false;
+                if (exercise.getMuscles() != null) {
+                    for (String muscle : exercise.getMuscles()) {
+                        if (muscle != null && muscle.equalsIgnoreCase(selectedMuscleEnglish)) {
+                            matchesMuscle = true;
                             break;
                         }
                     }
@@ -306,22 +390,22 @@ public class ExerciseSelectionDialog extends DialogFragment {
                 boolean matchesName = exercise.getName().toLowerCase().contains(lowerQuery);
                 boolean matchesLevel = exercise.getLevel() != null && 
                     exercise.getLevel().toLowerCase().contains(lowerQuery);
-                boolean matchesCategoryInSearch = false;
+                boolean matchesMuscleInSearch = false;
                 
-                if (exercise.getCategory() != null) {
-                    for (String category : exercise.getCategory()) {
-                        if (category != null && category.toLowerCase().contains(lowerQuery)) {
-                            matchesCategoryInSearch = true;
+                if (exercise.getMuscles() != null) {
+                    for (String muscle : exercise.getMuscles()) {
+                        if (muscle != null && muscle.toLowerCase().contains(lowerQuery)) {
+                            matchesMuscleInSearch = true;
                             break;
                         }
                     }
                 }
                 
-                matchesSearch = matchesName || matchesLevel || matchesCategoryInSearch;
+                matchesSearch = matchesName || matchesLevel || matchesMuscleInSearch;
             }
             
-            // Add if matches both filters
-            if (matchesCategory && matchesSearch) {
+            // Add if matches all filters
+            if (matchesDifficulty && matchesMuscle && matchesSearch) {
                 filteredExercises.add(exercise);
             }
         }

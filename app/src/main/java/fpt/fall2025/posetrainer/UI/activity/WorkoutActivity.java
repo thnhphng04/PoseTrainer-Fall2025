@@ -36,6 +36,14 @@ import java.util.UUID;
 
 public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapter.OnSetsRepsChangedListener, ExerciseAdapter.OnDifficultyChangedListener {
     private static final String TAG = "WorkoutActivity";
+    
+    // Level mapping (English -> Vietnamese)
+    private static final java.util.Map<String, String> LEVEL_MAP = new java.util.HashMap<String, String>() {{
+        put("beginner", "Dễ");
+        put("intermediate", "Trung bình");
+        put("advanced", "Khó");
+        put("pro", "Khó");
+    }};
     ActivityWorkoutBinding binding;
     private WorkoutTemplate workoutTemplate;
     private ArrayList<Exercise> exercises;
@@ -395,6 +403,7 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
         }
         currentSession.setTitle(workoutTemplate.getTitle());
         currentSession.setDescription(workoutTemplate.getDescription());
+        currentSession.setThumbnailUrl(workoutTemplate.getThumbnailUrl());
         currentSession.setStartedAt(System.currentTimeMillis() / 1000); // Convert to seconds
         currentSession.setEndedAt(0); // Will be set when workout is completed
         
@@ -841,12 +850,30 @@ public class WorkoutActivity extends AppCompatActivity implements ExerciseAdapte
         
         // Set duration
         binding.durationTxt.setText(workoutTemplate.getEstDurationMin() + " phút");
+        
+        // Set difficulty badge in Vietnamese
+        String level = workoutTemplate.getLevel();
+        if (level != null) {
+            String vietnameseLevel = LEVEL_MAP.get(level.toLowerCase());
+            binding.textView14.setText(vietnameseLevel != null ? vietnameseLevel : level);
+        } else {
+            binding.textView14.setText("Trung bình");
+        }
 
-        // Set image based on focus
-        int resId = getImageResourceForWorkout(workoutTemplate);
-        Glide.with(this)
-                .load(resId)
-                .into(binding.pic);
+        // Set image from thumbnailUrl or fallback to local resource
+        String thumbnailUrl = workoutTemplate.getThumbnailUrl();
+        if (thumbnailUrl != null && !thumbnailUrl.isEmpty()) {
+            Glide.with(this)
+                    .load(thumbnailUrl)
+                    .placeholder(getImageResourceForWorkout(workoutTemplate))
+                    .error(getImageResourceForWorkout(workoutTemplate))
+                    .into(binding.pic);
+        } else {
+            int resId = getImageResourceForWorkout(workoutTemplate);
+            Glide.with(this)
+                    .load(resId)
+                    .into(binding.pic);
+        }
     }
 
     /**

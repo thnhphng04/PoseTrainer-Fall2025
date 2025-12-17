@@ -10,6 +10,7 @@ public class Session implements Serializable {
     private String uid;
     private String title;
     private String description;
+    private String thumbnailUrl;
     private long startedAt;
     private long endedAt;
     private SessionSummary summary;
@@ -67,6 +68,14 @@ public class Session implements Serializable {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getThumbnailUrl() {
+        return thumbnailUrl;
+    }
+
+    public void setThumbnailUrl(String thumbnailUrl) {
+        this.thumbnailUrl = thumbnailUrl;
     }
 
     public long getStartedAt() {
