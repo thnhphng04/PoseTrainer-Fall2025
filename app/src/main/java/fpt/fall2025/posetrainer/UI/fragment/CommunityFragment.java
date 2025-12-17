@@ -82,6 +82,48 @@ public class CommunityFragment extends Fragment {
     // Notification badge
     private long lastNotificationCountUpdate = 0;
     private static final long NOTIFICATION_COUNT_UPDATE_INTERVAL = 5000; // 5 giây
+    
+    /**
+     * Chuyển đổi tiếng Việt có dấu sang không dấu để hỗ trợ tìm kiếm
+     * Ví dụ: "Nguyễn Văn A" -> "nguyen van a"
+     */
+    private String removeVietnameseDiacritics(String text) {
+        if (text == null || text.isEmpty()) {
+            return "";
+        }
+        
+        // Normalize và chuyển sang lowercase
+        String normalized = java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFD);
+        
+        // Loại bỏ các ký tự dấu (diacritics)
+        normalized = normalized.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+        
+        // Chuyển sang lowercase
+        return normalized.toLowerCase();
+    }
+    
+    /**
+     * Kiểm tra xem text có chứa search query không (hỗ trợ cả có dấu và không dấu)
+     */
+    private boolean matchesSearch(String text, String searchQuery) {
+        if (text == null || searchQuery == null || searchQuery.isEmpty()) {
+            return true; // Nếu không có search query thì match tất cả
+        }
+        
+        String textLower = text.toLowerCase();
+        String searchLower = searchQuery.toLowerCase();
+        
+        // Kiểm tra match trực tiếp (có dấu)
+        if (textLower.contains(searchLower)) {
+            return true;
+        }
+        
+        // Kiểm tra match không dấu
+        String textNoDiacritics = removeVietnameseDiacritics(text);
+        String searchNoDiacritics = removeVietnameseDiacritics(searchQuery);
+        
+        return textNoDiacritics.contains(searchNoDiacritics);
+    }
 
 
     @Nullable
@@ -337,15 +379,14 @@ public class CommunityFragment extends Fragment {
         
         Query baseQuery = communityDAO.getCollection();
         
+        // Filter chỉ lấy các post có isVisible = true ở query level để tránh IndexOutOfBoundsException
+        baseQuery = baseQuery.whereEqualTo("isVisible", true);
+        
         // Apply search filter - chỉ áp dụng cho tab Tất cả và Mới nhất
         // Tab Phổ biến không hỗ trợ search vì Firestore cần composite index
+        // Lưu ý: Không filter ở query level nữa vì cần tìm cả trong content và author.displayName
+        // Filter sẽ được thực hiện ở client side trong onBindViewHolder
         boolean hasSearch = !TextUtils.isEmpty(currentSearchQuery);
-        if (hasSearch && (currentTab == 0 || currentTab == 2)) {
-            // Note: Firestore doesn't support full-text search natively
-            // This is a simple implementation - for production, consider using Algolia or similar
-            baseQuery = baseQuery.whereGreaterThanOrEqualTo("content", currentSearchQuery)
-                    .whereLessThanOrEqualTo("content", currentSearchQuery + "\uf8ff");
-        }
         
         // Apply tab filter
         switch (currentTab) {
@@ -358,10 +399,8 @@ public class CommunityFragment extends Fragment {
                     currentTab = 0;
                     isAutoSwitchingTab = true;
                     tabLayout.getTabAt(0).select();
-                    // Apply search filter
-                    baseQuery = baseQuery.whereGreaterThanOrEqualTo("content", currentSearchQuery)
-                            .whereLessThanOrEqualTo("content", currentSearchQuery + "\uf8ff")
-                            .orderBy("createdAt", Query.Direction.DESCENDING);
+                    // Search filter sẽ được thực hiện ở client side
+                    baseQuery = baseQuery.orderBy("createdAt", Query.Direction.DESCENDING);
                 } else {
                     baseQuery = baseQuery.orderBy("likesCount", Query.Direction.DESCENDING);
                 }
@@ -375,10 +414,8 @@ public class CommunityFragment extends Fragment {
                     currentTab = 0;
                     isAutoSwitchingTab = true;
                     tabLayout.getTabAt(0).select();
-                    // Apply search filter
-                    baseQuery = baseQuery.whereGreaterThanOrEqualTo("content", currentSearchQuery)
-                            .whereLessThanOrEqualTo("content", currentSearchQuery + "\uf8ff")
-                            .orderBy("createdAt", Query.Direction.DESCENDING);
+                    // Search filter sẽ được thực hiện ở client side
+                    baseQuery = baseQuery.orderBy("createdAt", Query.Direction.DESCENDING);
                     break;
                 }
                 FirebaseUser currentUser = authService.getCurrentUser();
@@ -412,12 +449,23 @@ public class CommunityFragment extends Fragment {
 
             @Override
             protected void onBindViewHolder(@NonNull PostVH h, int position, @NonNull Community p) {
-                // Filter isVisible ở client side
-                if (!p.isVisible) {
+                // Filter search query: kiểm tra cả content và author.displayName (hỗ trợ tìm không dấu)
+                boolean matchesSearch = true;
+                if (!TextUtils.isEmpty(currentSearchQuery)) {
+                    boolean contentMatch = matchesSearch(p.content, currentSearchQuery);
+                    boolean authorMatch = p.author != null && p.author.displayName != null && 
+                        matchesSearch(p.author.displayName, currentSearchQuery);
+                    matchesSearch = contentMatch || authorMatch;
+                }
+                
+                if (!matchesSearch) {
+                    // Ẩn item nếu không match search query
                     h.itemView.setVisibility(View.GONE);
                     h.itemView.setLayoutParams(new RecyclerView.LayoutParams(0, 0));
                     return;
                 }
+                
+                // Hiển thị item nếu match
                 h.itemView.setVisibility(View.VISIBLE);
                 h.itemView.setLayoutParams(new RecyclerView.LayoutParams(
                     RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
@@ -435,8 +483,30 @@ public class CommunityFragment extends Fragment {
             public void onDataChanged() {
                 super.onDataChanged();
                 showLoading(false);
-                if (getItemCount() == 0) {
-                    showEmptyState("Chưa có bài viết nào");
+                
+                // Đếm số item thực sự hiển thị sau khi filter search
+                int visibleCount = 0;
+                if (!TextUtils.isEmpty(currentSearchQuery)) {
+                    for (int i = 0; i < getItemCount(); i++) {
+                        Community p = getItem(i);
+                        if (p != null) {
+                            boolean contentMatch = matchesSearch(p.content, currentSearchQuery);
+                            boolean authorMatch = p.author != null && p.author.displayName != null && 
+                                matchesSearch(p.author.displayName, currentSearchQuery);
+                            if (contentMatch || authorMatch) {
+                                visibleCount++;
+                            }
+                        }
+                    }
+                } else {
+                    visibleCount = getItemCount();
+                }
+                
+                if (visibleCount == 0) {
+                    String message = !TextUtils.isEmpty(currentSearchQuery) 
+                        ? "Không tìm thấy kết quả cho \"" + currentSearchQuery + "\""
+                        : "Chưa có bài viết nào";
+                    showEmptyState(message);
                 } else {
                     hideEmptyState();
                 }
@@ -464,6 +534,7 @@ public class CommunityFragment extends Fragment {
                     }
                     
                     Query query = communityDAO.getCollection()
+                            .whereEqualTo("isVisible", true) // Filter chỉ lấy các post visible
                             .whereIn("uid", followingIds)
                             .orderBy("createdAt", Query.Direction.DESCENDING)
                             .limit(50);
@@ -488,12 +559,23 @@ public class CommunityFragment extends Fragment {
 
                         @Override
                         protected void onBindViewHolder(@NonNull PostVH h, int position, @NonNull Community p) {
-                            // Filter isVisible ở client side
-                            if (!p.isVisible) {
+                            // Filter search query: kiểm tra cả content và author.displayName (hỗ trợ tìm không dấu)
+                            boolean matchesSearchResult = true;
+                            if (!TextUtils.isEmpty(currentSearchQuery)) {
+                                boolean contentMatch = matchesSearch(p.content, currentSearchQuery);
+                                boolean authorMatch = p.author != null && p.author.displayName != null && 
+                                    matchesSearch(p.author.displayName, currentSearchQuery);
+                                matchesSearchResult = contentMatch || authorMatch;
+                            }
+                            
+                            if (!matchesSearchResult) {
+                                // Ẩn item nếu không match search query
                                 h.itemView.setVisibility(View.GONE);
                                 h.itemView.setLayoutParams(new RecyclerView.LayoutParams(0, 0));
                                 return;
                             }
+                            
+                            // Hiển thị item nếu match
                             h.itemView.setVisibility(View.VISIBLE);
                             h.itemView.setLayoutParams(new RecyclerView.LayoutParams(
                                 RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
@@ -504,8 +586,30 @@ public class CommunityFragment extends Fragment {
                         public void onDataChanged() {
                             super.onDataChanged();
                             showLoading(false);
-                            if (getItemCount() == 0) {
-                                showEmptyState("Chưa có bài viết nào từ người bạn đang theo dõi");
+                            
+                            // Đếm số item thực sự hiển thị sau khi filter search
+                            int visibleCount = 0;
+                            if (!TextUtils.isEmpty(currentSearchQuery)) {
+                                for (int i = 0; i < getItemCount(); i++) {
+                                    Community p = getItem(i);
+                                    if (p != null) {
+                                        boolean contentMatch = matchesSearch(p.content, currentSearchQuery);
+                                        boolean authorMatch = p.author != null && p.author.displayName != null && 
+                                            matchesSearch(p.author.displayName, currentSearchQuery);
+                                        if (contentMatch || authorMatch) {
+                                            visibleCount++;
+                                        }
+                                    }
+                                }
+                            } else {
+                                visibleCount = getItemCount();
+                            }
+                            
+                            if (visibleCount == 0) {
+                                String message = !TextUtils.isEmpty(currentSearchQuery) 
+                                    ? "Không tìm thấy kết quả cho \"" + currentSearchQuery + "\""
+                                    : "Chưa có bài viết nào từ người bạn đang theo dõi";
+                                showEmptyState(message);
                             } else {
                                 hideEmptyState();
                             }

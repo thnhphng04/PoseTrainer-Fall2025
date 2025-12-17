@@ -112,6 +112,37 @@ public class FeedbackDetailDialog extends DialogFragment {
         }
     }
     
+    /**
+     * Format timestamp (milliseconds) to relative time in Vietnamese
+     * @param timestampMillis Timestamp in milliseconds
+     * @return Formatted string like "5 phút trước", "2 giờ trước"
+     */
+    private String formatRelativeTimeVietnamese(long timestampMillis) {
+        if (timestampMillis == 0) return "Không xác định";
+        
+        long now = System.currentTimeMillis();
+        long diffMillis = now - timestampMillis;
+        
+        if (diffMillis < 60000) { // Less than 1 minute
+            return "Vừa xong";
+        } else if (diffMillis < 3600000) { // Less than 1 hour
+            long minutes = diffMillis / 60000;
+            return minutes + " phút trước";
+        } else if (diffMillis < 86400000) { // Less than 1 day
+            long hours = diffMillis / 3600000;
+            return hours + " giờ trước";
+        } else if (diffMillis < 2592000000L) { // Less than 30 days
+            long days = diffMillis / 86400000;
+            return days + " ngày trước";
+        } else if (diffMillis < 31104000000L) { // Less than 1 year
+            long months = diffMillis / 2592000000L;
+            return months + " tháng trước";
+        } else {
+            long years = diffMillis / 31104000000L;
+            return years + " năm trước";
+        }
+    }
+
     private void bindData() {
         // Set icon và loại feedback
         String typeIcon = "📱";
@@ -174,18 +205,8 @@ public class FeedbackDetailDialog extends DialogFragment {
         // Set thời gian tương đối
         if (feedback.getCreatedAt() > 0) {
             long createdAtMillis = feedback.getCreatedAt() * 1000;
-            android.text.format.DateUtils.getRelativeTimeSpanString(
-                createdAtMillis,
-                System.currentTimeMillis(),
-                android.text.format.DateUtils.MINUTE_IN_MILLIS,
-                android.text.format.DateUtils.FORMAT_ABBREV_RELATIVE
-            );
-            tvFeedbackTime.setText(android.text.format.DateUtils.getRelativeTimeSpanString(
-                createdAtMillis,
-                System.currentTimeMillis(),
-                android.text.format.DateUtils.MINUTE_IN_MILLIS,
-                android.text.format.DateUtils.FORMAT_ABBREV_RELATIVE
-            ));
+            String timeAgo = formatRelativeTimeVietnamese(createdAtMillis);
+            tvFeedbackTime.setText(timeAgo);
         } else {
             tvFeedbackTime.setText("");
         }
