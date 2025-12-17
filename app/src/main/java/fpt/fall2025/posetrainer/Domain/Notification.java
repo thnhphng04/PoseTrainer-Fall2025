@@ -19,6 +19,7 @@ public class Notification implements Serializable {
     private String actionData; // Data cho action (ví dụ: workoutId, exerciseId)
     private String feedback; // "accepted", "ignored", "dismissed" - Phản hồi của người dùng
     private Map<String, Object> metadata; // Dữ liệu bổ sung (tùy chỉnh theo nhu cầu)
+    private String senderName; // Tên người gửi (ví dụ: "Posey" - nhân vật tượng trưng)
 
     public Notification() {}
 
@@ -157,12 +158,34 @@ public class Notification implements Serializable {
     public void setMetadata(Map<String, Object> metadata) {
         this.metadata = metadata;
     }
+
+    public String getSenderName() {
+        return senderName;
+    }
+
+    public void setSenderName(String senderName) {
+        this.senderName = senderName;
+    }
     
     /**
      * Helper method: Kiểm tra xem thông báo có phải do AI tạo không
      */
     public boolean isFromAI() {
         return isAiGenerated || (type != null && type.startsWith("ai_"));
+    }
+    
+    /**
+     * Helper method: Lấy tên người gửi, mặc định là "Zues" nếu là AI notification
+     */
+    public String getDisplaySenderName() {
+        if (senderName != null && !senderName.isEmpty()) {
+            return senderName;
+        }
+        // Mặc định là "Zues" cho AI notifications
+        if (isFromAI()) {
+            return "Zues";
+        }
+        return "Hệ thống";
     }
     
     /**

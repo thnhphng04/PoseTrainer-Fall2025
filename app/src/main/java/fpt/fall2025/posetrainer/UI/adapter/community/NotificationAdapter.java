@@ -63,6 +63,15 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
         // Lấy notification tại vị trí hiện tại
         Notification notification = notifications.get(position);
         
+        // Set sender name (nhân vật tượng trưng)
+        String senderName = notification.getDisplaySenderName();
+        if (notification.isFromAI() && senderName != null && !senderName.isEmpty()) {
+            holder.senderTextView.setText(senderName + " 🦥");
+            holder.senderTextView.setVisibility(View.VISIBLE);
+        } else {
+            holder.senderTextView.setVisibility(View.GONE);
+        }
+        
         // Set title
         holder.titleTextView.setText(notification.getTitle());
         
@@ -198,6 +207,7 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
     static class NotificationViewHolder extends RecyclerView.ViewHolder {
         CardView cardView;
         ImageView iconImageView;
+        TextView senderTextView; // Tên người gửi (nhân vật tượng trưng)
         TextView titleTextView;
         TextView bodyTextView;
         TextView timeTextView;
@@ -210,6 +220,7 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
             // Ánh xạ các view
             cardView = itemView.findViewById(R.id.notification_card);
             iconImageView = itemView.findViewById(R.id.notification_icon);
+            senderTextView = itemView.findViewById(R.id.notification_sender);
             titleTextView = itemView.findViewById(R.id.notification_title);
             bodyTextView = itemView.findViewById(R.id.notification_body);
             timeTextView = itemView.findViewById(R.id.notification_time);

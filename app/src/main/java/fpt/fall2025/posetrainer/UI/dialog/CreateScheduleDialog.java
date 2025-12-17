@@ -5,18 +5,23 @@ import android.app.DatePickerDialog;
 import android.app.Dialog;
 import android.app.TimePickerDialog;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.DialogFragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -30,25 +35,40 @@ import fpt.fall2025.posetrainer.Domain.UserWorkout;
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.DAL.WorkoutTemplateDAO;
 import fpt.fall2025.posetrainer.DAL.UserWorkoutDAO;
+import fpt.fall2025.posetrainer.UI.adapter.workout.WorkoutSelectionAdapter;
 
 public class CreateScheduleDialog extends DialogFragment {
     private static final String TAG = "CreateScheduleDialog";
     
+    // Views
     private TextView tvSelectedDate;
     private TextView tvSelectedTime;
-    private Spinner spinnerWorkout;
+    private Button btnMyWorkouts;
+    private Button btnTemplates;
+    private EditText etSearch;
+    private ImageView ivClearSearch;
+    private RecyclerView recyclerViewWorkouts;
+    private LinearLayout llSelectedWorkout;
+    private TextView tvSelectedWorkout;
     private Button btnCancel;
     private Button btnSave;
     
+    // Data
     private Calendar selectedDate;
     private Calendar selectedTime;
     private ArrayList<WorkoutTemplate> workoutTemplates;
     private ArrayList<UserWorkout> userWorkouts;
-    private ArrayList<Object> allWorkouts; // Combined list for spinner
+    private ArrayList<Object> displayedWorkouts; // Currently displayed workouts
+    private ArrayList<Object> allMyWorkouts; // All user workouts
+    private ArrayList<Object> allTemplateWorkouts; // All template workouts
     private WorkoutTemplateDAO workoutTemplateDAO;
     private UserWorkoutDAO userWorkoutDAO;
-    private ArrayAdapter<String> workoutAdapter;
+    private WorkoutSelectionAdapter workoutAdapter;
     private OnScheduleCreatedListener listener;
+    
+    // State
+    private boolean isShowingMyWorkouts = true; // true = "Của tôi", false = "Mẫu"
+    private Object selectedWorkout; // Currently selected workout
     
     public interface OnScheduleCreatedListener {
         void onScheduleCreated(Schedule.ScheduleItem scheduleItem);
@@ -85,7 +105,13 @@ public class CreateScheduleDialog extends DialogFragment {
     private void initViews(View view) {
         tvSelectedDate = view.findViewById(R.id.tv_selected_date);
         tvSelectedTime = view.findViewById(R.id.tv_selected_time);
-        spinnerWorkout = view.findViewById(R.id.spinner_workout);
+        btnMyWorkouts = view.findViewById(R.id.btn_my_workouts);
+        btnTemplates = view.findViewById(R.id.btn_templates);
+        etSearch = view.findViewById(R.id.et_search);
+        ivClearSearch = view.findViewById(R.id.iv_clear_search);
+        recyclerViewWorkouts = view.findViewById(R.id.recycler_view_workouts);
+        llSelectedWorkout = view.findViewById(R.id.ll_selected_workout);
+        tvSelectedWorkout = view.findViewById(R.id.tv_selected_workout);
         btnCancel = view.findViewById(R.id.btn_cancel);
         btnSave = view.findViewById(R.id.btn_save);
         
@@ -94,6 +120,16 @@ public class CreateScheduleDialog extends DialogFragment {
         
         llDatePicker.setOnClickListener(v -> showDatePicker());
         llTimePicker.setOnClickListener(v -> showTimePicker());
+        
+        // Setup RecyclerView
+        recyclerViewWorkouts.setLayoutManager(new LinearLayoutManager(getContext()));
+        displayedWorkouts = new ArrayList<>();
+        workoutAdapter = new WorkoutSelectionAdapter(displayedWorkouts);
+        workoutAdapter.setOnWorkoutSelectedListener((workout, position) -> {
+            selectedWorkout = workout;
+            updateSelectedWorkoutDisplay();
+        });
+        recyclerViewWorkouts.setAdapter(workoutAdapter);
     }
     
     private void setupListeners() {
@@ -104,6 +140,103 @@ public class CreateScheduleDialog extends DialogFragment {
                 saveSchedule();
             }
         });
+        
+        // Tab buttons
+        btnMyWorkouts.setOnClickListener(v -> switchToMyWorkouts());
+        btnTemplates.setOnClickListener(v -> switchToTemplates());
+        
+        // Search functionality
+        etSearch.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                filterWorkouts(s.toString());
+                ivClearSearch.setVisibility(s.length() > 0 ? View.VISIBLE : View.GONE);
+            }
+            
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+        
+        ivClearSearch.setOnClickListener(v -> {
+            etSearch.setText("");
+            ivClearSearch.setVisibility(View.GONE);
+        });
+    }
+    
+    private void switchToMyWorkouts() {
+        isShowingMyWorkouts = true;
+        updateTabButtons();
+        displayedWorkouts.clear();
+        displayedWorkouts.addAll(allMyWorkouts);
+        workoutAdapter.updateList(displayedWorkouts);
+        filterWorkouts(etSearch.getText().toString());
+    }
+    
+    private void switchToTemplates() {
+        isShowingMyWorkouts = false;
+        updateTabButtons();
+        displayedWorkouts.clear();
+        displayedWorkouts.addAll(allTemplateWorkouts);
+        workoutAdapter.updateList(displayedWorkouts);
+        filterWorkouts(etSearch.getText().toString());
+    }
+    
+    private void updateTabButtons() {
+        if (isShowingMyWorkouts) {
+            btnMyWorkouts.setBackgroundResource(R.drawable.button_primary);
+            btnMyWorkouts.setTextColor(ContextCompat.getColor(requireContext(), R.color.daily_text_primary));
+            btnTemplates.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.daily_background));
+            btnTemplates.setTextColor(ContextCompat.getColor(requireContext(), R.color.daily_text_secondary));
+        } else {
+            btnMyWorkouts.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.daily_background));
+            btnMyWorkouts.setTextColor(ContextCompat.getColor(requireContext(), R.color.daily_text_secondary));
+            btnTemplates.setBackgroundResource(R.drawable.button_primary);
+            btnTemplates.setTextColor(ContextCompat.getColor(requireContext(), R.color.daily_text_primary));
+        }
+    }
+    
+    private void filterWorkouts(String query) {
+        ArrayList<Object> filtered = new ArrayList<>();
+        ArrayList<Object> source = isShowingMyWorkouts ? allMyWorkouts : allTemplateWorkouts;
+        
+        if (query == null || query.trim().isEmpty()) {
+            filtered.addAll(source);
+        } else {
+            String lowerQuery = query.toLowerCase().trim();
+            for (Object workout : source) {
+                String title = "";
+                if (workout instanceof WorkoutTemplate) {
+                    title = ((WorkoutTemplate) workout).getTitle();
+                } else if (workout instanceof UserWorkout) {
+                    title = ((UserWorkout) workout).getTitle();
+                }
+                if (title.toLowerCase().contains(lowerQuery)) {
+                    filtered.add(workout);
+                }
+            }
+        }
+        
+        displayedWorkouts.clear();
+        displayedWorkouts.addAll(filtered);
+        workoutAdapter.updateList(displayedWorkouts);
+    }
+    
+    private void updateSelectedWorkoutDisplay() {
+        if (selectedWorkout != null) {
+            String title = "";
+            if (selectedWorkout instanceof WorkoutTemplate) {
+                title = ((WorkoutTemplate) selectedWorkout).getTitle();
+            } else if (selectedWorkout instanceof UserWorkout) {
+                title = ((UserWorkout) selectedWorkout).getTitle();
+            }
+            tvSelectedWorkout.setText(title);
+            llSelectedWorkout.setVisibility(View.VISIBLE);
+        } else {
+            llSelectedWorkout.setVisibility(View.GONE);
+        }
     }
     
     private void showDatePicker() {
@@ -161,12 +294,15 @@ public class CreateScheduleDialog extends DialogFragment {
     private void loadWorkouts() {
         workoutTemplates = new ArrayList<>();
         userWorkouts = new ArrayList<>();
-        allWorkouts = new ArrayList<>();
+        allMyWorkouts = new ArrayList<>();
+        allTemplateWorkouts = new ArrayList<>();
         
+        // Load templates
         workoutTemplateDAO.getPublicTemplates(task -> {
             if (task.isSuccessful() && task.getResult() != null) {
                 workoutTemplates = new ArrayList<>(task.getResult());
-                allWorkouts.addAll(workoutTemplates);
+                allTemplateWorkouts.clear();
+                allTemplateWorkouts.addAll(workoutTemplates);
                 
                 // Load user workouts
                 com.google.firebase.auth.FirebaseUser currentUser = 
@@ -175,36 +311,29 @@ public class CreateScheduleDialog extends DialogFragment {
                     userWorkoutDAO.getByUserId(currentUser.getUid(), userWorkoutTask -> {
                         if (userWorkoutTask.isSuccessful() && userWorkoutTask.getResult() != null) {
                             userWorkouts = new ArrayList<>(userWorkoutTask.getResult());
-                            allWorkouts.addAll(userWorkouts);
-                            updateWorkoutSpinner();
+                            allMyWorkouts.clear();
+                            allMyWorkouts.addAll(userWorkouts);
+                            updateWorkoutList();
+                        } else {
+                            updateWorkoutList();
                         }
                     });
                 } else {
-                    updateWorkoutSpinner();
+                    updateWorkoutList();
                 }
+            } else {
+                updateWorkoutList();
             }
         });
     }
     
-    private void updateWorkoutSpinner() {
-        List<String> workoutNames = new ArrayList<>();
-        workoutNames.add("Chọn bài tập");
-        
-        for (WorkoutTemplate template : workoutTemplates) {
-            workoutNames.add(template.getTitle() + " (Mẫu)");
-        }
-        
-        for (UserWorkout userWorkout : userWorkouts) {
-            workoutNames.add(userWorkout.getTitle() + " (Của tôi)");
-        }
-        
-        workoutAdapter = new ArrayAdapter<>(
-            requireContext(),
-            android.R.layout.simple_spinner_item,
-            workoutNames
-        );
-        workoutAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinnerWorkout.setAdapter(workoutAdapter);
+    private void updateWorkoutList() {
+        // Show "Của tôi" by default
+        isShowingMyWorkouts = true;
+        updateTabButtons();
+        displayedWorkouts.clear();
+        displayedWorkouts.addAll(allMyWorkouts);
+        workoutAdapter.updateList(displayedWorkouts);
     }
     
     private boolean validateInput() {
@@ -218,8 +347,7 @@ public class CreateScheduleDialog extends DialogFragment {
             return false;
         }
         
-        int selectedPosition = spinnerWorkout.getSelectedItemPosition();
-        if (selectedPosition == 0 || allWorkouts == null || selectedPosition > allWorkouts.size()) {
+        if (selectedWorkout == null) {
             Toast.makeText(getContext(), "Vui lòng chọn bài tập", Toast.LENGTH_SHORT).show();
             return false;
         }
@@ -228,16 +356,10 @@ public class CreateScheduleDialog extends DialogFragment {
     }
     
     private void saveSchedule() {
-        if (selectedDate == null || selectedTime == null) {
+        if (selectedDate == null || selectedTime == null || selectedWorkout == null) {
             return;
         }
         
-        int selectedPosition = spinnerWorkout.getSelectedItemPosition();
-        if (selectedPosition <= 0 || selectedPosition > allWorkouts.size()) {
-            return;
-        }
-        
-        Object selectedWorkout = allWorkouts.get(selectedPosition - 1);
         String workoutId;
         
         if (selectedWorkout instanceof WorkoutTemplate) {

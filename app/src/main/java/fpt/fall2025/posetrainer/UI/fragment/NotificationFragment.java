@@ -279,6 +279,7 @@ public class NotificationFragment extends Fragment {
         
         // Ánh xạ các views
         ImageView iconImageView = dialogView.findViewById(R.id.dialog_notification_icon);
+        TextView senderTextView = dialogView.findViewById(R.id.dialog_notification_sender);
         TextView titleTextView = dialogView.findViewById(R.id.dialog_notification_title);
         TextView bodyTextView = dialogView.findViewById(R.id.dialog_notification_body);
         TextView timeTextView = dialogView.findViewById(R.id.dialog_notification_time);
@@ -288,6 +289,15 @@ public class NotificationFragment extends Fragment {
             dialogView.findViewById(R.id.dialog_view_detail_button);
         com.google.android.material.button.MaterialButton closeButton = 
             dialogView.findViewById(R.id.dialog_close_button);
+        
+        // Set sender name (nhân vật tượng trưng)
+        String senderName = notification.getDisplaySenderName();
+        if (notification.isFromAI() && senderName != null && !senderName.isEmpty()) {
+            senderTextView.setText(senderName + " 🦥");
+            senderTextView.setVisibility(View.VISIBLE);
+        } else {
+            senderTextView.setVisibility(View.GONE);
+        }
         
         // Set dữ liệu vào dialog
         titleTextView.setText(notification.getTitle());
