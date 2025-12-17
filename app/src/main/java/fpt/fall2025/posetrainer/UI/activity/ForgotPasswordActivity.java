@@ -5,13 +5,13 @@ import android.os.Bundle;
 import android.util.Log;
 import android.util.Patterns;
 import android.view.View;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.AppCompatButton;
 
 import java.util.List;
 import java.util.Locale;
@@ -22,7 +22,7 @@ import fpt.fall2025.posetrainer.Service.AuthService;
 public class ForgotPasswordActivity extends AppCompatActivity {
 
     private EditText edtEmail;
-    private Button btnReset, btnOpenGmail, btnBackLogin;
+    private AppCompatButton btnReset, btnOpenGmail, btnBackLogin;
     private ProgressBar progress;
     private LinearLayout postActions;
     private AuthService authService;
