@@ -32,12 +32,47 @@ public class AchievementAdapter extends RecyclerView.Adapter<AchievementAdapter.
         
         // Get all available badge keys from AchievementManager
         badgeKeys.clear();
+        
+        // Streak achievements
         badgeKeys.add("streak_3");
         badgeKeys.add("streak_7");
         badgeKeys.add("streak_14");
+        badgeKeys.add("streak_30");
+        badgeKeys.add("streak_60");
+        badgeKeys.add("streak_100");
+        
+        // Workout count achievements
         badgeKeys.add("workout_1");
         badgeKeys.add("workout_10");
         badgeKeys.add("workout_30");
+        badgeKeys.add("workout_50");
+        badgeKeys.add("workout_100");
+        badgeKeys.add("workout_200");
+        badgeKeys.add("workout_500");
+        
+        // Duration achievements
+        badgeKeys.add("duration_1h");
+        badgeKeys.add("duration_10h");
+        badgeKeys.add("duration_50h");
+        badgeKeys.add("duration_100h");
+        
+        // Calories achievements
+        badgeKeys.add("calories_1000");
+        badgeKeys.add("calories_5000");
+        badgeKeys.add("calories_10000");
+        badgeKeys.add("calories_50000");
+        
+        // Weekly achievements
+        badgeKeys.add("week_1");
+        badgeKeys.add("week_4");
+        badgeKeys.add("week_12");
+        
+        // Special achievements
+        badgeKeys.add("early_bird");
+        badgeKeys.add("night_owl");
+        badgeKeys.add("weekend_warrior");
+        badgeKeys.add("perfectionist");
+        badgeKeys.add("marathon");
         
         notifyDataSetChanged();
     }

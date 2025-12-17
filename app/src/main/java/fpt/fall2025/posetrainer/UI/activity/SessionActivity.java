@@ -9,6 +9,7 @@ import android.view.View;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseUser;
 
 import java.util.ArrayList;
@@ -229,7 +230,18 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
         binding.exerciseCountTxt.setText(exerciseCount + " bài tập");
 
         // Set workout image (using default image)
-        binding.workoutImage.setImageResource(R.drawable.pic_1);
+        //binding.workoutImage.setImageResource(R.drawable.pic_1);
+        // Set image from thumbnailUrl or fallback to local resource
+        String thumbnailUrl = currentSession.getThumbnailUrl();
+        if (thumbnailUrl != null && !thumbnailUrl.isEmpty()) {
+            Glide.with(this)
+                    .load(thumbnailUrl)
+                    .placeholder(R.drawable.pic_1)
+                    .error(R.drawable.pic_1)
+                    .into(binding.workoutImage);
+        } else {
+            binding.workoutImage.setImageResource(R.drawable.pic_1);
+        }
     }
 
     private void setupRecyclerView() {

@@ -69,11 +69,24 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent">
 
+            <!-- Tên người gửi (nhân vật tượng trưng) -->
+            <TextView
+                android:id="@+id/notification_sender"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:textColor="#4d9df2"
+                android:textStyle="bold"
+                android:visibility="gone"
+                tools:text="Zues 🦥"
+                tools:visibility="visible" />
+
             <!-- Tiêu đề thông báo -->
             <TextView
                 android:id="@+id/notification_title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
                 android:textSize="16sp"
                 android:textColor="#ffffff"
                 android:textStyle="bold"

@@ -120,17 +120,17 @@ public class DonkeyKickAnalyzer implements ExerciseAnalyzerInterface {
             // Chọn bên để phân tích dựa trên visibility score
             // Tính average visibility cho mỗi bên
             float leftAvgVis = (
-                leftShoulder.getOrDefault("visibility", 0f) +
-                leftElbow.getOrDefault("visibility", 0f) +
-                leftHip.getOrDefault("visibility", 0f) +
-                leftKnee.getOrDefault("visibility", 0f)
+                    leftShoulder.getOrDefault("visibility", 0f) +
+                            leftElbow.getOrDefault("visibility", 0f) +
+                            leftHip.getOrDefault("visibility", 0f) +
+                            leftKnee.getOrDefault("visibility", 0f)
             ) / 4.0f;
-            
+
             float rightAvgVis = (
-                rightShoulder.getOrDefault("visibility", 0f) +
-                rightElbow.getOrDefault("visibility", 0f) +
-                rightHip.getOrDefault("visibility", 0f) +
-                rightKnee.getOrDefault("visibility", 0f)
+                    rightShoulder.getOrDefault("visibility", 0f) +
+                            rightElbow.getOrDefault("visibility", 0f) +
+                            rightHip.getOrDefault("visibility", 0f) +
+                            rightKnee.getOrDefault("visibility", 0f)
             ) / 4.0f;
 
             List<Map<String, Float>> points;
@@ -185,7 +185,7 @@ public class DonkeyKickAnalyzer implements ExerciseAnalyzerInterface {
             // Kiểm tra chân near
             if ("s3".equals(nearCurrState)) {
                 // Kiểm tra nếu đã hoàn thành chu kỳ đầy đủ (có s2 và s1)
-                boolean nearComplete = nearStateSequence.contains("s2") && nearStateSequence.contains("s1");
+                boolean nearComplete = nearStateSequence.contains("s2");
                 if (nearComplete && nearKneeAngle > thresholds.getKneeWithUpVerticalMax()) {
                     displayText[0] = true;
                     nearIncorrectPosture = true;
@@ -204,8 +204,8 @@ public class DonkeyKickAnalyzer implements ExerciseAnalyzerInterface {
             // Kiểm tra chân far
             if ("s3".equals(farCurrState)) {
                 // Kiểm tra nếu đã hoàn thành chu kỳ đầy đủ (có s2 và s3)
-                boolean farComplete = farStateSequence.contains("s2") && nearStateSequence.contains("s1");
-                if (farComplete && nearKneeAngle > thresholds.getKneeWithUpVerticalMax()) {
+                boolean farComplete = farStateSequence.contains("s2");
+                if (farComplete && farKneeAngle > thresholds.getKneeWithUpVerticalMax()) {
                     displayText[0] = true;
                     farIncorrectPosture = true;
                     feedbackList.add("Giữ cẳng chân hướng lên");
@@ -246,7 +246,7 @@ public class DonkeyKickAnalyzer implements ExerciseAnalyzerInterface {
                     feedbackList.add("Hông nâng quá cao");
                 }
             }
-            
+
             // Kiểm tra chân far
             if ("s1".equals(farCurrState)) {
                 // Kiểm tra nếu đã hoàn thành chu kỳ đầy đủ (có s2 và s3)
@@ -273,9 +273,9 @@ public class DonkeyKickAnalyzer implements ExerciseAnalyzerInterface {
              */
 
             // Inactivity logic - kiểm tra nếu cả hai chân đều không thay đổi
-            boolean bothStatesUnchanged = (nearCurrState != null && nearCurrState.equals(prevState)) && 
-                                        (farCurrState != null && farCurrState.equals(prevState));
-            
+            boolean bothStatesUnchanged = (nearCurrState != null && nearCurrState.equals(prevState)) &&
+                    (farCurrState != null && farCurrState.equals(prevState));
+
             if (bothStatesUnchanged) {
                 inactiveTime += now - startInactiveTime;
                 startInactiveTime = now;
@@ -304,7 +304,7 @@ public class DonkeyKickAnalyzer implements ExerciseAnalyzerInterface {
             );
             // Tạo state string kết hợp cho cả hai chân
             String combinedState = "Near:" + (nearCurrState != null ? nearCurrState : "null") +
-                                 " Far:" + (farCurrState != null ? farCurrState : "null");
+                    " Far:" + (farCurrState != null ? farCurrState : "null");
             System.out.println(combinedState);
             feedback.setCurrentState(combinedState);
 
@@ -479,7 +479,7 @@ public class DonkeyKickAnalyzer implements ExerciseAnalyzerInterface {
 
     private String getState(int elbowAngle, int hipAngle) {
         if (elbowAngle > thresholds.getElbowNormal() &&
-            hipAngle < thresholds.getHipNormal()) {
+                hipAngle < thresholds.getHipNormal()) {
             return "s1";
         } else if ((hipAngle > thresholds.getHipTrans()[0] && hipAngle < thresholds.getHipTrans()[1])) {
             return "s2";
@@ -533,7 +533,7 @@ public class DonkeyKickAnalyzer implements ExerciseAnalyzerInterface {
 
         public DonkeyKickThresholds(int elbowNormal, int backNormal, int kneeWithUpVerticalMax,
                                     int hipNormal, int[] hipTrans, int hipPass,
-                                int offsetThresh, double inactiveThresh, int cntFrameThresh) {
+                                    int offsetThresh, double inactiveThresh, int cntFrameThresh) {
             this.elbowNormal = elbowNormal;
             this.backNormal = backNormal;
             this.kneeWithUpVerticalMax = kneeWithUpVerticalMax;
@@ -547,16 +547,16 @@ public class DonkeyKickAnalyzer implements ExerciseAnalyzerInterface {
 
         public static DonkeyKickThresholds defaultBeginner() {
             return new DonkeyKickThresholds(
-                    150, 95, 20,
-                    100, new int[]{105, 155}, 160,
+                    150, 95, 30,
+                    100, new int[]{105, 140}, 160,
                     65, 15.0, 50
             );
         }
 
         public static DonkeyKickThresholds defaultPro() {
             return new DonkeyKickThresholds(
-                    150, 85, 15,
-                    100, new int[]{105, 160}, 165,
+                    150, 85, 25,
+                    100, new int[]{105, 140}, 165,
                     65, 15.0, 50
             );
         }

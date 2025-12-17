@@ -12,6 +12,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 import fpt.fall2025.posetrainer.Domain.Exercise;
 import fpt.fall2025.posetrainer.Util.GlideImageLoader;
@@ -24,6 +26,14 @@ import fpt.fall2025.posetrainer.R;
 public class ExerciseSelectionAdapter extends RecyclerView.Adapter<ExerciseSelectionAdapter.ExerciseViewHolder> {
     private ArrayList<Exercise> exercises;
     private OnExerciseSelectedListener listener;
+    
+    // Level mapping (English -> Vietnamese)
+    private static final Map<String, String> LEVEL_MAP = new HashMap<String, String>() {{
+        put("beginner", "Dễ");
+        put("intermediate", "Trung bình");
+        put("pro", "Khó");
+        put("advanced", "Khó");
+    }};
 
     public ExerciseSelectionAdapter(ArrayList<Exercise> exercises, OnExerciseSelectedListener listener) {
         this.exercises = exercises;
@@ -67,6 +77,7 @@ public class ExerciseSelectionAdapter extends RecyclerView.Adapter<ExerciseSelec
         private TextView setsTxt;
         private TextView repsTxt;
         private TextView categoryTxt;
+        private View addExerciseBtn;
 
         public ExerciseViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -77,14 +88,21 @@ public class ExerciseSelectionAdapter extends RecyclerView.Adapter<ExerciseSelec
             setsTxt = itemView.findViewById(R.id.setsTxt);
             repsTxt = itemView.findViewById(R.id.repsTxt);
             categoryTxt = itemView.findViewById(R.id.categoryTxt);
+            addExerciseBtn = itemView.findViewById(R.id.addExerciseBtn);
         }
 
         public void bind(Exercise exercise) {
             // Set exercise name
             titleTxt.setText(exercise.getName());
             
-            // Set level/difficulty
-            difficultyBtn.setText(exercise.getLevel());
+            // Set level/difficulty in Vietnamese
+            String level = exercise.getLevel();
+            if (level != null) {
+                String vietnameseLevel = LEVEL_MAP.get(level.toLowerCase());
+                difficultyBtn.setText(vietnameseLevel != null ? vietnameseLevel : level);
+            } else {
+                difficultyBtn.setText("Trung bình");
+            }
             
             // Set sets and reps separately
             if (exercise.getDefaultConfig() != null) {
@@ -128,13 +146,10 @@ public class ExerciseSelectionAdapter extends RecyclerView.Adapter<ExerciseSelec
             // Load exercise image
             loadExerciseImage(exercise);
 
-            // Set click listener
-            itemView.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (listener != null) {
-                        listener.onExerciseSelected(exercise);
-                    }
+            // Set click listener only on add button
+            addExerciseBtn.setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onExerciseSelected(exercise);
                 }
             });
         }

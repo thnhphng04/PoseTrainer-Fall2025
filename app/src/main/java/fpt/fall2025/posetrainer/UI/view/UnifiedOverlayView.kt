@@ -140,7 +140,7 @@ class UnifiedOverlayView @JvmOverloads constructor(
                     canvas.drawText(warningText, width/2f, warningY + 20f, warningPaint)
                 }
 
-                else if (feedback?.getOffsetAngle()?.let { it > 35 } == true) {
+                else if (feedback?.getOffsetAngle()?.let { it > 60 } == true) {
 
 
                     // Vẽ skeleton đầy đủ
@@ -206,6 +206,27 @@ class UnifiedOverlayView @JvmOverloads constructor(
                     // Vẽ điểm bàn chân
                     canvas.drawCircle(leftFoot.first, leftFoot.second, 12f, footPaint)
                     canvas.drawCircle(rightFoot.first, rightFoot.second, 12f, footPaint)
+
+                    // Hiển thị feedbackList (các cảnh báo động tác)
+                    val feedbacks = feedback?.feedbackList ?: emptyList()
+                    if (feedbacks.isNotEmpty()) {
+                        val fbPaint = Paint().apply {
+                            color = Color.rgb(255, 140, 0)
+                            textSize = 60f
+                            style = Paint.Style.FILL
+                            setShadowLayer(10f, 0f, 0f, Color.BLACK)
+                        }
+
+                        // Vẽ từ dưới lên, mỗi dòng cách nhau 80f
+                        feedbacks.forEachIndexed { i, msg ->
+                            canvas.drawText(
+                                msg,
+                                40f,
+                                height - 220f - (feedbacks.size - 1 - i) * 80f,
+                                fbPaint
+                            )
+                        }
+                    }
                 }
 
                 else {
@@ -279,6 +300,28 @@ class UnifiedOverlayView @JvmOverloads constructor(
                         canvas.drawCircle(rightAnkle.first, rightAnkle.second, 14f, rightPaint)
                         canvas.drawCircle(rightFoot.first, rightFoot.second, 12f, footPaint)
                     }
+
+                    // Hiển thị feedbackList (các cảnh báo động tác)
+                    val feedbacks = feedback?.feedbackList ?: emptyList()
+                    if (feedbacks.isNotEmpty()) {
+                        val fbPaint = Paint().apply {
+                            color = Color.rgb(255, 140, 0)
+                            textSize = 60f
+                            style = Paint.Style.FILL
+                            setShadowLayer(10f, 0f, 0f, Color.BLACK)
+                        }
+
+                        // Vẽ từ dưới lên, mỗi dòng cách nhau 80f
+                        feedbacks.forEachIndexed { i, msg ->
+                            canvas.drawText(
+                                msg,
+                                40f,
+                                height - 220f - (feedbacks.size - 1 - i) * 80f,
+                                fbPaint
+                            )
+                        }
+                    }
+
                 }
 
                 
@@ -287,26 +330,7 @@ class UnifiedOverlayView @JvmOverloads constructor(
 
                 //////////////////////############################################
 
-                // Hiển thị feedbackList (các cảnh báo động tác)
-                val feedbacks = feedback?.feedbackList ?: emptyList()
-                if (feedbacks.isNotEmpty()) {
-                    val fbPaint = Paint().apply {
-                        color = Color.rgb(255, 140, 0)
-                        textSize = 60f
-                        style = Paint.Style.FILL
-                        setShadowLayer(10f, 0f, 0f, Color.BLACK)
-                    }
-                    
-                    // Vẽ từ dưới lên, mỗi dòng cách nhau 80f
-                    feedbacks.forEachIndexed { i, msg ->
-                        canvas.drawText(
-                            msg, 
-                            40f, 
-                            height - 220f - (feedbacks.size - 1 - i) * 80f, 
-                            fbPaint
-                        )
-                    }
-                }
+
             }
         }
     }

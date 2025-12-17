@@ -182,18 +182,11 @@ public class RussianTwistAnalyzer implements ExerciseAnalyzerInterface {
             String message = "";
             if ("s1".equals(currState)) { //hiển thị lỗi tư thế ở s1(chỉ hiển thị lỗi chứ không bắt lỗi)
                 // Feedback động tác
-                if (hipAngle > thresholds.getHipThresholds()[1]) {
-                    displayText[1] = true;
-                    feedbackList.add("Hông duỗi quá mức");
-                }
                 if (kneeAngle < thresholds.getKneeThresholds()[0]) {
                     displayText[2] = true;
                     feedbackList.add("Đầu gối gập quá mức");
                 }
-                if (kneeAngle > thresholds.getKneeThresholds()[1]) {
-                    displayText[3] = true;
-                    feedbackList.add("Đầu gối duỗi quá mức");
-                }
+
 
             }
 
@@ -207,13 +200,6 @@ public class RussianTwistAnalyzer implements ExerciseAnalyzerInterface {
                         incorrectCount++;
                         message = "INCORRECT";
                     }
-                    if (hipAngle > thresholds.getHipThresholds()[1]) {
-                        displayText[1] = true;
-                        incorrectPosture = true;
-                        feedbackList.add("Hông duỗi quá mức");
-                        incorrectCount++;
-                        message = "INCORRECT";
-                    }
                     if (kneeAngle < thresholds.getKneeThresholds()[0]) {
                         displayText[2] = true;
                         incorrectPosture = true;
@@ -221,13 +207,7 @@ public class RussianTwistAnalyzer implements ExerciseAnalyzerInterface {
                         incorrectCount++;
                         message = "INCORRECT";
                     }
-                    if (kneeAngle > thresholds.getKneeThresholds()[1]) {
-                        displayText[3] = true;
-                        incorrectPosture = true;
-                        feedbackList.add("Đầu gối duỗi quá mức");
-                        incorrectCount++;
-                        message = "INCORRECT";
-                    }
+
                 }
                 if (complete && !incorrectPosture) {
                     correctCount++;

@@ -2,7 +2,6 @@ package fpt.fall2025.posetrainer.UI.adapter.community;
 
 import android.content.Context;
 import android.graphics.Typeface;
-import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -63,6 +62,15 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
         // Lấy notification tại vị trí hiện tại
         Notification notification = notifications.get(position);
         
+        // Set sender name (nhân vật tượng trưng)
+        String senderName = notification.getDisplaySenderName();
+        if (notification.isFromAI() && senderName != null && !senderName.isEmpty()) {
+            holder.senderTextView.setText(senderName + " 🦥");
+            holder.senderTextView.setVisibility(View.VISIBLE);
+        } else {
+            holder.senderTextView.setVisibility(View.GONE);
+        }
+        
         // Set title
         holder.titleTextView.setText(notification.getTitle());
         
@@ -70,12 +78,7 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
         holder.bodyTextView.setText(notification.getBody());
         
         // Set thời gian (relative time: "5 phút trước", "2 giờ trước"...)
-        CharSequence timeAgo = DateUtils.getRelativeTimeSpanString(
-            notification.getSentAt(),
-            System.currentTimeMillis(),
-            DateUtils.MINUTE_IN_MILLIS,
-            DateUtils.FORMAT_ABBREV_RELATIVE
-        );
+        String timeAgo = formatRelativeTimeVietnamese(notification.getSentAt());
         holder.timeTextView.setText(timeAgo);
         
         // Hiển thị icon dựa theo loại thông báo
@@ -121,6 +124,37 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
     @Override
     public int getItemCount() {
         return notifications != null ? notifications.size() : 0;
+    }
+
+    /**
+     * Format timestamp (milliseconds) to relative time in Vietnamese
+     * @param timestampMillis Timestamp in milliseconds
+     * @return Formatted string like "5 phút trước", "2 giờ trước"
+     */
+    private String formatRelativeTimeVietnamese(long timestampMillis) {
+        if (timestampMillis == 0) return "Không xác định";
+        
+        long now = System.currentTimeMillis();
+        long diffMillis = now - timestampMillis;
+        
+        if (diffMillis < 60000) { // Less than 1 minute
+            return "Vừa xong";
+        } else if (diffMillis < 3600000) { // Less than 1 hour
+            long minutes = diffMillis / 60000;
+            return minutes + " phút trước";
+        } else if (diffMillis < 86400000) { // Less than 1 day
+            long hours = diffMillis / 3600000;
+            return hours + " giờ trước";
+        } else if (diffMillis < 2592000000L) { // Less than 30 days
+            long days = diffMillis / 86400000;
+            return days + " ngày trước";
+        } else if (diffMillis < 31104000000L) { // Less than 1 year
+            long months = diffMillis / 2592000000L;
+            return months + " tháng trước";
+        } else {
+            long years = diffMillis / 31104000000L;
+            return years + " năm trước";
+        }
     }
 
     /**
@@ -198,6 +232,7 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
     static class NotificationViewHolder extends RecyclerView.ViewHolder {
         CardView cardView;
         ImageView iconImageView;
+        TextView senderTextView; // Tên người gửi (nhân vật tượng trưng)
         TextView titleTextView;
         TextView bodyTextView;
         TextView timeTextView;
@@ -210,6 +245,7 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
             // Ánh xạ các view
             cardView = itemView.findViewById(R.id.notification_card);
             iconImageView = itemView.findViewById(R.id.notification_icon);
+            senderTextView = itemView.findViewById(R.id.notification_sender);
             titleTextView = itemView.findViewById(R.id.notification_title);
             bodyTextView = itemView.findViewById(R.id.notification_body);
             timeTextView = itemView.findViewById(R.id.notification_time);

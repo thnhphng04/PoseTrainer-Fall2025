@@ -20,6 +20,7 @@ public class Exercise implements Serializable {
     private DefaultConfig defaultConfig;
     private boolean isPublic;
     private long updatedAt;
+    private String uid; // UID của user tạo custom exercise
 
     public Exercise() {}
 
@@ -147,6 +148,14 @@ public class Exercise implements Serializable {
         this.updatedAt = updatedAt;
     }
 
+    public String getUid() {
+        return uid;
+    }
+
+    public void setUid(String uid) {
+        this.uid = uid;
+    }
+
     // Inner class for Media
     public static class Media implements Serializable {
         private String demoVideoUrl;
@@ -180,6 +189,7 @@ public class Exercise implements Serializable {
     public static class MediaPipe implements Serializable {
         private String analyzerType;
         private String version;
+        private java.util.Map<String, Object> config; // Config cho custom exercises từ Gemini
 
         public MediaPipe() {}
 
@@ -202,6 +212,14 @@ public class Exercise implements Serializable {
 
         public void setVersion(String version) {
             this.version = version;
+        }
+
+        public java.util.Map<String, Object> getConfig() {
+            return config;
+        }
+
+        public void setConfig(java.util.Map<String, Object> config) {
+            this.config = config;
         }
     }
 

@@ -3,15 +3,19 @@ package fpt.fall2025.posetrainer.UI.adapter.exercise;
 import android.content.Context;
 import android.content.Intent;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.widget.PopupMenu;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+
 import fpt.fall2025.posetrainer.UI.activity.ExerciseActivity;
 import fpt.fall2025.posetrainer.UI.activity.ExerciseDetailActivity;
+import fpt.fall2025.posetrainer.UI.activity.FeedbackActivity;
 import fpt.fall2025.posetrainer.Domain.Exercise;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
 import fpt.fall2025.posetrainer.Util.GlideImageLoader;
@@ -19,8 +23,18 @@ import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.databinding.ViewholderExerciseBinding;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.Viewholder> {
+    
+    // Level mapping (English -> Vietnamese)
+    private static final Map<String, String> LEVEL_MAP = new HashMap<String, String>() {{
+        put("beginner", "Dễ");
+        put("intermediate", "Trung bình");
+        put("pro", "Khó");
+        put("advanced", "Khó");
+    }};
 
     private final ArrayList<Exercise> list;
     private final WorkoutTemplate workoutTemplate;
@@ -105,28 +119,48 @@ public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.Viewho
         // Sets and reps controls are disabled in WorkoutActivity - buttons are hidden
         // No click listeners needed as users cannot edit sets/reps in this view
 
-        // Difficulty button
-        holder.binding.difficultyBtn.setOnClickListener(v -> {
-            // Toggle between beginner and pro
-            if (holder.currentDifficulty.equals("beginner")) {
-                holder.currentDifficulty = "pro";
-                holder.binding.difficultyBtn.setText("Pro");
-                holder.binding.difficultyBtn.setBackgroundResource(R.drawable.blue_bg);
-            } else {
-                holder.currentDifficulty = "beginner";
-                holder.binding.difficultyBtn.setText("Beginner");
-                holder.binding.difficultyBtn.setBackgroundResource(R.drawable.orange_bg);
-            }
-            
-            if (difficultyListener != null) {
-                difficultyListener.onDifficultyChanged(position, holder.currentDifficulty);
-            }
-        });
+        // Get difficulty from Exercise.level (not from WorkoutTemplate.ExerciseConfig)
+        String exerciseLevel = exercise.getLevel();
+        if (exerciseLevel != null) {
+            holder.currentDifficulty = exerciseLevel.toLowerCase();
+        } else {
+            holder.currentDifficulty = "beginner";
+        }
+        
+        // Set initial difficulty text in Vietnamese
+        String vietnameseLevel = LEVEL_MAP.get(holder.currentDifficulty);
+        holder.binding.difficultyBtn.setText(vietnameseLevel != null ? vietnameseLevel : "Trung bình");
+        
+        // Keep default orange background
+        holder.binding.difficultyBtn.setBackgroundResource(R.drawable.orange_bg);
+        
+        // Disable difficulty button click - display only from Exercise.level
+        holder.binding.difficultyBtn.setClickable(false);
 
         // Add click listener to open ExerciseDetailDialog
         holder.binding.getRoot().setOnClickListener(v -> {
             // Use Dialog instead of Activity
             ExerciseDetailActivity.show(context, exercise);
+        });
+
+        // More options button (3 dots) - show popup menu
+        holder.binding.btnMoreOptions.setOnClickListener(v -> {
+            PopupMenu popupMenu = new PopupMenu(context, v);
+            popupMenu.getMenuInflater().inflate(R.menu.exercise_options_menu, popupMenu.getMenu());
+            
+            popupMenu.setOnMenuItemClickListener(item -> {
+                if (item.getItemId() == R.id.menu_feedback) {
+                    // Open FeedbackActivity with exercise data (using Serializable)
+                    Intent intent = new Intent(context, FeedbackActivity.class);
+                    intent.putExtra("exercise", exercise);
+                    intent.putExtra("auto_show_dialog", true);
+                    context.startActivity(intent);
+                    return true;
+                }
+                return false;
+            });
+            
+            popupMenu.show();
         });
     }
 

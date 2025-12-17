@@ -3,7 +3,6 @@ package fpt.fall2025.posetrainer.UI.fragment;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
-import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -279,6 +278,7 @@ public class NotificationFragment extends Fragment {
         
         // Ánh xạ các views
         ImageView iconImageView = dialogView.findViewById(R.id.dialog_notification_icon);
+        TextView senderTextView = dialogView.findViewById(R.id.dialog_notification_sender);
         TextView titleTextView = dialogView.findViewById(R.id.dialog_notification_title);
         TextView bodyTextView = dialogView.findViewById(R.id.dialog_notification_body);
         TextView timeTextView = dialogView.findViewById(R.id.dialog_notification_time);
@@ -289,17 +289,21 @@ public class NotificationFragment extends Fragment {
         com.google.android.material.button.MaterialButton closeButton = 
             dialogView.findViewById(R.id.dialog_close_button);
         
+        // Set sender name (nhân vật tượng trưng)
+        String senderName = notification.getDisplaySenderName();
+        if (notification.isFromAI() && senderName != null && !senderName.isEmpty()) {
+            senderTextView.setText(senderName + " 🦥");
+            senderTextView.setVisibility(View.VISIBLE);
+        } else {
+            senderTextView.setVisibility(View.GONE);
+        }
+        
         // Set dữ liệu vào dialog
         titleTextView.setText(notification.getTitle());
         bodyTextView.setText(notification.getBody());
         
         // Format thời gian
-        CharSequence timeAgo = DateUtils.getRelativeTimeSpanString(
-            notification.getSentAt(),
-            System.currentTimeMillis(),
-            DateUtils.MINUTE_IN_MILLIS,
-            DateUtils.FORMAT_ABBREV_RELATIVE
-        );
+        String timeAgo = formatRelativeTimeVietnamese(notification.getSentAt());
         timeTextView.setText(timeAgo);
         
         // Set icon dựa theo loại thông báo
@@ -370,6 +374,37 @@ public class NotificationFragment extends Fragment {
         }
     }
     
+    /**
+     * Format timestamp (milliseconds) to relative time in Vietnamese
+     * @param timestampMillis Timestamp in milliseconds
+     * @return Formatted string like "5 phút trước", "2 giờ trước"
+     */
+    private String formatRelativeTimeVietnamese(long timestampMillis) {
+        if (timestampMillis == 0) return "Không xác định";
+        
+        long now = System.currentTimeMillis();
+        long diffMillis = now - timestampMillis;
+        
+        if (diffMillis < 60000) { // Less than 1 minute
+            return "Vừa xong";
+        } else if (diffMillis < 3600000) { // Less than 1 hour
+            long minutes = diffMillis / 60000;
+            return minutes + " phút trước";
+        } else if (diffMillis < 86400000) { // Less than 1 day
+            long hours = diffMillis / 3600000;
+            return hours + " giờ trước";
+        } else if (diffMillis < 2592000000L) { // Less than 30 days
+            long days = diffMillis / 86400000;
+            return days + " ngày trước";
+        } else if (diffMillis < 31104000000L) { // Less than 1 year
+            long months = diffMillis / 2592000000L;
+            return months + " tháng trước";
+        } else {
+            long years = diffMillis / 31104000000L;
+            return years + " năm trước";
+        }
+    }
+
     /**
      * Lấy icon phù hợp theo loại thông báo
      */

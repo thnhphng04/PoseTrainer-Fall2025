@@ -39,9 +39,9 @@ import fpt.fall2025.posetrainer.R;
 public class RegisterAccountActivity extends AppCompatActivity {
 
     private TextInputEditText editTextEmail, editTextPassword, editTextConfirmPassword;
-    private TextInputEditText editTextDisplayName, editTextPhotoUrl;
+    private TextInputEditText editTextDisplayName;
     private TextInputLayout layoutEmail, layoutPassword, layoutConfirmPassword;
-    private TextInputLayout layoutDisplayName, layoutPhotoUrl;
+    private TextInputLayout layoutDisplayName;
     private Button buttonReg, buttonGoogleSignIn;
     private TextView textViewBackToLogin;
 
@@ -77,7 +77,6 @@ public class RegisterAccountActivity extends AppCompatActivity {
         layoutPassword = findViewById(R.id.til_password);
         layoutConfirmPassword = findViewById(R.id.til_confirm_password);
         layoutDisplayName = findViewById(R.id.til_display_name);
-        layoutPhotoUrl = findViewById(R.id.til_photo_url);
 
         buttonReg = findViewById(R.id.btn_register);
         buttonGoogleSignIn = findViewById(R.id.btn_google_signin);
@@ -95,7 +94,7 @@ public class RegisterAccountActivity extends AppCompatActivity {
             String password = Objects.requireNonNull(editTextPassword.getText()).toString().trim();
             String confirmPassword = Objects.requireNonNull(editTextConfirmPassword.getText()).toString().trim();
             String displayName = Objects.requireNonNull(editTextDisplayName.getText()).toString().trim();
-            String photoUrl = Objects.requireNonNull(editTextPhotoUrl.getText()).toString().trim();
+            String photoUrl = ""; // Không sử dụng URL ảnh đại diện khi đăng ký
 
             // Reset errors
             layoutEmail.setError(null);

@@ -184,6 +184,7 @@ public class CreatePostActivity extends AppCompatActivity {
         post.likesCount = 0L;
         post.commentsCount = 0L;
         post.likedBy = new ArrayList<>();
+        post.isVisible = true;
         post.createdAt = new com.google.firebase.Timestamp(new java.util.Date());
         post.updatedAt = new com.google.firebase.Timestamp(new java.util.Date());
 

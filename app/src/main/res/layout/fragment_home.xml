@@ -154,18 +154,24 @@
             </androidx.cardview.widget.CardView>
 
             <!-- Streak Display Section -->
-            <LinearLayout
+            <androidx.cardview.widget.CardView
                 android:id="@+id/ll_streak_section"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
                 android:layout_marginTop="8dp"
-                android:layout_marginBottom="8dp"
-                android:orientation="horizontal"
-                android:background="#ff2a3142"
-                android:padding="16dp"
-                android:gravity="center_vertical">
+                android:layout_marginBottom="30dp"
+                app:cardBackgroundColor="#ff2a3142"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical">
 
                 <TextView
                     android:id="@+id/tv_streak_emoji"
@@ -200,88 +206,31 @@
 
                 </LinearLayout>
 
-            </LinearLayout>
-
-            <HorizontalScrollView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:scrollbars="none">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="16dp">
-
-                    <TextView
-                        android:id="@+id/chip_latest"
-                        style="@style/CategoryChipSelected"
-                        android:text="Mới cập nhật" />
-
-                    <TextView
-                        android:id="@+id/chip_beginner"
-                        style="@style/CategoryChip"
-                        android:text="Người mới" />
-
-                    <TextView
-                        android:id="@+id/chip_intermediate"
-                        style="@style/CategoryChip"
-                        android:text="Trung bình" />
-
-                    <TextView
-                        android:id="@+id/chip_advanced"
-                        style="@style/CategoryChip"
-                        android:text="Nâng cao" />
-
                 </LinearLayout>
 
-            </HorizontalScrollView>
+            </androidx.cardview.widget.CardView>
 
-            <!-- Duration Filter Tabs -->
-            <HorizontalScrollView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:scrollbars="none">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="16dp">
-
-                    <TextView
-                        android:id="@+id/chip_1_7min"
-                        style="@style/DurationChip"
-                        android:text="1-7 phút" />
-
-                    <TextView
-                        android:id="@+id/chip_8_15min"
-                        style="@style/DurationChip"
-                        android:text="8-15 phút" />
-
-                    <TextView
-                        android:id="@+id/chip_15min_plus"
-                        style="@style/DurationChip"
-                        android:text=">15 phút" />
-
-                    <TextView
-                        android:id="@+id/chip_stretching"
-                        style="@style/DurationChip"
-                        android:text="Giãn cơ &amp; Khởi động" />
-
-                </LinearLayout>
-
-            </HorizontalScrollView>
-            <!-- Category Tabs -->
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/view1"
-                android:layout_width="match_parent"
+            <!-- Recommended Section Title -->
+            <TextView
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="16dp"
-                android:layout_marginBottom="16dp"
-                android:nestedScrollingEnabled="false" />
+                android:layout_marginBottom="12dp"
+                android:text="Mới cập nhật"
+                android:textColor="#ffffff"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <!-- Featured Workouts Carousel -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_featured_workouts"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                android:clipToPadding="false"
+                android:nestedScrollingEnabled="false"
+                android:paddingHorizontal="16dp" />
+
             <!-- Collections Section -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -336,28 +285,6 @@
 
             </LinearLayout>
 
-            <!-- Recommended Section Title -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginBottom="12dp"
-                android:text="Bài tập dành cho bạn"
-                android:textColor="#ffffff"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <!-- Featured Workouts Carousel -->
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rv_featured_workouts"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp"
-                android:clipToPadding="false"
-                android:nestedScrollingEnabled="false"
-                android:paddingHorizontal="16dp" />
-
-
             <!-- Build Muscle Goal Card -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -388,10 +315,11 @@
                             android:textStyle="bold" />
 
                         <TextView
+                            android:id="@+id/tv_gain_muscle_count"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:text="115 Bài tập"
+                            android:text="0 Bài tập"
                             android:textColor="#99ffffff"
                             android:textSize="12sp" />
 
@@ -414,6 +342,134 @@
             <!-- Workout List -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rv_workouts"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                android:clipToPadding="false"
+                android:nestedScrollingEnabled="false"
+                android:paddingHorizontal="16dp" />
+
+            <!-- Lose Fat Goal Card -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginBottom="16dp"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="12dp">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Giảm mỡ"
+                            android:textColor="#ffffff"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tv_lose_fat_count"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="0 Bài tập"
+                            android:textColor="#99ffffff"
+                            android:textSize="12sp" />
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/btn_see_all_lose_fat"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Xem tất cả"
+                        android:textColor="#4d9df2"
+                        android:textSize="14sp"
+                        android:foreground="?android:attr/selectableItemBackground"
+                        android:padding="8dp" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- Lose Fat Workout List -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_lose_fat_workouts"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                android:clipToPadding="false"
+                android:nestedScrollingEnabled="false"
+                android:paddingHorizontal="16dp" />
+
+            <!-- General Fitness Goal Card -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginBottom="16dp"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="12dp">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Thể dục tổng quát"
+                            android:textColor="#ffffff"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tv_general_fitness_count"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="0 Bài tập"
+                            android:textColor="#99ffffff"
+                            android:textSize="12sp" />
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/btn_see_all_general_fitness"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Xem tất cả"
+                        android:textColor="#4d9df2"
+                        android:textSize="14sp"
+                        android:foreground="?android:attr/selectableItemBackground"
+                        android:padding="8dp" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- General Fitness Workout List -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_general_fitness_workouts"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="24dp"

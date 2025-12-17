@@ -20,8 +20,18 @@ import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.databinding.ViewholderUserWorkoutExerciseBinding;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 public class UserWorkoutExerciseAdapter extends RecyclerView.Adapter<UserWorkoutExerciseAdapter.Viewholder> {
+
+    // Level mapping (English -> Vietnamese)
+    private static final Map<String, String> LEVEL_MAP = new HashMap<String, String>() {{
+        put("beginner", "Dễ");
+        put("intermediate", "Trung bình");
+        put("pro", "Khó");
+        put("advanced", "Khó");
+    }};
 
     private final ArrayList<Exercise> list;
     private final UserWorkout userWorkout;
@@ -204,11 +214,10 @@ public class UserWorkoutExerciseAdapter extends RecyclerView.Adapter<UserWorkout
             }
         });
 
-        // Set difficulty text
+        // Set difficulty text in Vietnamese
         final String difficulty = getDifficultyText(workoutItem, exercise);
-        
-        // Capitalize first letter
-        final String displayDifficulty = difficulty.substring(0, 1).toUpperCase() + difficulty.substring(1);
+        final String vietnameseLevel = LEVEL_MAP.get(difficulty.toLowerCase());
+        final String displayDifficulty = vietnameseLevel != null ? vietnameseLevel : "Trung bình";
         holder.binding.difficultyBtn.setText(displayDifficulty);
         
         // Set difficulty click listener (optional - for future enhancement)

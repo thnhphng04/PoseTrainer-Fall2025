@@ -169,6 +169,7 @@ public class UserProfileActivity extends AppCompatActivity {
 
     private void setupPosts() {
         Query query = communityDAO.getCollection()
+                .whereEqualTo("isVisible", true) // Filter chỉ lấy các post visible để tránh IndexOutOfBoundsException
                 .whereEqualTo("uid", userId)
                 .orderBy("createdAt", Query.Direction.DESCENDING)
                 .limit(50);
@@ -189,6 +190,12 @@ public class UserProfileActivity extends AppCompatActivity {
 
             @Override
             protected void onBindViewHolder(@NonNull PostVH holder, int position, @NonNull Community post) {
+                // Không cần filter isVisible ở client side nữa vì đã filter ở query level
+                // Đảm bảo view luôn visible và có layout params đúng
+                holder.itemView.setVisibility(View.VISIBLE);
+                holder.itemView.setLayoutParams(new androidx.recyclerview.widget.RecyclerView.LayoutParams(
+                    androidx.recyclerview.widget.RecyclerView.LayoutParams.MATCH_PARENT, 
+                    androidx.recyclerview.widget.RecyclerView.LayoutParams.WRAP_CONTENT));
                 holder.bind(post);
             }
 

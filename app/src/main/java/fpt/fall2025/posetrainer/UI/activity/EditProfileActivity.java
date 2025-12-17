@@ -9,6 +9,8 @@ import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.SeekBar;
 import android.widget.Switch;
 import android.widget.TextView;
@@ -55,6 +57,12 @@ public class EditProfileActivity extends AppCompatActivity {
     private Switch switchUpcomingSchedule;
     private Switch switchSessionFeedback;
     private Switch switchStreakReminder;
+    
+    // Pose Model selection
+    private RadioGroup radioGroupPoseModel;
+    private RadioButton radioFullModel;
+    private RadioButton radioLiteModel;
+    private RadioButton radioHeavyModel;
 
     private Uri selectedImageUri;
     private FirebaseUser user;
@@ -75,6 +83,9 @@ public class EditProfileActivity extends AppCompatActivity {
     private boolean enableUpcomingSchedule = true;
     private boolean enableSessionFeedback = true;
     private boolean enableStreakReminder = true;
+    
+    // Pose Model setting
+    private int selectedPoseModel = 0; // 0=full, 1=lite, 2=heavy
     
     // Debounce handler cho save settings
     private Handler saveSettingsHandler = new Handler(Looper.getMainLooper());
@@ -104,6 +115,12 @@ public class EditProfileActivity extends AppCompatActivity {
         switchUpcomingSchedule = findViewById(R.id.switchUpcomingSchedule);
         switchSessionFeedback = findViewById(R.id.switchSessionFeedback);
         switchStreakReminder = findViewById(R.id.switchStreakReminder);
+        
+        // Pose Model selection
+        radioGroupPoseModel = findViewById(R.id.radioGroupPoseModel);
+        radioFullModel = findViewById(R.id.radioFullModel);
+        radioLiteModel = findViewById(R.id.radioLiteModel);
+        radioHeavyModel = findViewById(R.id.radioHeavyModel);
 
         authService = new AuthService();
         userDAO = new UserDAO();
@@ -124,7 +141,9 @@ public class EditProfileActivity extends AppCompatActivity {
 
         setupProfileViews();
         setupNotificationViews();
+        setupPoseModelViews();
         loadNotificationSettings();
+        loadPoseModelSetting();
     }
     
     /**
@@ -234,6 +253,22 @@ public class EditProfileActivity extends AppCompatActivity {
         
         // Disable các switch loại thông báo nếu AI notifications bị tắt
         updateNotificationTypeSwitchesEnabled();
+    }
+    
+    /**
+     * Setup Pose Model selection views và listeners
+     */
+    private void setupPoseModelViews() {
+        radioGroupPoseModel.setOnCheckedChangeListener((group, checkedId) -> {
+            if (checkedId == R.id.radioFullModel) {
+                selectedPoseModel = 0; // Full model
+            } else if (checkedId == R.id.radioLiteModel) {
+                selectedPoseModel = 1; // Lite model
+            } else if (checkedId == R.id.radioHeavyModel) {
+                selectedPoseModel = 2; // Heavy model
+            }
+            savePoseModelSetting();
+        });
     }
     
     /**
@@ -428,6 +463,105 @@ public class EditProfileActivity extends AppCompatActivity {
                 Toast.makeText(this, "Lỗi lưu cài đặt thông báo", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+    
+    /**
+     * Load selectedPoseModel từ User document
+     */
+    private void loadPoseModelSetting() {
+        if (user == null) {
+            Log.w(TAG, "User chưa đăng nhập");
+            return;
+        }
+        
+        String uid = user.getUid();
+        Log.d(TAG, "Đang load pose model setting cho user: " + uid);
+        
+        userDAO.getDocument(uid)
+            .get()
+            .addOnSuccessListener(documentSnapshot -> {
+                if (documentSnapshot.exists()) {
+                    // Load selectedPoseModel
+                    Object poseModelObj = documentSnapshot.get("selectedPoseModel");
+                    if (poseModelObj instanceof Long) {
+                        selectedPoseModel = ((Long) poseModelObj).intValue();
+                    } else if (poseModelObj instanceof Integer) {
+                        selectedPoseModel = (Integer) poseModelObj;
+                    } else {
+                        selectedPoseModel = 0; // Default to full model
+                    }
+                    
+                    // Đảm bảo giá trị hợp lệ (0-2)
+                    if (selectedPoseModel < 0) selectedPoseModel = 0;
+                    if (selectedPoseModel > 2) selectedPoseModel = 2;
+                    
+                    // Update UI
+                    updatePoseModelUI();
+                    
+                    Log.d(TAG, "✓ Đã load pose model setting thành công: " + selectedPoseModel);
+                } else {
+                    Log.w(TAG, "User document không tồn tại, sử dụng giá trị mặc định");
+                    selectedPoseModel = 0; // Default to full model
+                    updatePoseModelUI();
+                }
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "✗ Lỗi load pose model setting: " + e.getMessage(), e);
+                selectedPoseModel = 0; // Default to full model
+                updatePoseModelUI();
+            });
+    }
+    
+    /**
+     * Update Pose Model UI với giá trị hiện tại
+     */
+    private void updatePoseModelUI() {
+        switch (selectedPoseModel) {
+            case 0: // Full model
+                radioFullModel.setChecked(true);
+                break;
+            case 1: // Lite model
+                radioLiteModel.setChecked(true);
+                break;
+            case 2: // Heavy model
+                radioHeavyModel.setChecked(true);
+                break;
+            default:
+                radioFullModel.setChecked(true);
+                selectedPoseModel = 0;
+                break;
+        }
+    }
+    
+    /**
+     * Save selectedPoseModel lên Firestore
+     */
+    private void savePoseModelSetting() {
+        if (user == null) {
+            Log.w(TAG, "User chưa đăng nhập, không thể lưu pose model setting");
+            return;
+        }
+        
+        String uid = user.getUid();
+        Log.d(TAG, "Đang lưu pose model setting cho user: " + uid + ", model: " + selectedPoseModel);
+        
+        // Đảm bảo giá trị hợp lệ (0-2)
+        if (selectedPoseModel < 0) selectedPoseModel = 0;
+        if (selectedPoseModel > 2) selectedPoseModel = 2;
+        
+        // Cập nhật lên Firestore
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("selectedPoseModel", selectedPoseModel);
+        
+        userDAO.getDocument(uid)
+            .update(updates)
+            .addOnSuccessListener(aVoid -> {
+                Log.d(TAG, "✓ Đã lưu pose model setting thành công");
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "✗ Lỗi lưu pose model setting: " + e.getMessage(), e);
+                Toast.makeText(this, "Lỗi lưu cài đặt mô hình", Toast.LENGTH_SHORT).show();
+            });
     }
 
     private void openImagePicker() {

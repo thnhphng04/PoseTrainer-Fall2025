@@ -26,6 +26,7 @@ public class Community {
     public Timestamp createdAt;     // Ngày tạo
     public Timestamp updatedAt;     // Ngày cập nhật
     public List<String> likedBy;    // Danh sách UID người đã like
+    public boolean isVisible;       // Hiển thị bài viết hay không
 
     // ====== Constructor bắt buộc Firestore cần ======
     public Community() {

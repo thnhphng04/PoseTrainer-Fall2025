@@ -134,19 +134,17 @@ public class SupermanAnalyzer implements ExerciseAnalyzerInterface {
             Map<String, Float> foot = points.get(5);
 
             // Tính các góc
-            int hipAngle = calculateAngleContainingUpVertical(shldr, hip, knee);       // Góc shoulder-hip-knee
+            int kneeAngle = calculateAngle(ankle, knee, hip);
+            int hipAngle = calculateAngleContainingUpVertical(ankle, hip, shldr);       // Góc shoulder-hip-knee
 
-
-            // State machine - phân biệt nằm vs ngồi dựa vào hip angle
             currState = getState(hipAngle, check);
             updateStateSequence(currState);
 
             // Đếm Sit-Up đúng/sai
             String message = "";
-            
+
             // Chỉ hiển thị feedback khi đang ở trạng thái s1 (nằm xuống)
             if ("s1".equals(currState)) {
-                // Feedback động tác khi nằm
 
             }
 
@@ -154,8 +152,11 @@ public class SupermanAnalyzer implements ExerciseAnalyzerInterface {
             if ("s2".equals(currState)) {
                 Boolean complete = stateSequence.contains("s1");
                 if (complete) {
+                    if (kneeAngle < 120) {
+                        displayText[0] = true;
+                        feedbackList.add("Đầu gối bị gập");
+                    }
 
-                    
                     // Nếu không có lỗi thì đếm là đúng
                     if (!incorrectPosture) {
                         correctCount++;
@@ -361,6 +362,53 @@ public class SupermanAnalyzer implements ExerciseAnalyzerInterface {
         return (int) diff;
     }
 
+    private int calculateAngleContainingUpVertical(
+            Map<String, Float> p1,
+            Map<String, Float> p2,
+            Map<String, Float> p3,
+            Map<String, Float> p4) {
+
+        if (p1 == null || p2 == null || p3 == null || p4 == null) return 0;
+
+        // Vector v1 = p2 → p1
+        float v1x = p1.get("x") - p2.get("x");
+        float v1y = p1.get("y") - p2.get("y");
+
+        // Vector v2 = p3 → p4
+        float v2x = p4.get("x") - p3.get("x");
+        float v2y = p4.get("y") - p3.get("y");
+
+        // ⚠ atan2(x, y): 0° là hướng xuống (do Y dương hướng xuống)
+        double a1 = Math.toDegrees(Math.atan2(v1x, v1y));
+        double a2 = Math.toDegrees(Math.atan2(v2x, v2y));
+
+        // Chuẩn hóa về [0, 360)
+        a1 = (a1 + 360) % 360;
+        a2 = (a2 + 360) % 360;
+
+        // 🔼 Up vertical (trục Y âm)
+        double up = 180.0;
+
+        // Góc theo chiều kim đồng hồ từ a1 → a2
+        double diff = (a2 - a1 + 360) % 360;
+
+        // Kiểm tra xem cung a1 → a2 có chứa hướng up hay không
+        boolean containsUp;
+        if (a1 <= a2) {
+            containsUp = (up >= a1 && up <= a2);
+        } else {
+            // Cung đi qua 0°
+            containsUp = (up >= a1 || up <= a2);
+        }
+
+        // Nếu không chứa hướng lên → lấy phần bù
+        if (!containsUp) {
+            diff = 360 - diff;
+        }
+
+        return (int) diff;
+    }
+
 
     private String getState(int hipAngle, Boolean check) {
         if (hipAngle > thresholds.getHipThresholds()[1] && check) {
@@ -393,7 +441,7 @@ public class SupermanAnalyzer implements ExerciseAnalyzerInterface {
         public SupermanThresholds() {}
 
         public SupermanThresholds(int[] hipThresholds,
-                              int offsetThresh, double inactiveThresh, int cntFrameThresh) {
+                                  int offsetThresh, double inactiveThresh, int cntFrameThresh) {
             this.hipThresholds = hipThresholds;
             this.offsetThresh = offsetThresh;
             this.inactiveThresh = inactiveThresh;

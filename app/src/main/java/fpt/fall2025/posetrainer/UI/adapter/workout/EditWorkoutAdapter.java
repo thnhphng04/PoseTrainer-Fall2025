@@ -340,19 +340,19 @@ public class EditWorkoutAdapter extends RecyclerView.Adapter<EditWorkoutAdapter.
      */
     private String convertLevelToVietnamese(String englishLevel) {
         if (englishLevel == null || englishLevel.isEmpty()) {
-            return "Người mới bắt đầu";
+            return "Dễ";
         }
 
         String lowerLevel = englishLevel.toLowerCase();
         if (lowerLevel.contains("beginner") || lowerLevel.contains("mới")) {
-            return "Người mới bắt đầu";
+            return "Dễ";
         } else if (lowerLevel.contains("intermediate") || lowerLevel.contains("trung")) {
             return "Trung bình";
         } else if (lowerLevel.contains("advanced") || lowerLevel.contains("nâng") || lowerLevel.contains("pro")) {
-            return "Nâng cao";
+            return "Khó";
         }
 
-        return "Người mới bắt đầu"; // Default
+        return "Dễ"; // Default
     }
 
     /**
