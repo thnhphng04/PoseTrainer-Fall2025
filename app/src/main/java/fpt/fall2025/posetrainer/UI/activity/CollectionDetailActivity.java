@@ -7,7 +7,7 @@ import android.view.View;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
-import fpt.fall2025.posetrainer.UI.adapter.workout.WorkoutTemplateAdapter;
+import fpt.fall2025.posetrainer.UI.adapter.workout.SearchWorkoutAdapter;
 import fpt.fall2025.posetrainer.Domain.Collection;
 import fpt.fall2025.posetrainer.Domain.WorkoutTemplate;
 import fpt.fall2025.posetrainer.DAL.CollectionDAO;
@@ -23,7 +23,7 @@ public class CollectionDetailActivity extends AppCompatActivity {
     private String collectionTitle;
     private Collection collection;
     private ArrayList<WorkoutTemplate> workouts;
-    private WorkoutTemplateAdapter adapter;
+    private SearchWorkoutAdapter adapter;
     private CollectionDAO collectionDAO;
     private WorkoutTemplateDAO workoutTemplateDAO;
 
@@ -53,7 +53,7 @@ public class CollectionDetailActivity extends AppCompatActivity {
 
     private void setupRecyclerView() {
         binding.rvWorkouts.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new WorkoutTemplateAdapter(workouts);
+        adapter = new SearchWorkoutAdapter(workouts);
         binding.rvWorkouts.setAdapter(adapter);
     }
 
