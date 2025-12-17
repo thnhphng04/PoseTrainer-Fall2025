@@ -189,6 +189,16 @@ public class UserProfileActivity extends AppCompatActivity {
 
             @Override
             protected void onBindViewHolder(@NonNull PostVH holder, int position, @NonNull Community post) {
+                // Filter isVisible ở client side
+                if (!post.isVisible) {
+                    holder.itemView.setVisibility(View.GONE);
+                    holder.itemView.setLayoutParams(new androidx.recyclerview.widget.RecyclerView.LayoutParams(0, 0));
+                    return;
+                }
+                holder.itemView.setVisibility(View.VISIBLE);
+                holder.itemView.setLayoutParams(new androidx.recyclerview.widget.RecyclerView.LayoutParams(
+                    androidx.recyclerview.widget.RecyclerView.LayoutParams.MATCH_PARENT, 
+                    androidx.recyclerview.widget.RecyclerView.LayoutParams.WRAP_CONTENT));
                 holder.bind(post);
             }
 

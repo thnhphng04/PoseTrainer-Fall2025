@@ -1,29 +1,38 @@
-package fpt.fall2025.posetrainer.Fragment
+package fpt.fall2025.posetrainer.UI.fragment
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
-import androidx.camera.core.*
+import androidx.appcompat.app.AlertDialog
+import androidx.camera.core.AspectRatio
+import androidx.camera.core.Camera
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
+import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import com.google.mediapipe.tasks.vision.core.RunningMode
+import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult
+import fpt.fall2025.posetrainer.Core.analyzer.core.CustomExerciseAnalyzer
 import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseAnalyzerInterface
 import fpt.fall2025.posetrainer.Core.analyzer.core.ExerciseFeedback
-import fpt.fall2025.posetrainer.Core.analyzer.core.CustomExerciseAnalyzer
-import fpt.fall2025.posetrainer.Domain.Exercise
 import fpt.fall2025.posetrainer.Core.mediapipe.LandmarkConverter
 import fpt.fall2025.posetrainer.Core.mediapipe.PoseLandmarkerHelper
+import fpt.fall2025.posetrainer.Domain.Exercise
+import fpt.fall2025.posetrainer.Domain.Session
 import fpt.fall2025.posetrainer.UI.activity.ExerciseActivity
 import fpt.fall2025.posetrainer.UI.view.UnifiedOverlayView
 import fpt.fall2025.posetrainer.databinding.FragmentCustomExerciseCameraBinding
-import com.google.mediapipe.tasks.vision.core.RunningMode
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -56,7 +65,7 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
     private lateinit var exercise: Exercise
     private var sets: Int = 3
     private var reps: Int = 12
-    private var session: fpt.fall2025.posetrainer.Domain.Session? = null
+    private var session: Session? = null
     private var exerciseIndex: Int = 0
 
     // Exercise state management
@@ -68,7 +77,7 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
     private var lastCorrectCount: Int = 0
     private var isUIReset: Boolean = false
     private var lastRepShown: Int = -1 // Track last rep we showed toast for - FIX TOAST ISSUE
-    
+
     // Error tracking
     private val currentSetErrorCounts = mutableMapOf<String, Int>()
     private var lastFeedbackList: List<String> = emptyList()
@@ -84,29 +93,29 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         // Get exercise data from arguments
         arguments?.let { args ->
             exercise = args.getSerializable("exercise") as Exercise
             sets = args.getInt("sets", 3)
             reps = args.getInt("reps", 12)
-            
+
             // Nhận currentSetNumber để tiếp tục từ set đúng
             currentSet = args.getInt("currentSetNumber", 1)
             Log.d(TAG, "=== CUSTOM EXERCISE CAMERA FRAGMENT ===")
             Log.d(TAG, "Received currentSetNumber: $currentSet")
             Log.d(TAG, "Exercise ID: ${exercise.id}")
             Log.d(TAG, "Exercise Name: ${exercise.name}")
-            
+
             // Nhận session để biết trạng thái các set
-            session = args.getSerializable("session") as? fpt.fall2025.posetrainer.Domain.Session
-            
+            session = args.getSerializable("session") as? Session
+
             // Nhận exerciseIndex để tìm đúng PerExercise trong session
             exerciseIndex = args.getInt("exerciseIndex", 0)
-            
+
             // Nhận isResume flag
             val isResume = args.getBoolean("isResume", false)
-            
+
         }
     }
 
@@ -134,7 +143,7 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
 
         // Setup UI
         setupUI()
-        
+
         // Add camera switch button
         binding.btnSwitchCamera?.setOnClickListener {
             cameraFacing = if (cameraFacing == CameraSelector.LENS_FACING_FRONT) {
@@ -144,7 +153,7 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
             }
             setUpCamera()
         }
-        
+
         // Setup exercise controls
         setupExerciseControls()
 
@@ -159,8 +168,8 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
                 minPoseDetectionConfidence = 0.5f,
                 minPoseTrackingConfidence = 0.5f,
                 minPosePresenceConfidence = 0.5f,
-                currentModel = PoseLandmarkerHelper.MODEL_POSE_LANDMARKER_FULL,
-                currentDelegate = PoseLandmarkerHelper.DELEGATE_CPU,
+                currentModel = PoseLandmarkerHelper.Companion.MODEL_POSE_LANDMARKER_FULL,
+                currentDelegate = PoseLandmarkerHelper.Companion.DELEGATE_CPU,
                 runningMode = RunningMode.LIVE_STREAM,
                 context = requireContext(),
                 poseLandmarkerHelperListener = this
@@ -179,13 +188,13 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
         Log.d(TAG, "MediaPipe object: ${mediaPipe != null}")
         Log.d(TAG, "AnalyzerType: ${mediaPipe?.analyzerType}")
         Log.d(TAG, "Config exists: ${mediaPipe?.config != null}")
-        
+
         val config = mediaPipe?.config
         if (config != null) {
             try {
                 Log.d(TAG, "Config type: ${config.javaClass.name}")
                 Log.d(TAG, "Config toString: ${config.toString().take(200)}")
-                
+
                 // Convert config to Map<String, Any> if needed
                 val configMap = when (config) {
                     is Map<*, *> -> {
@@ -206,13 +215,13 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
                         null
                     }
                 }
-                
+
                 if (configMap != null) {
                     Log.d(TAG, "Config keys: ${configMap.keys}")
                     Log.d(TAG, "Config has 'states': ${configMap.containsKey("states")}")
                     Log.d(TAG, "Config has 'thresholds': ${configMap.containsKey("thresholds")}")
                     Log.d(TAG, "Config has 'stateSequence': ${configMap.containsKey("stateSequence")}")
-                    
+
                     currentAnalyzer = CustomExerciseAnalyzer(configMap)
                     Log.d(TAG, "✅ CustomExerciseAnalyzer initialized successfully!")
                 } else {
@@ -247,43 +256,43 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
 
         Log.d(TAG, "Set unified overlay view for custom exercise: ${exercise.name}")
     }
-    
+
     private fun setupUI() {
         // Set exercise name
         binding.tvExerciseType.text = exercise.name
-        
+
         // Find the first incomplete set if resuming
         findFirstIncompleteSet()
-        
+
         // Set initial set info
         updateSetInfo()
-        
+
         // Set initial reps info
         updateRepsInfo()
-        
+
         // Set initial correct count
         updateCorrectCount()
     }
-    
+
     /**
      * Find the first incomplete set when resuming exercise
      */
     private fun findFirstIncompleteSet() {
         Log.d(TAG, "=== FIND FIRST INCOMPLETE SET ===")
         Log.d(TAG, "Current set from ExerciseActivity: $currentSet")
-        
+
         // Check if current set is already completed or skipped
         val currentSetStatus = getSetStatus(currentSet)
         Log.d(TAG, "Current set $currentSet status: $currentSetStatus")
-        
+
         if (currentSetStatus == "completed" || currentSetStatus == "skipped") {
             Log.d(TAG, "Current set is $currentSetStatus, finding next incomplete set")
-            
+
             // Find first incomplete set
             for (setNumber in 1..sets) {
                 val setStatus = getSetStatus(setNumber)
                 Log.d(TAG, "Set $setNumber status: $setStatus")
-                
+
                 if (setStatus == "incomplete") {
                     currentSet = setNumber
                     Log.d(TAG, "Found first incomplete set: $currentSet")
@@ -293,17 +302,17 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
         } else {
             Log.d(TAG, "Current set $currentSet is incomplete, no need to change")
         }
-        
+
         Log.d(TAG, "Final current set: $currentSet")
         Log.d(TAG, "=== END FIND FIRST INCOMPLETE SET ===")
     }
-    
+
     private fun setupExerciseControls() {
         // Back button
         binding.btnBack.setOnClickListener {
             activity?.finish()
         }
-        
+
         // Start/Stop button
         binding.btnStartStop.setOnClickListener {
             if (isExerciseActive) {
@@ -312,13 +321,13 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
                 startExercise()
             }
         }
-        
+
         // Skip button
         binding.btnSkip.setOnClickListener {
             showSkipOptions()
         }
     }
-    
+
     private fun updateSetInfo() {
         // Get set status from session
         val setStatus = getSetStatus(currentSet)
@@ -328,11 +337,11 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
             "incomplete" -> ""
             else -> ""
         }
-        
+
         Log.d(TAG, "updateSetInfo: currentSet=$currentSet, setStatus=$setStatus, statusText=$statusText")
         binding.tvSetInfo.text = "Set $currentSet/$sets $statusText"
     }
-    
+
     /**
      * Get status of a specific set from session
      */
@@ -344,26 +353,26 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
                 // Get exerciseNo from intent or use exerciseIndex + 1 as fallback
                 activity.intent.getIntExtra("exerciseNo", exerciseIndex + 1)
             } ?: (exerciseIndex + 1)
-            
+
             val currentPerExercise = perExerciseList?.find { it.getExerciseNo() == currentExerciseNo }
             val setsList = currentPerExercise?.getSets() ?: ArrayList()
             val targetSet = setsList.find { it.getSetNo() == setNumber }
             val state = targetSet?.getState() ?: "incomplete"
-            
+
             Log.d(TAG, "getSetStatus($setNumber): exerciseIndex=$exerciseIndex, currentExerciseNo=$currentExerciseNo, exerciseNo=${currentPerExercise?.getExerciseNo()}, setState=$state")
             state
         } ?: "incomplete"
     }
-    
+
     private fun updateRepsInfo() {
         binding.tvRepsInfo.text = "Reps: $currentRep/$reps"
     }
-    
+
     private fun updateCorrectCount() {
         // Update UI with current correct count for this set
         binding.tvCorrectCount.text = correctCount.toString()
     }
-    
+
     private fun startExercise() {
         // Check if current set is already completed or skipped
         val currentSetStatus = getSetStatus(currentSet)
@@ -378,83 +387,83 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
                 }
                 nextSet++
             }
-            
+
             // If no incomplete set found, all sets are completed
             if (nextSet > sets) {
                 Toast.makeText(requireContext(), "All sets are completed!", Toast.LENGTH_SHORT).show()
                 return
             }
-            
+
             // Update UI after moving to new set
             updateSetInfo()
             updateRepsInfo()
         }
-        
+
         // Start exercise (either current set or moved set)
         startExerciseInternal()
     }
-    
+
     private fun startExerciseInternal() {
         // Reset analyzer first to clear any previous feedback
         currentAnalyzer?.reset()
-        
+
         // Reset all counters first
         currentRep = 0
         correctCount = 0
         lastCorrectCount = 0
         lastRepShown = -1 // Reset last rep shown - FIX TOAST ISSUE
-        
+
         // Reset error tracking for new set
         resetErrorTracking()
-        
+
         // Reset UI counts to 0 when starting
         binding.tvCorrectCount.text = "0"
         binding.tvIncorrectCount.text = "0"
-        
+
         // Update UI
         binding.btnStartStop.text = "Reset"
         updateRepsInfo()
-        
+
         // Set flags
         isUIReset = true
         isExerciseActive = true
-        
+
         // Force UI update after a short delay to ensure it's not overridden by onResults
         binding.root.post {
             binding.tvCorrectCount.text = "0"
             binding.tvIncorrectCount.text = "0"
         }
-        
+
         Toast.makeText(requireContext(), "Set $currentSet started! Perform $reps reps", Toast.LENGTH_SHORT).show()
     }
-    
+
     private fun stopExercise() {
         isExerciseActive = false
-        
+
         // Reset current set progress
         currentRep = 0
         correctCount = 0
         lastCorrectCount = 0
         lastRepShown = -1 // Reset last rep shown - FIX TOAST ISSUE
-        
+
         // Reset error tracking when stopping
         resetErrorTracking()
-        
+
         // Reset UI counts to 0 when stopping
         binding.tvCorrectCount.text = "0"
         binding.tvIncorrectCount.text = "0"
-        
+
         // Update UI
         binding.btnStartStop.text = "Start"
         updateRepsInfo()
         updateCorrectCount()
-        
+
         Toast.makeText(requireContext(), "Set reset. Click Start to begin again", Toast.LENGTH_SHORT).show()
     }
-    
+
     private fun completeSet() {
         isExerciseActive = false
-        
+
         // Cập nhật session với kết quả set vừa hoàn thành (bao gồm errorCounts)
         (activity as? ExerciseActivity)?.updateSessionAfterSet(
             setNumber = currentSet,
@@ -463,46 +472,46 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
             skipped = false,
             errorCounts = currentSetErrorCounts.toMap() // Convert to immutable map
         )
-        
+
         // Force reload session to get latest data
         reloadSessionFromActivity()
-        
+
         // Add to total correct count
         totalCorrectCount += correctCount
-        
+
         // FIX: Reset analyzer để đảm bảo correctCount/incorrectCount được reset cho set mới
         currentAnalyzer?.reset()
-        
+
         // Reset for next set
         currentRep = 0
         correctCount = 0
         lastCorrectCount = 0
         lastRepShown = -1 // Reset last rep shown - FIX TOAST ISSUE
-        
+
         // Reset error tracking for next set
         resetErrorTracking()
-        
+
         // Reset UI counts to 0 when set completed
         binding.tvCorrectCount.text = "0"
         binding.tvIncorrectCount.text = "0"
-        
+
         // Update UI
         binding.btnStartStop.text = "Start"
         updateRepsInfo() // Make sure reps info is updated
-        
+
         // Move to next set (simple logic)
         if (currentSet < sets) {
             // Move to next set
             currentSet++
             updateSetInfo()
-            
+
             // Ensure UI counts are 0 for new set
             binding.tvCorrectCount.text = "0"
             binding.tvIncorrectCount.text = "0"
-            
+
             // FIX: Set isUIReset flag để đảm bảo UI được reset đúng cách
             isUIReset = true
-            
+
             // Show continue message
             Toast.makeText(requireContext(), "Set ${currentSet - 1} completed! Ready for Set $currentSet", Toast.LENGTH_LONG).show()
         } else {
@@ -510,7 +519,7 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
             completeExercise()
         }
     }
-    
+
     /**
      * Reload session from ExerciseActivity to get latest data
      */
@@ -523,7 +532,7 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
             }
         }
     }
-    
+
     private fun continueToNextSet() {
         // Find next incomplete set
         var nextSet = currentSet + 1
@@ -534,49 +543,49 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
             }
             nextSet++
         }
-        
+
         if (nextSet <= sets) {
             currentSet = nextSet
             currentRep = 0
             correctCount = 0
             lastCorrectCount = 0
             lastRepShown = -1 // Reset last rep shown - FIX TOAST ISSUE
-            
+
             // FIX: Reset analyzer để đảm bảo correctCount/incorrectCount được reset cho set mới
             currentAnalyzer?.reset()
-            
+
             // Reset UI counts to 0 for new set
             binding.tvCorrectCount.text = "0"
             binding.tvIncorrectCount.text = "0"
-            
+
             // FIX: Set isUIReset flag để đảm bảo UI được reset đúng cách
             isUIReset = true
-            
+
             updateSetInfo()
             updateRepsInfo()
-            
+
             // Ensure UI counts remain 0 for new set
             binding.tvCorrectCount.text = "0"
             binding.tvIncorrectCount.text = "0"
-            
+
             Toast.makeText(requireContext(), "Ready for Set $currentSet", Toast.LENGTH_SHORT).show()
         } else {
             // All sets completed
             completeExercise()
         }
     }
-    
+
     private fun completeExercise() {
         Toast.makeText(requireContext(), "Exercise completed! Total reps: $totalCorrectCount", Toast.LENGTH_LONG).show()
-        
+
         // Notify parent activity that exercise is completed
         (activity as? ExerciseActivity)?.onExerciseCompleted()
     }
-    
+
     private fun showSkipOptions() {
         val options = arrayOf("Skip Set", "Skip Exercise")
-        
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+
+        AlertDialog.Builder(requireContext())
             .setTitle("Skip Options")
             .setItems(options) { _, which ->
                 when (which) {
@@ -587,7 +596,7 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
             .setNegativeButton("Cancel", null)
             .show()
     }
-    
+
     private fun skipCurrentSet() {
         // Cập nhật session với set bị skip (bao gồm errorCounts nếu có)
         (activity as? ExerciseActivity)?.updateSessionAfterSet(
@@ -597,26 +606,26 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
             skipped = true,
             errorCounts = currentSetErrorCounts.toMap() // Convert to immutable map
         )
-        
+
         // Stop current exercise if active
         if (isExerciseActive) {
             isExerciseActive = false
             binding.btnStartStop.text = "Start"
         }
-        
+
         // Reset current set progress
         currentRep = 0
         correctCount = 0
         lastCorrectCount = 0
         lastRepShown = -1 // Reset last rep shown - FIX TOAST ISSUE
-        
+
         // Reset error tracking for next set
         resetErrorTracking()
-        
+
         // Reset UI counts
         binding.tvCorrectCount.text = "0"
         binding.tvIncorrectCount.text = "0"
-        
+
         // Move to next set (simple logic)
         if (currentSet < sets) {
             // Move to next set
@@ -629,16 +638,16 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
             completeExercise()
         }
     }
-    
+
     private fun skipCurrentExercise() {
         // Stop current exercise if active
         if (isExerciseActive) {
             isExerciseActive = false
             binding.btnStartStop.text = "Start"
         }
-        
+
         // Show confirmation
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+        AlertDialog.Builder(requireContext())
             .setTitle("Skip Exercise")
             .setMessage("Are you sure you want to skip this exercise?")
             .setPositiveButton("Yes, Skip") { _, _ ->
@@ -648,35 +657,35 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
             .setNegativeButton("Cancel", null)
             .show()
     }
-    
+
     private fun skipExerciseAndGoToRest() {
         // Gọi skipExercise() để cập nhật session
         (activity as? ExerciseActivity)?.skipExercise()
-        
+
         // Notify parent activity that exercise is completed (skipped)
         // This will trigger the rest screen flow
         (activity as? ExerciseActivity)?.onExerciseCompleted()
     }
-    
+
     // Method called when rep is detected - Logic giống UnifiedCameraFragment
     private fun onRepDetected() {
         // Only count reps when exercise is active (Start button pressed)
         if (isExerciseActive) {
             currentRep++
             updateRepsInfo()
-            
+
             // Show progress message - Logic giống UnifiedCameraFragment
             if (currentRep < reps) {
                 Toast.makeText(requireContext(), "Rep $currentRep/$reps", Toast.LENGTH_SHORT).show()
             }
-            
+
             // Complete set only when reaching target reps
             if (currentRep >= reps) {
                 completeSet()
             }
         }
     }
-    
+
     // Method called when correct form is detected - Logic giống UnifiedCameraFragment
     private fun onCorrectFormDetected() {
         // Only count correct form when exercise is active (Start button pressed)
@@ -684,7 +693,7 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
             // Don't increment correctCount here - it's already updated from feedback.correctCount in onResults()
             // Just update UI and show feedback
             updateCorrectCount()
-            
+
             // Show form feedback - Logic giống UnifiedCameraFragment
             Toast.makeText(requireContext(), "Good form! ($correctCount)", Toast.LENGTH_SHORT).show()
         }
@@ -785,7 +794,7 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
                 if (allLandmarks != null) {
                     // Convert landmarks to analyzer format
                     val landmarks = LandmarkConverter.convertToAnalyzerFormat(poseResult)
-                    
+
                      // Analyze with current analyzer
                      currentAnalyzer?.let { analyzer ->
                          lastFeedback = analyzer.analyze(landmarks)
@@ -797,48 +806,48 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
                          if (isExerciseActive) {
                              // Phát âm thanh trước khi track errors (để có thể phát hiện lỗi mới)
                              maybeSpeakFeedback(feedback)
-                             
+
                              // Track errors from feedback (chỉ track khi exercise active)
                              // Phải gọi sau maybeSpeakFeedback để lastFeedbackList vẫn chứa feedback của frame trước
                              trackErrors(feedback)
-                             
+
                             // Don't update UI immediately after reset - wait for meaningful feedback
                             // Logic giống UnifiedCameraFragment
                             if (!isUIReset || (feedback.correctCount > 0 || feedback.incorrectCount > 0)) {
                                 // Update our internal counters based on analyzer feedback
                                 correctCount = feedback.correctCount
-                                
+
                                 // FIX: Always update incorrectCount from feedback to ensure UI reflects analyzer state
                                 // incorrectCount is tracked by analyzer, not by fragment
-                                
+
                                 // Update UI with our internal counters
                                 binding.tvCorrectCount.text = correctCount.toString()
                                 binding.tvIncorrectCount.text = feedback.incorrectCount.toString()
-                                
+
                                 // Clear the reset flag after first meaningful update
                                 if (isUIReset) {
                                     isUIReset = false
                                 }
                             }
-                            
+
                             // Simple rep detection - only count when correct count increases
                             // Logic giống UnifiedCameraFragment
                             if (feedback.correctCount > lastCorrectCount) {
                                 onRepDetected()
                             }
-                            
+
                             // FIX: Also detect when incorrect count increases (rep completed with errors)
                             val lastIncorrectCount = lastFeedback?.incorrectCount ?: 0
                             if (feedback.incorrectCount > lastIncorrectCount) {
-                                android.util.Log.d(TAG, "❌ Incorrect rep detected! incorrectCount: $lastIncorrectCount -> ${feedback.incorrectCount}")
+                                Log.d(TAG, "❌ Incorrect rep detected! incorrectCount: $lastIncorrectCount -> ${feedback.incorrectCount}")
                                 // Don't call onRepDetected() here - it's already counted in analyzer
                             }
-                            
+
                             // Handle correct form detection - only count when correct count increases
                             if (feedback.correctCount > lastCorrectCount) {
                                 onCorrectFormDetected()
                             }
-                            
+
                             // Update last correct count to prevent duplicate counting
                             lastCorrectCount = feedback.correctCount
                          } else {
@@ -856,33 +865,33 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
     }
 
     private fun updateSpecializedOverlayView(
-        poseResult: com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult,
+        poseResult: PoseLandmarkerResult,
         imageHeight: Int,
         imageWidth: Int,
         feedback: ExerciseFeedback?
     ) {
         // Cập nhật unified overlay view cho custom exercises
         unifiedOverlayView?.setResults(
-            poseResult, 
-            imageHeight, 
-            imageWidth, 
-            com.google.mediapipe.tasks.vision.core.RunningMode.LIVE_STREAM, 
+            poseResult,
+            imageHeight,
+            imageWidth,
+            RunningMode.LIVE_STREAM,
             feedback
         )
     }
 
     private fun initTextToSpeech() {
         // Thử khởi tạo với Google TTS engine trước
-        val googleTtsIntent = android.content.Intent(android.speech.tts.TextToSpeech.Engine.ACTION_CHECK_TTS_DATA)
+        val googleTtsIntent = Intent(TextToSpeech.Engine.ACTION_CHECK_TTS_DATA)
         val resolveInfo = requireContext().packageManager.resolveActivity(googleTtsIntent, 0)
-        
+
         // Nếu có Google TTS, thử dùng nó
         val engine = if (resolveInfo != null) {
             "com.google.android.tts"
         } else {
             null // Dùng engine mặc định
         }
-        
+
         textToSpeech = TextToSpeech(requireContext(), { status ->
             if (status == TextToSpeech.SUCCESS) {
                 val vietnamese = Locale("vi", "VN")
@@ -935,22 +944,22 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
         if (!isTtsReady || textToSpeech == null || isSpeakingFeedback) {
             return
         }
-        
+
         // Chỉ đọc khi exercise đang active (giống trackErrors)
         if (!isExerciseActive) {
             return
         }
-        
+
         // Không đọc khi camera bị lệch (cameraWarning = true)
         if (feedback.isCameraWarning) {
             return
         }
-        
+
         val currentMessages = feedback.feedbackList ?: emptyList()
         if (currentMessages.isEmpty()) {
             return
         }
-        
+
         // Chỉ đọc lỗi mới xuất hiện và không phải lỗi về camera
         // Filter ra các errors có chứa "Camera" (case-insensitive)
         val newErrors = currentMessages.filter { errorMessage ->
@@ -959,11 +968,11 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
             val isNotCameraError = !errorMessage.contains("Camera", ignoreCase = true)
             isNotBlank && isNew && isNotCameraError
         }
-        
+
         if (newErrors.isEmpty()) {
             return
         }
-        
+
         // Nối tất cả lỗi mới lại bằng dấu phẩy
         val textToSpeak = newErrors.joinToString(", ").trim()
         if (textToSpeak.isEmpty()) {
@@ -981,12 +990,12 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
     override fun onError(error: String, errorCode: Int) {
         activity?.runOnUiThread {
             Toast.makeText(requireContext(), error, Toast.LENGTH_SHORT).show()
-            if (errorCode == PoseLandmarkerHelper.GPU_ERROR) {
+            if (errorCode == PoseLandmarkerHelper.Companion.GPU_ERROR) {
                 // Log.e(TAG, "GPU error, switching to CPU")
             }
         }
     }
-    
+
     /**
      * Track errors from ExerciseFeedback - chỉ đếm khi lỗi mới xuất hiện
      * Không đếm errors khi cameraWarning = true (camera lệch, feedback không chính xác)
@@ -994,16 +1003,16 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
      */
     private fun trackErrors(feedback: ExerciseFeedback) {
         if (!isExerciseActive) return // Chỉ track khi đang tập
-        
+
         // Không track errors khi camera bị lệch (cameraWarning = true)
         if (feedback.isCameraWarning) {
             // Reset lastFeedbackList để không track errors từ frame camera lệch
             lastFeedbackList = emptyList()
             return
         }
-        
+
         val currentErrors = feedback.feedbackList ?: emptyList()
-        
+
         // Chỉ đếm lỗi mới xuất hiện và không phải lỗi về camera
         // Filter ra các errors có chứa "Camera" (case-insensitive)
         val newErrors = currentErrors.filter { errorMessage ->
@@ -1012,17 +1021,17 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
             val isNotCameraError = !errorMessage.contains("Camera", ignoreCase = true)
             isNotBlank && isNew && isNotCameraError
         }
-        
+
         newErrors.forEach { errorMessage ->
-            currentSetErrorCounts[errorMessage] = 
+            currentSetErrorCounts[errorMessage] =
                 currentSetErrorCounts.getOrDefault(errorMessage, 0) + 1
             Log.d(TAG, "Error tracked: $errorMessage (count: ${currentSetErrorCounts[errorMessage]})")
         }
-        
+
         // Cập nhật cho frame tiếp theo (bao gồm cả camera errors để tránh đếm lại)
         lastFeedbackList = currentErrors
     }
-    
+
     /**
      * Reset error tracking khi bắt đầu set mới hoặc stop exercise
      */
@@ -1032,4 +1041,3 @@ class CustomExerciseCameraFragment : Fragment(), PoseLandmarkerHelper.Landmarker
         Log.d(TAG, "Error tracking reset")
     }
 }
-

@@ -383,6 +383,15 @@ public class CommunityFragment extends Fragment {
 
             @Override
             protected void onBindViewHolder(@NonNull PostVH h, int position, @NonNull Community p) {
+                // Filter isVisible ở client side
+                if (!p.isVisible) {
+                    h.itemView.setVisibility(View.GONE);
+                    h.itemView.setLayoutParams(new RecyclerView.LayoutParams(0, 0));
+                    return;
+                }
+                h.itemView.setVisibility(View.VISIBLE);
+                h.itemView.setLayoutParams(new RecyclerView.LayoutParams(
+                    RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
                 h.bind(p);
             }
 
@@ -450,6 +459,15 @@ public class CommunityFragment extends Fragment {
 
                         @Override
                         protected void onBindViewHolder(@NonNull PostVH h, int position, @NonNull Community p) {
+                            // Filter isVisible ở client side
+                            if (!p.isVisible) {
+                                h.itemView.setVisibility(View.GONE);
+                                h.itemView.setLayoutParams(new RecyclerView.LayoutParams(0, 0));
+                                return;
+                            }
+                            h.itemView.setVisibility(View.VISIBLE);
+                            h.itemView.setLayoutParams(new RecyclerView.LayoutParams(
+                                RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
                             h.bind(p);
                         }
 

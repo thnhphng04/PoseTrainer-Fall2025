@@ -94,9 +94,15 @@ public class LoginActivity extends AppCompatActivity {
             authService.signInWithEmailPassword(email, password, task -> {
                 buttonLogin.setEnabled(true);
                 if (task.isSuccessful()) {
-                    Toast.makeText(LoginActivity.this, "Đăng nhập thành công", Toast.LENGTH_SHORT).show();
-                    startActivity(new Intent(getApplicationContext(), MainActivity.class));
-                    finish();
+                    // Check if user is active
+                    FirebaseUser user = authService.getCurrentUser();
+                    if (user != null) {
+                        checkUserActiveStatus(user.getUid(), () -> {
+                            Toast.makeText(LoginActivity.this, "Đăng nhập thành công", Toast.LENGTH_SHORT).show();
+                            startActivity(new Intent(getApplicationContext(), MainActivity.class));
+                            finish();
+                        });
+                    }
                 } else {
                     String errorMessage = task.getException() != null
                             ? task.getException().getMessage()
@@ -190,16 +196,19 @@ public class LoginActivity extends AppCompatActivity {
         String uid = firebaseUser.getUid();
         Log.d("GOOGLE_AUTH", "Updating last login time for UID: " + uid);
 
-        authService.updateLastLogin(uid, task -> {
-            if (task.isSuccessful()) {
-                Log.d("GOOGLE_AUTH", "Last login time updated successfully");
-                startActivity(new Intent(getApplicationContext(), MainActivity.class));
-                finish();
-            } else {
-                Log.w("GOOGLE_AUTH", "Failed to update last login, creating new user document");
-                // If update fails, try to create user document
-                createUserDocumentForGoogle(firebaseUser);
-            }
+        // Check if user is active before proceeding
+        checkUserActiveStatus(uid, () -> {
+            authService.updateLastLogin(uid, task -> {
+                if (task.isSuccessful()) {
+                    Log.d("GOOGLE_AUTH", "Last login time updated successfully");
+                    startActivity(new Intent(getApplicationContext(), MainActivity.class));
+                    finish();
+                } else {
+                    Log.w("GOOGLE_AUTH", "Failed to update last login, creating new user document");
+                    // If update fails, try to create user document
+                    createUserDocumentForGoogle(firebaseUser);
+                }
+            });
         });
     }
 
@@ -209,10 +218,35 @@ public class LoginActivity extends AppCompatActivity {
     private void checkCurrentUser() {
         FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser != null) {
-            // User is already logged in, navigate to MainActivity
+            // User is already logged in, check if active
             Log.d("FIREBASE_AUTH", "User already logged in: " + currentUser.getUid());
-            startActivity(new Intent(getApplicationContext(), MainActivity.class));
-            finish();
+            checkUserActiveStatus(currentUser.getUid(), () -> {
+                startActivity(new Intent(getApplicationContext(), MainActivity.class));
+                finish();
+            });
         }
+    }
+
+    /**
+     * Check if user is active, if not sign out and show message
+     * @param uid User ID to check
+     * @param onActive Callback to execute if user is active
+     */
+    private void checkUserActiveStatus(String uid, Runnable onActive) {
+        userDAO.getById(uid, task -> {
+            if (task.isSuccessful() && task.getResult() != null) {
+                fpt.fall2025.posetrainer.Domain.User user = task.getResult();
+                if (user.isActive()) {
+                    onActive.run();
+                } else {
+                    // User is deactivated
+                    authService.signOut();
+                    Toast.makeText(LoginActivity.this, "Tài khoản của bạn đã bị vô hiệu hóa.", Toast.LENGTH_LONG).show();
+                }
+            } else {
+                // User document not found, proceed (new user or error)
+                onActive.run();
+            }
+        });
     }
 }

@@ -118,7 +118,7 @@
                         android:id="@+id/textView14"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Intermediate"
+                        android:text="Tùy chỉnh"
                         android:textColor="@color/white"
                         android:textSize="12sp"
                         android:textStyle="bold" />
