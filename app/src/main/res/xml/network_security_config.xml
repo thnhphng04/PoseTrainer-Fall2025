@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Cho phép Firebase Storage và các domain Google -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">firebasestorage.googleapis.com</domain>
+        <domain includeSubdomains="true">*.googleapis.com</domain>
+        <domain includeSubdomains="true">*.google.com</domain>
+    </domain-config>
+    
+    <!-- Cho phép HTTPS từ mọi nguồn (Firebase Storage sử dụng HTTPS) -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
