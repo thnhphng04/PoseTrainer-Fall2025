@@ -39,7 +39,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
     
     private RecyclerView rvDays;
     private ProgressBar progress;
-    private AppCompatButton btnGenerate, btnAccept;
+    private AppCompatButton btnGenerate;
     private TextView tvHeader, tvSub;
     private EditText etDesiredDays;
     private PlanModels.Plan currentPlan;
@@ -59,7 +59,6 @@ public class PlanPreviewActivity extends AppCompatActivity {
         rvDays = findViewById(R.id.rvDays);
         progress = findViewById(R.id.progress);
         btnGenerate = findViewById(R.id.btnGenerate);
-        btnAccept = findViewById(R.id.btnAccept);
         tvHeader = findViewById(R.id.tvHeader);
         tvSub = findViewById(R.id.tvSub);
         etDesiredDays = findViewById(R.id.etDesiredDays);
@@ -84,7 +83,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
 
         // Set initial state
         setLoading(false);
-        btnAccept.setEnabled(false);
+        // btnAccept đã bị xóa khỏi layout, không cần setEnabled nữa
 
         // Setup click listeners
         btnGenerate.setOnClickListener(v -> checkProfileAndGenerate());
@@ -94,7 +93,6 @@ public class PlanPreviewActivity extends AppCompatActivity {
             generatePlan(true);
             return true;
         });
-        btnAccept.setOnClickListener(v -> acceptPlan());
     }
 
     private void setLoading(boolean loading) {
@@ -104,10 +102,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
         if (btnGenerate != null) {
             btnGenerate.setEnabled(!loading);
         }
-        if (btnAccept != null) {
-            btnAccept.setEnabled(!loading && currentPlan != null && 
-                    currentPlan.days != null && currentPlan.days.size() > 0);
-        }
+        // btnAccept đã được di chuyển vào adapter footer, không cần setEnabled ở đây nữa
     }
 
     /**
@@ -484,7 +479,20 @@ public class PlanPreviewActivity extends AppCompatActivity {
         tvSub.setText(info);
         
         if (rvDays != null) {
-            rvDays.setAdapter(new PlanDayAdapter(plan.days));
+            PlanDayAdapter adapter = new PlanDayAdapter(plan.days);
+            adapter.setOnActionButtonClickListener(new PlanDayAdapter.OnActionButtonClickListener() {
+                @Override
+                public void onAccept() {
+                    acceptPlan();
+                }
+
+                @Override
+                public void onReject() {
+                    // Từ chối: quay về màn hình trước (như nút back)
+                    finish();
+                }
+            });
+            rvDays.setAdapter(adapter);
         }
         
         setLoading(false); // Ensure buttons are enabled

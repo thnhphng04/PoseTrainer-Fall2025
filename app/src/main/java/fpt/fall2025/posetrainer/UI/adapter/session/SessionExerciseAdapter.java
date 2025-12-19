@@ -69,8 +69,28 @@ public class SessionExerciseAdapter extends RecyclerView.Adapter<SessionExercise
 
     @Override
     public void onBindViewHolder(@NonNull SessionExerciseViewHolder holder, int position) {
-        Session.PerExercise perExercise = perExercises.get(position);
-        Exercise exercise = getExerciseByOrder(perExercise.getExerciseNo());
+        final Session.PerExercise perExercise = perExercises.get(position);
+        
+        // FIX: Tìm exercise trực tiếp bằng exerciseId trước (hoạt động tốt với custom exercises)
+        Exercise exerciseFound = null;
+        final String exerciseId = perExercise.getExerciseId();
+        
+        if (exercises != null && exerciseId != null) {
+            for (Exercise ex : exercises) {
+                if (ex.getId() != null && ex.getId().equals(exerciseId)) {
+                    exerciseFound = ex;
+                    break;
+                }
+            }
+        }
+        
+        // Fallback: Nếu không tìm thấy bằng ID, thử dùng getExerciseByOrder (cho backward compatibility)
+        if (exerciseFound == null) {
+            android.util.Log.w("SessionExerciseAdapter", "Exercise not found by ID: " + exerciseId + ", trying getExerciseByOrder");
+            exerciseFound = getExerciseByOrder(perExercise.getExerciseNo());
+        }
+        
+        final Exercise exercise = exerciseFound;
 
         android.util.Log.d("SessionExerciseAdapter", "=== BINDING POSITION " + position + " ===");
         android.util.Log.d("SessionExerciseAdapter", "PerExercise - ExerciseNo: " + perExercise.getExerciseNo() + 
@@ -79,7 +99,7 @@ public class SessionExerciseAdapter extends RecyclerView.Adapter<SessionExercise
         android.util.Log.d("SessionExerciseAdapter", "Exercise found: " + (exercise != null ? exercise.getName() : "null"));
 
         if (exercise == null) {
-            android.util.Log.w("SessionExerciseAdapter", "Exercise is null for ID: " + perExercise.getExerciseId());
+            android.util.Log.w("SessionExerciseAdapter", "Exercise is null for ID: " + exerciseId);
             return;
         }
 
@@ -160,7 +180,7 @@ public class SessionExerciseAdapter extends RecyclerView.Adapter<SessionExercise
         int stateColor = getStateColor(state);
         holder.stateIndicator.setBackgroundColor(stateColor);
 
-        // Handle check mark visibility
+        // Handle check mark visibility - buttons trong adapter luôn ẩn, dùng button chính (startResumeBtn) ở dưới
         android.util.Log.d("SessionExerciseAdapter", "Position " + position + " - State: " + state + 
             " - Setting check mark visibility");
             
@@ -171,12 +191,11 @@ public class SessionExerciseAdapter extends RecyclerView.Adapter<SessionExercise
             android.util.Log.d("SessionExerciseAdapter", "Position " + position + " - Exercise completed, showing check mark");
         } else {
             holder.checkMarkContainer.setVisibility(View.GONE);
+            // FIX: Ẩn buttons trong adapter, dùng button chính (startResumeBtn) ở dưới màn hình
             holder.startExerciseBtn.setVisibility(View.GONE);
             holder.resumeExerciseBtn.setVisibility(View.GONE);
-            android.util.Log.d("SessionExerciseAdapter", "Position " + position + " - Individual buttons hidden (using single start/resume button)");
+            android.util.Log.d("SessionExerciseAdapter", "Position " + position + " - Individual buttons hidden (using main startResumeBtn button)");
         }
-
-        // No individual click listeners - handled by single button in SessionActivity
     }
 
     @Override

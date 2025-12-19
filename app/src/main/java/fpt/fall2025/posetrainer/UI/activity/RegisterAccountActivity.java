@@ -5,7 +5,9 @@ import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
 import android.util.Patterns;
+import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -34,6 +36,8 @@ import fpt.fall2025.posetrainer.Domain.User;
 import fpt.fall2025.posetrainer.Service.AuthService;
 import fpt.fall2025.posetrainer.DAL.UserDAO;
 import fpt.fall2025.posetrainer.DAL.ProfileDAO;
+import fpt.fall2025.posetrainer.UI.dialog.EmailVerificationDialog;
+import fpt.fall2025.posetrainer.UI.dialog.TermsOfServiceDialog;
 import fpt.fall2025.posetrainer.R;
 
 public class RegisterAccountActivity extends AppCompatActivity {
@@ -44,6 +48,10 @@ public class RegisterAccountActivity extends AppCompatActivity {
     private TextInputLayout layoutDisplayName;
     private Button buttonReg, buttonGoogleSignIn;
     private TextView textViewBackToLogin;
+    private CheckBox checkBoxTerms;
+    private TextView textViewTermsLink;
+    private boolean termsAgreed = false; // Flag để đánh dấu đã đồng ý qua dialog
+    private boolean isSettingCheckboxProgrammatically = false; // Flag để tránh trigger listener khi setChecked programmatically
 
     private AuthService authService;
     private UserDAO userDAO;
@@ -59,6 +67,9 @@ public class RegisterAccountActivity extends AppCompatActivity {
         authService = new AuthService();
         userDAO = new UserDAO();
         profileDAO = new ProfileDAO();
+        
+        // Kiểm tra nếu có user chưa xác minh email, xóa tài khoản
+        checkAndCleanupUnverifiedUser();
 
         // Google Sign-In config
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -81,12 +92,41 @@ public class RegisterAccountActivity extends AppCompatActivity {
         buttonReg = findViewById(R.id.btn_register);
         buttonGoogleSignIn = findViewById(R.id.btn_google_signin);
         textViewBackToLogin = findViewById(R.id.tv_back_to_login);
+        checkBoxTerms = findViewById(R.id.cb_terms);
+        textViewTermsLink = findViewById(R.id.tv_terms_link);
 
         // Back to login
         textViewBackToLogin.setOnClickListener(v -> {
             startActivity(new Intent(getApplicationContext(), LoginActivity.class));
             finish();
         });
+
+        // Terms and Conditions - Click on checkbox or text to show dialog
+        // Ngăn chặn tick trực tiếp, chỉ cho phép tick sau khi đồng ý trong dialog
+        checkBoxTerms.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            // Bỏ qua nếu đang setChecked programmatically
+            if (isSettingCheckboxProgrammatically) {
+                return;
+            }
+            
+            if (isChecked && !termsAgreed) {
+                // Nếu cố gắng tick mà chưa đồng ý qua dialog, revert lại và hiển thị dialog
+                isSettingCheckboxProgrammatically = true;
+                checkBoxTerms.setChecked(false);
+                isSettingCheckboxProgrammatically = false;
+                showTermsOfServiceDialog();
+            }
+        });
+        
+        View.OnClickListener showTermsDialogListener = v -> {
+            // Chỉ hiển thị dialog nếu chưa đồng ý
+            if (!termsAgreed) {
+                showTermsOfServiceDialog();
+            }
+        };
+        // Click vào checkbox hoặc text đều hiển thị dialog
+        checkBoxTerms.setOnClickListener(showTermsDialogListener);
+        textViewTermsLink.setOnClickListener(showTermsDialogListener);
 
         // Email/Password register with pre-check
         buttonReg.setOnClickListener(v -> {
@@ -131,6 +171,12 @@ public class RegisterAccountActivity extends AppCompatActivity {
                 layoutDisplayName.setError("Vui lòng nhập tên hiển thị");
                 return;
             }
+            
+            // Check terms and conditions
+            if (!checkBoxTerms.isChecked()) {
+                Toast.makeText(this, "Bạn cần xác nhận điều khoản sử dụng để đăng ký", Toast.LENGTH_LONG).show();
+                return;
+            }
 
             buttonReg.setEnabled(false);
 
@@ -152,27 +198,40 @@ public class RegisterAccountActivity extends AppCompatActivity {
                     return;
                 }
 
-                // 2) Tạo tài khoản
+                // 2) Tạo tài khoản Firebase Auth (NHƯNG CHƯA tạo user document)
                 authService.createUserWithEmailPassword(email, password, createTask -> {
                     buttonReg.setEnabled(true);
                     if (createTask.isSuccessful()) {
                         FirebaseUser firebaseUser = authService.getCurrentUser();
                         if (firebaseUser != null) {
-                            String uid = firebaseUser.getUid();
-
-                            // users/{uid}
-                            createUserDoc(uid, email, displayName, photoUrl, Arrays.asList("password"));
-
-                            // profiles/{uid} rỗng + defaults, rồi vào Questionnaire
-                            ensureEmptyProfile(uid)
-                                    .addOnSuccessListener(unused -> {
-                                        Toast.makeText(this, "Tạo tài khoản thành công", Toast.LENGTH_SHORT).show();
-                                        goToQuestionnaire(uid);
-                                    })
-                                    .addOnFailureListener(e -> {
-                                        Toast.makeText(this, "Lỗi khởi tạo profile: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                                        goToQuestionnaire(uid); // vẫn cho tiếp tục
+                            // Gửi email xác minh (không dùng continueUrl để tránh lỗi domain not allowlisted)
+                            authService.sendEmailVerification(sendTask -> {
+                                if (sendTask.isSuccessful()) {
+                                    Log.d("REGISTER", "✅ Đã gửi email verification");
+                                } else {
+                                    Log.e("REGISTER", "❌ Lỗi gửi email verification", sendTask.getException());
+                                    // Nếu không gửi được email, xóa tài khoản và thông báo lỗi
+                                    authService.deleteCurrentUser(deleteTask -> {
+                                        String errorMsg = "Không thể gửi email xác minh. ";
+                                        if (sendTask.getException() != null) {
+                                            String exceptionMsg = sendTask.getException().getMessage();
+                                            if (exceptionMsg != null && exceptionMsg.contains("domain")) {
+                                                errorMsg += "Vui lòng kiểm tra cấu hình Firebase.";
+                                            } else {
+                                                errorMsg += "Vui lòng thử lại sau.";
+                                            }
+                                        } else {
+                                            errorMsg += "Vui lòng thử lại sau.";
+                                        }
+                                        Toast.makeText(RegisterAccountActivity.this, errorMsg, Toast.LENGTH_LONG).show();
                                     });
+                                    return;
+                                }
+                                
+                                // Hiển thị dialog xác minh email
+                                // CHƯA tạo user document và profile - chỉ tạo khi email đã được xác minh
+                                showEmailVerificationDialog(email, displayName, photoUrl);
+                            });
                         }
                     } else {
                         Toast.makeText(this,
@@ -236,6 +295,27 @@ public class RegisterAccountActivity extends AppCompatActivity {
     }
 
     /* ======================== Helpers ======================== */
+    
+    private void showTermsOfServiceDialog() {
+        TermsOfServiceDialog dialog = new TermsOfServiceDialog(this);
+        dialog.setOnAgreeListener(new TermsOfServiceDialog.OnAgreeListener() {
+            @Override
+            public void onAgree() {
+                // Khi người dùng đồng ý, đánh dấu và tick vào checkbox
+                termsAgreed = true;
+                isSettingCheckboxProgrammatically = true;
+                checkBoxTerms.setChecked(true);
+                isSettingCheckboxProgrammatically = false;
+            }
+            
+            @Override
+            public void onCancel() {
+                // Khi người dùng hủy, không tick checkbox
+                // Không làm gì cả, checkbox vẫn ở trạng thái unchecked
+            }
+        });
+        dialog.show();
+    }
 
     private void goToQuestionnaire(String uid) {
         Intent intent = new Intent(getApplicationContext(), RegistrationInfoActivity.class);
@@ -275,6 +355,114 @@ public class RegisterAccountActivity extends AppCompatActivity {
             }
             return docRef.set(init);
         });
+    }
+
+    /**
+     * Hiển thị dialog xác minh email
+     * Bắt buộc phải xác minh email mới được tiếp tục
+     * CHỈ tạo user document và profile khi email đã được xác minh
+     */
+    private void showEmailVerificationDialog(String email, String displayName, String photoUrl) {
+        EmailVerificationDialog dialog = EmailVerificationDialog.newInstance(email);
+        dialog.setOnVerificationCompleteListener(new EmailVerificationDialog.OnVerificationCompleteListener() {
+            @Override
+            public void onVerified() {
+                // Người dùng đã xác minh email, BÂY GIỜ mới tạo user document và profile
+                FirebaseUser user = authService.getCurrentUser();
+                if (user != null && user.isEmailVerified()) {
+                    String uid = user.getUid();
+                    
+                    // Tạo user document trong Firestore
+                    createUserDoc(uid, email, displayName, photoUrl, Arrays.asList("password"));
+                    
+                    // Tạo profile
+                    ensureEmptyProfile(uid)
+                            .addOnSuccessListener(unused -> {
+                                Toast.makeText(RegisterAccountActivity.this,
+                                        "Email đã được xác minh thành công!",
+                                        Toast.LENGTH_SHORT).show();
+                                goToQuestionnaire(uid);
+                            })
+                            .addOnFailureListener(e -> {
+                                Log.e("REGISTER", "Lỗi khởi tạo profile", e);
+                                Toast.makeText(RegisterAccountActivity.this,
+                                        "Email đã được xác minh. Đang hoàn tất đăng ký...",
+                                        Toast.LENGTH_SHORT).show();
+                                goToQuestionnaire(uid);
+                            });
+                } else {
+                    // Vẫn chưa xác minh, không cho tiếp tục
+                    Toast.makeText(RegisterAccountActivity.this,
+                            "Vui lòng xác minh email trước khi tiếp tục.",
+                            Toast.LENGTH_LONG).show();
+                }
+            }
+            
+            @Override
+            public void onDialogClosed() {
+                // Người dùng đóng dialog mà chưa xác minh email
+                // Xóa tài khoản Firebase Auth vì chưa hoàn tất đăng ký
+                FirebaseUser user = authService.getCurrentUser();
+                if (user != null && !user.isEmailVerified()) {
+                    Log.d("REGISTER", "Người dùng đóng dialog chưa xác minh, xóa tài khoản");
+                    authService.deleteCurrentUser(deleteTask -> {
+                        if (deleteTask.isSuccessful()) {
+                            Toast.makeText(RegisterAccountActivity.this,
+                                    "Đăng ký chưa hoàn tất. Vui lòng xác minh email để tiếp tục.",
+                                    Toast.LENGTH_LONG).show();
+                        } else {
+                            Log.e("REGISTER", "Lỗi xóa tài khoản", deleteTask.getException());
+                        }
+                    });
+                }
+            }
+        });
+        // Không cho phép đóng dialog bằng cách click bên ngoài hoặc back button
+        dialog.setCancelable(false);
+        dialog.show(getSupportFragmentManager(), "EmailVerificationDialog");
+    }
+
+    /**
+     * Kiểm tra và xóa tài khoản chưa xác minh email (nếu có)
+     * Được gọi khi mở RegisterAccountActivity
+     */
+    private void checkAndCleanupUnverifiedUser() {
+        FirebaseUser currentUser = authService.getCurrentUser();
+        if (currentUser != null && !currentUser.isEmailVerified()) {
+            // Có user chưa xác minh email, xóa tài khoản
+            Log.d("REGISTER", "Phát hiện user chưa xác minh email, đang xóa tài khoản");
+            authService.deleteCurrentUser(deleteTask -> {
+                if (deleteTask.isSuccessful()) {
+                    Log.d("REGISTER", "✅ Đã xóa tài khoản chưa xác minh");
+                } else {
+                    Log.e("REGISTER", "❌ Lỗi xóa tài khoản", deleteTask.getException());
+                }
+            });
+        }
+    }
+    
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Kiểm tra lại khi resume (trường hợp user quay lại từ email app)
+        checkAndCleanupUnverifiedUser();
+    }
+    
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // Khi đóng activity, nếu user chưa xác minh email, xóa tài khoản
+        FirebaseUser currentUser = authService.getCurrentUser();
+        if (currentUser != null && !currentUser.isEmailVerified()) {
+            // Kiểm tra xem user document đã tồn tại chưa
+            userDAO.getById(currentUser.getUid(), task -> {
+                if (task.isSuccessful() && task.getResult() == null) {
+                    // User document chưa tồn tại → chưa hoàn tất đăng ký → xóa tài khoản
+                    Log.d("REGISTER", "Activity bị destroy, user chưa xác minh và chưa có user document, xóa tài khoản");
+                    authService.deleteCurrentUser(null);
+                }
+            });
+        }
     }
 
     /** Điều hướng sau khi đăng nhập Google */

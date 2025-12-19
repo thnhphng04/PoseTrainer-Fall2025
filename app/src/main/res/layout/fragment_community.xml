@@ -12,7 +12,9 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:background="#ff1a1f2e"
-        android:elevation="0dp">
+        android:elevation="0dp"
+        android:clickable="false"
+        android:focusable="false">
 
         <!-- Header row -->
         <LinearLayout
@@ -115,12 +117,13 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="#ff1a1f2e"
-            app:tabMode="scrollable"
+            android:layout_marginBottom="0dp"
             app:tabGravity="fill"
-            app:tabTextColor="#99ffffff"
-            app:tabSelectedTextColor="#4d9df2"
             app:tabIndicatorColor="#4d9df2"
-            app:tabIndicatorHeight="3dp" />
+            app:tabIndicatorHeight="3dp"
+            app:tabMode="scrollable"
+            app:tabSelectedTextColor="#4d9df2"
+            app:tabTextColor="#99ffffff" />
 
     </LinearLayout>
 
@@ -135,7 +138,10 @@
         android:gravity="center_vertical"
         android:layout_marginHorizontal="12dp"
         android:layout_marginTop="8dp"
-        android:layout_marginBottom="8dp">
+        android:layout_marginBottom="8dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:minHeight="64dp">
 
         <ImageView
             android:id="@+id/profile_image"

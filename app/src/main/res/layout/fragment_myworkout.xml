@@ -325,6 +325,18 @@
                     android:padding="8dp"
                     android:clipToPadding="false"
                     android:nestedScrollingEnabled="false" />
+                
+                <!-- Empty state message when all AI workouts are completed -->
+                <TextView
+                    android:id="@+id/ai_empty_message"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Bạn đã hoàn thành lịch tập do AI tạo ra. Hãy tạo lịch trình tập mới nhé!"
+                    android:textColor="#99FFFFFF"
+                    android:textSize="14sp"
+                    android:gravity="center"
+                    android:padding="32dp"
+                    android:visibility="gone" />
 
             </LinearLayout>
 
