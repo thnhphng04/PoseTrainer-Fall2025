@@ -252,5 +252,120 @@ public class AuthService {
     public com.google.firebase.auth.FirebaseAuth getAuth() {
         return authContext.getAuth();
     }
+    
+    /**
+     * Gửi email xác minh cho user hiện tại
+     * @param listener Callback để xử lý kết quả
+     */
+    public void sendEmailVerification(@Nullable OnCompleteListener<Void> listener) {
+        sendEmailVerification(null, listener);
+    }
+    
+    /**
+     * Gửi email xác minh cho user hiện tại với ActionCodeSettings
+     * @param continueUrl URL để redirect về app sau khi xác minh (có thể null)
+     * @param listener Callback để xử lý kết quả
+     */
+    public void sendEmailVerification(@Nullable String continueUrl, @Nullable OnCompleteListener<Void> listener) {
+        FirebaseUser user = getCurrentUser();
+        if (user == null) {
+            Log.e(TAG, "❌ Không thể gửi email verification: User chưa đăng nhập");
+            if (listener != null) {
+                listener.onComplete(Tasks.<Void>forException(
+                    new IllegalStateException("User is not logged in")));
+            }
+            return;
+        }
+        
+        if (user.isEmailVerified()) {
+            Log.d(TAG, "Email đã được xác minh rồi");
+            if (listener != null) {
+                listener.onComplete(Tasks.forResult(null));
+            }
+            return;
+        }
+        
+        Log.d(TAG, "Đang gửi email verification cho: " + user.getEmail());
+        authContext.getAuth().setLanguageCode("vi");
+        
+        // Tạo ActionCodeSettings với continueUrl để redirect về app
+        com.google.firebase.auth.ActionCodeSettings actionCodeSettings = null;
+        if (continueUrl != null && !continueUrl.isEmpty()) {
+            actionCodeSettings = com.google.firebase.auth.ActionCodeSettings.newBuilder()
+                    .setUrl(continueUrl)
+                    .setHandleCodeInApp(true) // Mở trong app nếu có thể
+                    .setAndroidPackageName(
+                            "fpt.fall2025.posetrainer",
+                            true, // install if not available
+                            null // minimum version - null để không check
+                    )
+                    .build();
+        }
+        
+        if (actionCodeSettings != null) {
+            user.sendEmailVerification(actionCodeSettings)
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        Log.d(TAG, "✅ Đã gửi email verification thành công với deep link");
+                    } else {
+                        Log.e(TAG, "❌ Gửi email verification thất bại", task.getException());
+                    }
+                    if (listener != null) {
+                        listener.onComplete(task);
+                    }
+                });
+        } else {
+            user.sendEmailVerification()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        Log.d(TAG, "✅ Đã gửi email verification thành công");
+                    } else {
+                        Log.e(TAG, "❌ Gửi email verification thất bại", task.getException());
+                    }
+                    if (listener != null) {
+                        listener.onComplete(task);
+                    }
+                });
+        }
+    }
+    
+    /**
+     * Kiểm tra email đã được xác minh chưa
+     * @return true nếu email đã được xác minh, false nếu chưa hoặc user chưa đăng nhập
+     */
+    public boolean isEmailVerified() {
+        FirebaseUser user = getCurrentUser();
+        return user != null && user.isEmailVerified();
+    }
+    
+    /**
+     * Xóa tài khoản Firebase Auth của user hiện tại
+     * @param listener Callback để xử lý kết quả
+     */
+    public void deleteCurrentUser(@Nullable OnCompleteListener<Void> listener) {
+        FirebaseUser user = getCurrentUser();
+        if (user == null) {
+            Log.e(TAG, "❌ Không thể xóa user: User chưa đăng nhập");
+            if (listener != null) {
+                listener.onComplete(Tasks.<Void>forException(
+                    new IllegalStateException("User is not logged in")));
+            }
+            return;
+        }
+        
+        Log.d(TAG, "Đang xóa user: " + user.getUid());
+        user.delete()
+            .addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    Log.d(TAG, "✅ Đã xóa user thành công");
+                    authContext.refreshUser();
+                } else {
+                    Log.e(TAG, "❌ Xóa user thất bại", task.getException());
+                }
+                if (listener != null) {
+                    listener.onComplete(task);
+                }
+            });
+    }
 }
 

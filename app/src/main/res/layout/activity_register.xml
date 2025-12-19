@@ -114,6 +114,37 @@
                 android:textColorHint="#80FFFFFF" />
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Terms and Conditions Checkbox -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="16dp"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp">
+
+            <CheckBox
+                android:id="@+id/cb_terms"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:button="@drawable/checkbox_custom"
+                android:checked="false" />
+
+            <TextView
+                android:id="@+id/tv_terms_link"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Tôi đồng ý với điều khoản sử dụng"
+                android:textColor="@color/white"
+                android:textSize="14sp"
+                android:paddingStart="8dp"
+                android:clickable="true"
+                android:focusable="true" />
+        </LinearLayout>
+
         <!-- Register Button -->
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/btn_register"

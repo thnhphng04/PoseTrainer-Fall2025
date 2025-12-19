@@ -82,19 +82,6 @@
                 android:textAllCaps="false"
                 style="@android:style/Widget.Button"/>
 
-            <androidx.appcompat.widget.AppCompatButton
-                android:id="@+id/btnAccept"
-                android:text="Chấp nhận"
-                android:enabled="false"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:background="@drawable/gray_outline_bg"
-                android:backgroundTint="@null"
-                android:textColor="@color/white"
-                android:textAllCaps="false"
-                style="@android:style/Widget.Button"/>
         </LinearLayout>
 
         <ProgressBar

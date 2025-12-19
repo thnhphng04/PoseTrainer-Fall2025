@@ -12,6 +12,7 @@
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
+        android:fillViewport="true"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@id/bottom_card">
 
@@ -20,13 +21,13 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Header Image - giữ nguyên tất cả -->
+            <!-- Header Image - giảm kích thước để tránh tràn -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardCornerRadius="0dp"
                 app:cardElevation="0dp"
-                android:layout_marginBottom="16dp">
+                android:layout_marginBottom="4dp">
 
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
@@ -35,7 +36,7 @@
                     <ImageView
                         android:id="@+id/pic"
                         android:layout_width="match_parent"
-                        android:layout_height="320dp"
+                        android:layout_height="140dp"
                         android:scaleType="centerCrop"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
@@ -45,7 +46,7 @@
                     <View
                         android:id="@+id/view2"
                         android:layout_width="match_parent"
-                        android:layout_height="160dp"
+                        android:layout_height="70dp"
                         android:background="@drawable/gradient_bg"
                         app:layout_constraintBottom_toBottomOf="@id/pic"
                         app:layout_constraintEnd_toEndOf="parent"
@@ -56,7 +57,7 @@
                         android:layout_width="40dp"
                         android:layout_height="40dp"
                         android:layout_marginStart="16dp"
-                        android:layout_marginTop="48dp"
+                        android:layout_marginTop="16dp"
                         android:background="@drawable/round_bg_white_alpha"
                         android:padding="8dp"
                         app:layout_constraintStart_toStartOf="parent"
@@ -99,9 +100,10 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:paddingStart="20dp"
-                android:paddingEnd="20dp"
-                android:paddingBottom="24dp">
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="12dp">
 
                 <!-- Tất cả content giữ nguyên -->
                 <LinearLayout
@@ -112,7 +114,7 @@
                     android:paddingTop="6dp"
                     android:paddingEnd="12dp"
                     android:paddingBottom="6dp"
-                    android:layout_marginBottom="8dp">
+                    android:layout_marginBottom="6dp">
 
                     <TextView
                         android:id="@+id/textView14"
@@ -130,10 +132,10 @@
                     android:layout_height="wrap_content"
                     android:text="Abs - Advanced"
                     android:textColor="@color/white"
-                    android:textSize="26sp"
+                    android:textSize="20sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.01"
-                    android:layout_marginBottom="12dp" />
+                    android:layout_marginBottom="6dp" />
 
                 <EditText
                     android:id="@+id/titleEditTxt"
@@ -156,7 +158,7 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
-                    android:layout_marginBottom="16dp">
+                    android:layout_marginBottom="8dp">
 
                     <ImageView
                         android:layout_width="18dp"
@@ -203,9 +205,9 @@
                     android:layout_height="wrap_content"
                     android:text="Advanced core workout combining all ab exercises for maximum results"
                     android:textColor="#99FFFFFF"
-                    android:textSize="14sp"
+                    android:textSize="13sp"
                     android:lineSpacingExtra="4dp"
-                    android:layout_marginBottom="24dp" />
+                    android:layout_marginBottom="12dp" />
 
                 <EditText
                     android:id="@+id/descriptionEditTxt"
@@ -231,7 +233,7 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
-                    android:layout_marginBottom="16dp">
+                    android:layout_marginBottom="8dp">
 
                     <TextView
                         android:id="@+id/textView19"
@@ -240,7 +242,7 @@
                         android:layout_weight="1"
                         android:text="Bài tập"
                         android:textColor="@color/white"
-                        android:textSize="20sp"
+                        android:textSize="18sp"
                         android:textStyle="bold" />
 
                     <androidx.appcompat.widget.AppCompatButton
@@ -284,12 +286,16 @@
             android:layout_height="wrap_content"
             android:background="@color/mainColor"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:paddingTop="8dp"
+            android:paddingBottom="0dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:fitsSystemWindows="true">
 
             <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/button"
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
+                android:layout_height="52dp"
                 android:text="Bắt đầu tập"
                 android:textAllCaps="false"
                 android:textColor="@color/white"

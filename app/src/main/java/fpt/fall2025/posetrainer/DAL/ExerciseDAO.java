@@ -16,6 +16,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.widget.Toast;
 
 import fpt.fall2025.posetrainer.Domain.Exercise;
+import fpt.fall2025.posetrainer.Domain.ExerciseUser;
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
 import fpt.fall2025.posetrainer.Service.firebaseContext.FirebaseFirestoreContext;
 
@@ -35,9 +36,12 @@ public class ExerciseDAO {
     
     /**
      * Lấy exercise theo ID
+     * FIX: Tìm trong cả collection "exercises" và "exerciseUser" (cho custom exercises)
      */
     public void getById(@NonNull String id, @Nullable OnCompleteListener<Exercise> listener) {
         Log.d(TAG, "Đang lấy exercise: " + id);
+        
+        // Tìm trong collection "exercises" trước
         firestoreContext.getDocument(COLLECTION_NAME, id)
             .get()
             .addOnSuccessListener(documentSnapshot -> {
@@ -45,7 +49,7 @@ public class ExerciseDAO {
                     Exercise exercise = documentSnapshot.toObject(Exercise.class);
                     if (exercise != null) {
                         exercise.setId(documentSnapshot.getId());
-                        Log.d(TAG, "✅ Lấy exercise thành công: " + id);
+                        Log.d(TAG, "✅ Lấy exercise thành công từ collection 'exercises': " + id);
                         if (listener != null) {
                             listener.onComplete(Tasks.forResult(exercise));
                         }
@@ -56,10 +60,40 @@ public class ExerciseDAO {
                         }
                     }
                 } else {
-                    Log.d(TAG, "Exercise không tồn tại: " + id);
-                    if (listener != null) {
-                        listener.onComplete(Tasks.forResult(null));
-                    }
+                    // Nếu không tìm thấy trong "exercises", thử tìm trong "exerciseUser" (custom exercises)
+                    Log.d(TAG, "Exercise không tồn tại trong 'exercises', thử tìm trong 'exerciseUser': " + id);
+                    firestoreContext.getDocument("exerciseUser", id)
+                        .get()
+                        .addOnSuccessListener(exerciseUserSnapshot -> {
+                            if (exerciseUserSnapshot.exists()) {
+                                ExerciseUser exerciseUser = exerciseUserSnapshot.toObject(ExerciseUser.class);
+                                if (exerciseUser != null) {
+                                    // Convert ExerciseUser sang Exercise
+                                    Exercise exercise = exerciseUser.toExercise();
+                                    exercise.setId(exerciseUserSnapshot.getId());
+                                    Log.d(TAG, "✅ Lấy exercise thành công từ collection 'exerciseUser': " + id);
+                                    if (listener != null) {
+                                        listener.onComplete(Tasks.forResult(exercise));
+                                    }
+                                } else {
+                                    Log.e(TAG, "❌ Không thể parse ExerciseUser");
+                                    if (listener != null) {
+                                        listener.onComplete(Tasks.<Exercise>forException(new Exception("Không thể parse ExerciseUser")));
+                                    }
+                                }
+                            } else {
+                                Log.d(TAG, "Exercise không tồn tại trong cả 'exercises' và 'exerciseUser': " + id);
+                                if (listener != null) {
+                                    listener.onComplete(Tasks.forResult(null));
+                                }
+                            }
+                        })
+                        .addOnFailureListener(e -> {
+                            Log.e(TAG, "❌ Lỗi lấy ExerciseUser: " + id, e);
+                            if (listener != null) {
+                                listener.onComplete(Tasks.<Exercise>forException(e));
+                            }
+                        });
                 }
             })
             .addOnFailureListener(e -> {
