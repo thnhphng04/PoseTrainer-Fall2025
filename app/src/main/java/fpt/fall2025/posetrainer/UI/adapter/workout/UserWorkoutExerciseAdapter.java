@@ -2,6 +2,8 @@ package fpt.fall2025.posetrainer.UI.adapter.workout;
 
 import android.content.Context;
 import android.content.Intent;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -173,7 +175,10 @@ public class UserWorkoutExerciseAdapter extends RecyclerView.Adapter<UserWorkout
         holder.binding.setsMinusBtn.setOnClickListener(v -> {
             if (holder.currentSets > 1) {
                 holder.currentSets--;
+                holder.isUpdatingFromWatcher = true;
                 holder.binding.setsTxt.setText(String.valueOf(holder.currentSets));
+                holder.binding.setsTxt.setSelection(holder.binding.setsTxt.getText().length());
+                holder.isUpdatingFromWatcher = false;
                 holder.binding.durationTxt.setText(holder.currentSets + " sets x " + holder.currentReps + " reps");
                 if (listener != null) {
                     listener.onSetsRepsChanged(position, holder.currentSets, holder.currentReps);
@@ -184,7 +189,10 @@ public class UserWorkoutExerciseAdapter extends RecyclerView.Adapter<UserWorkout
         holder.binding.setsPlusBtn.setOnClickListener(v -> {
             if (holder.currentSets < 10) {
                 holder.currentSets++;
+                holder.isUpdatingFromWatcher = true;
                 holder.binding.setsTxt.setText(String.valueOf(holder.currentSets));
+                holder.binding.setsTxt.setSelection(holder.binding.setsTxt.getText().length());
+                holder.isUpdatingFromWatcher = false;
                 holder.binding.durationTxt.setText(holder.currentSets + " sets x " + holder.currentReps + " reps");
                 if (listener != null) {
                     listener.onSetsRepsChanged(position, holder.currentSets, holder.currentReps);
@@ -195,7 +203,10 @@ public class UserWorkoutExerciseAdapter extends RecyclerView.Adapter<UserWorkout
         holder.binding.repsMinusBtn.setOnClickListener(v -> {
             if (holder.currentReps > 1) {
                 holder.currentReps--;
+                holder.isUpdatingFromWatcher = true;
                 holder.binding.repsTxt.setText(String.valueOf(holder.currentReps));
+                holder.binding.repsTxt.setSelection(holder.binding.repsTxt.getText().length());
+                holder.isUpdatingFromWatcher = false;
                 holder.binding.durationTxt.setText(holder.currentSets + " sets x " + holder.currentReps + " reps");
                 if (listener != null) {
                     listener.onSetsRepsChanged(position, holder.currentSets, holder.currentReps);
@@ -206,13 +217,19 @@ public class UserWorkoutExerciseAdapter extends RecyclerView.Adapter<UserWorkout
         holder.binding.repsPlusBtn.setOnClickListener(v -> {
             if (holder.currentReps < 50) {
                 holder.currentReps++;
+                holder.isUpdatingFromWatcher = true;
                 holder.binding.repsTxt.setText(String.valueOf(holder.currentReps));
+                holder.binding.repsTxt.setSelection(holder.binding.repsTxt.getText().length());
+                holder.isUpdatingFromWatcher = false;
                 holder.binding.durationTxt.setText(holder.currentSets + " sets x " + holder.currentReps + " reps");
                 if (listener != null) {
                     listener.onSetsRepsChanged(position, holder.currentSets, holder.currentReps);
                 }
             }
         });
+        
+        // Setup TextWatchers for EditText fields
+        setupTextWatchers(holder, position);
 
         // Set difficulty text in Vietnamese
         final String difficulty = getDifficultyText(workoutItem, exercise);
@@ -273,10 +290,134 @@ public class UserWorkoutExerciseAdapter extends RecyclerView.Adapter<UserWorkout
         return null;
     }
 
+    /**
+     * Setup TextWatchers for EditText fields to handle keyboard input
+     */
+    private void setupTextWatchers(Viewholder holder, int position) {
+        // Remove existing watchers to avoid duplicates
+        if (holder.setsTextWatcher != null) {
+            holder.binding.setsTxt.removeTextChangedListener(holder.setsTextWatcher);
+        }
+        if (holder.repsTextWatcher != null) {
+            holder.binding.repsTxt.removeTextChangedListener(holder.repsTextWatcher);
+        }
+        
+        // Sets TextWatcher
+        holder.setsTextWatcher = new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+            
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+            
+            @Override
+            public void afterTextChanged(Editable s) {
+                if (holder.isUpdatingFromWatcher) {
+                    return;
+                }
+                
+                String text = s.toString().trim();
+                if (text.isEmpty()) {
+                    return;
+                }
+                
+                try {
+                    int value = Integer.parseInt(text);
+                    // Validate range: 1-10 for sets
+                    if (value < 1) {
+                        value = 1;
+                    } else if (value > 10) {
+                        value = 10;
+                    }
+                    
+                    // Update if different
+                    if (value != holder.currentSets) {
+                        holder.isUpdatingFromWatcher = true;
+                        holder.currentSets = value;
+                        holder.binding.setsTxt.setText(String.valueOf(value));
+                        holder.binding.setsTxt.setSelection(holder.binding.setsTxt.getText().length());
+                        holder.isUpdatingFromWatcher = false;
+                        holder.binding.durationTxt.setText(holder.currentSets + " sets x " + holder.currentReps + " reps");
+                        
+                        if (listener != null) {
+                            listener.onSetsRepsChanged(position, holder.currentSets, holder.currentReps);
+                        }
+                    }
+                } catch (NumberFormatException e) {
+                    // Invalid input, reset to current value
+                    holder.isUpdatingFromWatcher = true;
+                    holder.binding.setsTxt.setText(String.valueOf(holder.currentSets));
+                    holder.binding.setsTxt.setSelection(holder.binding.setsTxt.getText().length());
+                    holder.isUpdatingFromWatcher = false;
+                }
+            }
+        };
+        holder.binding.setsTxt.addTextChangedListener(holder.setsTextWatcher);
+        
+        // Reps TextWatcher
+        holder.repsTextWatcher = new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+            
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+            
+            @Override
+            public void afterTextChanged(Editable s) {
+                if (holder.isUpdatingFromWatcher) {
+                    return;
+                }
+                
+                String text = s.toString().trim();
+                if (text.isEmpty()) {
+                    return;
+                }
+                
+                try {
+                    int value = Integer.parseInt(text);
+                    // Validate range: 1-50 for reps
+                    if (value < 1) {
+                        value = 1;
+                    } else if (value > 50) {
+                        value = 50;
+                    }
+                    
+                    // Update if different
+                    if (value != holder.currentReps) {
+                        holder.isUpdatingFromWatcher = true;
+                        holder.currentReps = value;
+                        holder.binding.repsTxt.setText(String.valueOf(value));
+                        holder.binding.repsTxt.setSelection(holder.binding.repsTxt.getText().length());
+                        holder.isUpdatingFromWatcher = false;
+                        holder.binding.durationTxt.setText(holder.currentSets + " sets x " + holder.currentReps + " reps");
+                        
+                        if (listener != null) {
+                            listener.onSetsRepsChanged(position, holder.currentSets, holder.currentReps);
+                        }
+                    }
+                } catch (NumberFormatException e) {
+                    // Invalid input, reset to current value
+                    holder.isUpdatingFromWatcher = true;
+                    holder.binding.repsTxt.setText(String.valueOf(holder.currentReps));
+                    holder.binding.repsTxt.setSelection(holder.binding.repsTxt.getText().length());
+                    holder.isUpdatingFromWatcher = false;
+                }
+            }
+        };
+        holder.binding.repsTxt.addTextChangedListener(holder.repsTextWatcher);
+    }
+
     public class Viewholder extends RecyclerView.ViewHolder {
         ViewholderUserWorkoutExerciseBinding binding;
         int currentSets = 3;
         int currentReps = 12;
+        boolean isUpdatingFromWatcher = false;
+        TextWatcher setsTextWatcher;
+        TextWatcher repsTextWatcher;
 
         public Viewholder(ViewholderUserWorkoutExerciseBinding binding) {
             super(binding.getRoot());
