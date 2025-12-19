@@ -402,6 +402,8 @@ public class DailyFragment extends Fragment {
             if (binding != null) {
                 binding.tvEmptyState.setVisibility(View.VISIBLE);
                 binding.recyclerViewSessions.setVisibility(View.GONE);
+                // Update sessions title to show empty message
+                binding.tvSessionsTitle.setText(getString(fpt.fall2025.posetrainer.R.string.daily_sessions_title_empty));
             }
             return;
         }
@@ -437,9 +439,13 @@ public class DailyFragment extends Fragment {
         if (filteredSessionsForSelectedDay.isEmpty()) {
             binding.tvEmptyState.setVisibility(View.VISIBLE);
             binding.recyclerViewSessions.setVisibility(View.GONE);
+            // Update sessions title to show empty message
+            binding.tvSessionsTitle.setText(getString(fpt.fall2025.posetrainer.R.string.daily_sessions_title_empty));
         } else {
             binding.tvEmptyState.setVisibility(View.GONE);
             binding.recyclerViewSessions.setVisibility(View.VISIBLE);
+            // Restore normal sessions title
+            binding.tvSessionsTitle.setText(getString(fpt.fall2025.posetrainer.R.string.daily_sessions_title));
         }
     }
 
