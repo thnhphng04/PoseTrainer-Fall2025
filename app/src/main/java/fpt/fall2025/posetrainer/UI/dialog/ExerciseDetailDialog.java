@@ -17,8 +17,9 @@ import androidx.annotation.NonNull;
 import com.bumptech.glide.Glide;
 
 import android.webkit.WebView;
-import android.widget.MediaController;
-import android.widget.VideoView;
+
+import com.google.android.exoplayer2.ExoPlayer;
+import com.google.android.exoplayer2.ui.PlayerView;
 
 import fpt.fall2025.posetrainer.UI.activity.ExerciseActivity;
 import fpt.fall2025.posetrainer.Domain.Exercise;
@@ -26,7 +27,7 @@ import fpt.fall2025.posetrainer.Domain.Exercise;
 import java.util.HashMap;
 import java.util.Map;
 import fpt.fall2025.posetrainer.Util.GlideImageLoader;
-import fpt.fall2025.posetrainer.Util.VideoPlayerHelper;
+import fpt.fall2025.posetrainer.Util.ExoPlayerHelper;
 import fpt.fall2025.posetrainer.Util.VideoUrlHelper;
 import fpt.fall2025.posetrainer.Util.YouTubeWebViewHelper;
 import fpt.fall2025.posetrainer.databinding.DialogExerciseDetailBinding;
@@ -64,8 +65,7 @@ public class ExerciseDetailDialog extends Dialog {
     private int customSets = -1;
     private int customReps = -1;
     private String customDifficulty = null;
-    private MediaController mediaController;
-    private Runnable showMediaControllerRunnable;
+    private ExoPlayer exoPlayer; // ExoPlayer instance để có thể release khi dialog đóng
 
     public ExerciseDetailDialog(@NonNull Context context, Exercise exercise) {
         super(context);
@@ -293,19 +293,14 @@ public class ExerciseDetailDialog extends Dialog {
                         }
                     });
                 } else {
-                    // Load direct video in VideoView (Google Drive, direct URLs, etc.)
-                    Log.d(TAG, "Đã phát hiện URL video trực tiếp, đang tải trong VideoView");
+                    // Load direct video với ExoPlayer (Google Drive, direct URLs, etc.)
+                    Log.d(TAG, "Đã phát hiện URL video trực tiếp, đang tải với ExoPlayer");
                     binding.exerciseWebView.setVisibility(View.GONE);
                     binding.exerciseVideoView.setVisibility(View.VISIBLE);
                     
-                    // Setup MediaController for video controls (play, pause, seek)
-                    MediaController mediaController = new MediaController(context);
-                    mediaController.setAnchorView(binding.exerciseVideoView);
-                    binding.exerciseVideoView.setMediaController(mediaController);
-                    
-                    // Load video với error handling
-                    VideoPlayerHelper.loadVideo(binding.exerciseVideoView, videoUrl, 
-                        new VideoPlayerHelper.OnVideoErrorListener() {
+                    // Load video với ExoPlayer
+                    exoPlayer = ExoPlayerHelper.loadVideo(context, binding.exerciseVideoView, videoUrl, 
+                        new ExoPlayerHelper.OnVideoErrorListener() {
                             @Override
                             public void onError(String errorMessage) {
                                 Log.e(TAG, "Lỗi tải video: " + errorMessage);
@@ -326,10 +321,29 @@ public class ExerciseDetailDialog extends Dialog {
                                     binding.mediaPlaceholderTxt.setVisibility(View.VISIBLE);
                                 }
                             }
+                        }, 
+                        new ExoPlayerHelper.OnVideoPreparedListener() {
+                            @Override
+                            public void onPrepared() {
+                                Log.d(TAG, "ExoPlayer đã sẵn sàng, video sẽ tự động phát");
+                                // ExoPlayer sẽ tự động phát khi setPlayWhenReady(true) trong ExoPlayerHelper
+                            }
                         });
                     
-                    // Auto-play video (optional - bạn có thể remove dòng này nếu không muốn auto-play)
-                    // VideoPlayerHelper.playVideo(binding.exerciseVideoView);
+                    if (exoPlayer == null) {
+                        Log.e(TAG, "Không thể tạo ExoPlayer, hiển thị thumbnail");
+                        binding.exerciseVideoView.setVisibility(View.GONE);
+                        if (exercise.getMedia().getThumbnailUrl() != null && 
+                            !exercise.getMedia().getThumbnailUrl().isEmpty()) {
+                            String thumbnailUrl = exercise.getMedia().getThumbnailUrl();
+                            GlideImageLoader.loadImage(context, thumbnailUrl, binding.exerciseImageView);
+                            binding.exerciseImageView.setVisibility(View.VISIBLE);
+                            binding.mediaPlaceholderTxt.setVisibility(View.GONE);
+                        } else {
+                            binding.mediaPlaceholderTxt.setText("Video không khả dụng");
+                            binding.mediaPlaceholderTxt.setVisibility(View.VISIBLE);
+                        }
+                    }
                 }
             }
             // Try thumbnail if no video - sử dụng GlideImageLoader để hỗ trợ tất cả các loại URL
@@ -361,16 +375,78 @@ public class ExerciseDetailDialog extends Dialog {
         }
     }
     
+    private boolean resourcesReleased = false;
+    
+    /**
+     * Release ExoPlayer và cleanup resources
+     */
+    private void releaseResources() {
+        // Đảm bảo chỉ release một lần
+        if (resourcesReleased) {
+            return;
+        }
+        resourcesReleased = true;
+        
+        Log.d(TAG, "=== BẮT ĐẦU RELEASE RESOURCES ===");
+        
+        // Release ExoPlayer
+        if (exoPlayer != null) {
+            Log.d(TAG, "Đang release ExoPlayer...");
+            try {
+                // Dừng phát video trước khi release
+                if (exoPlayer.isPlaying()) {
+                    exoPlayer.pause();
+                }
+                exoPlayer.stop();
+                exoPlayer.setPlayWhenReady(false);
+                Log.d(TAG, "Đã dừng ExoPlayer");
+            } catch (Exception e) {
+                Log.w(TAG, "Lỗi khi dừng ExoPlayer: " + e.getMessage());
+            }
+            try {
+                ExoPlayerHelper.releasePlayer(exoPlayer);
+                Log.d(TAG, "Đã release ExoPlayer");
+            } catch (Exception e) {
+                Log.e(TAG, "Lỗi khi release ExoPlayer: " + e.getMessage());
+            }
+            exoPlayer = null;
+        }
+        
+        // Detach player từ PlayerView
+        if (binding != null && binding.exerciseVideoView != null) {
+            try {
+                binding.exerciseVideoView.setPlayer(null);
+                Log.d(TAG, "Đã detach player từ PlayerView");
+            } catch (Exception e) {
+                Log.w(TAG, "Lỗi khi detach player: " + e.getMessage());
+            }
+        }
+        
+        // Cleanup WebView cho YouTube videos
+        if (binding != null && binding.exerciseWebView != null) {
+            try {
+                YouTubeWebViewHelper.cleanup(binding.exerciseWebView);
+                Log.d(TAG, "Đã cleanup WebView");
+            } catch (Exception e) {
+                Log.w(TAG, "Lỗi khi cleanup WebView: " + e.getMessage());
+            }
+        }
+        
+        Log.d(TAG, "=== HOÀN THÀNH RELEASE RESOURCES ===");
+    }
+    
     @Override
     public void dismiss() {
-        // Stop video playback và cleanup WebView khi dialog dismiss
-        if (binding.exerciseVideoView != null) {
-            VideoPlayerHelper.stopVideo(binding.exerciseVideoView);
-        }
-        if (binding.exerciseWebView != null) {
-            YouTubeWebViewHelper.cleanup(binding.exerciseWebView);
-        }
+        Log.d(TAG, "dismiss() được gọi");
+        releaseResources();
         super.dismiss();
+    }
+    
+    @Override
+    public void cancel() {
+        Log.d(TAG, "cancel() được gọi");
+        releaseResources();
+        super.cancel();
     }
 
     /**
@@ -398,4 +474,5 @@ public class ExerciseDetailDialog extends Dialog {
             Log.e(TAG, "Lỗi khi hiển thị dialog: " + e.getMessage(), e);
         }
     }
+    
 }
