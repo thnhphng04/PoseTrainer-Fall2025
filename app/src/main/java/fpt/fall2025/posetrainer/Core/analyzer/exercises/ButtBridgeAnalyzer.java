@@ -147,7 +147,7 @@ public class ButtBridgeAnalyzer implements ExerciseAnalyzerInterface {
             // Chỉ hiển thị feedback khi đang ở trạng thái s1 (nằm xuống)
             if ("s1".equals(currState)) {
                 // Feedback động tác khi nằm
-                if (kneeAngle > thresholds.getKneeThreshold()) {
+                if (kneeAngle < thresholds.getKneeThreshold()) {
                     displayText[0] = true;
                     feedbackList.add("Duỗi đầu gối thêm");
                 }
@@ -158,7 +158,7 @@ public class ButtBridgeAnalyzer implements ExerciseAnalyzerInterface {
                 Boolean complete = stateSequence.contains("s1");
                 if (complete) {
                     // Kiểm tra lỗi khi lên
-                    if (kneeAngle > thresholds.getKneeThreshold()) {
+                    if (kneeAngle < thresholds.getKneeThreshold()) {
                         displayText[0] = true;
                         feedbackList.add("Duỗi đầu gối thêm");
                     }
@@ -379,7 +379,7 @@ public class ButtBridgeAnalyzer implements ExerciseAnalyzerInterface {
             return new ButtBridgeThresholds(
                     160,
                     80,
-                    70,
+                    55,
                     65, 15.0, 50
             );
         }
@@ -388,7 +388,7 @@ public class ButtBridgeAnalyzer implements ExerciseAnalyzerInterface {
             return new ButtBridgeThresholds(
                     165,
                     80,
-                    75,
+                    55,
                     65, 15.0, 50
             );
         }
