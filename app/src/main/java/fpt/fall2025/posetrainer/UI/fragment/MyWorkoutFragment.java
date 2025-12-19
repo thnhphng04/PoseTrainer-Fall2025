@@ -25,6 +25,8 @@ import fpt.fall2025.posetrainer.DAL.UserWorkoutDAO;
 import fpt.fall2025.posetrainer.databinding.FragmentMyworkoutBinding;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 
 /**
  * MyWorkoutFragment - Fragment hiển thị danh sách user workouts đã lưu của user
@@ -237,6 +239,7 @@ public class MyWorkoutFragment extends Fragment {
 
     /**
      * Filter workouts và hiển thị vào 2 RecyclerView riêng biệt
+     * Sắp xếp theo thời gian tạo từ mới nhất đến cũ nhất
      */
     private void filterAndDisplayWorkouts(ArrayList<UserWorkout> allWorkouts) {
         if (allWorkouts == null || allWorkouts.isEmpty()) {
@@ -258,6 +261,23 @@ public class MyWorkoutFragment extends Fragment {
                 userWorkouts.add(workout);
             }
         }
+
+        // Sắp xếp theo thời gian tạo từ mới nhất đến cũ nhất (descending order)
+        Collections.sort(userWorkouts, new Comparator<UserWorkout>() {
+            @Override
+            public int compare(UserWorkout w1, UserWorkout w2) {
+                // So sánh createdAt: workout mới hơn (createdAt lớn hơn) sẽ đứng trước
+                return Long.compare(w2.getCreatedAt(), w1.getCreatedAt());
+            }
+        });
+        
+        Collections.sort(aiWorkouts, new Comparator<UserWorkout>() {
+            @Override
+            public int compare(UserWorkout w1, UserWorkout w2) {
+                // So sánh createdAt: workout mới hơn (createdAt lớn hơn) sẽ đứng trước
+                return Long.compare(w2.getCreatedAt(), w1.getCreatedAt());
+            }
+        });
 
         // Cập nhật adapters
         userWorkoutAdapter = new UserWorkoutCardAdapter(userWorkouts);

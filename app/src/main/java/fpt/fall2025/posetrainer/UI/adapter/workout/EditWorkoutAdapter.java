@@ -1,8 +1,11 @@
 package fpt.fall2025.posetrainer.UI.adapter.workout;
 
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -116,8 +119,8 @@ public class EditWorkoutAdapter extends RecyclerView.Adapter<EditWorkoutAdapter.
         private TextView titleTxt;
         private TextView durationTxt;
         private TextView difficultyBtn;
-        private TextView setsTxt;
-        private TextView repsTxt;
+        private EditText setsTxt;
+        private EditText repsTxt;
         private TextView orderNumberTxt;
         private ImageButton removeBtn;
         private ImageButton setsPlusBtn;
@@ -126,6 +129,9 @@ public class EditWorkoutAdapter extends RecyclerView.Adapter<EditWorkoutAdapter.
         private ImageButton repsMinusBtn;
         private Exercise currentExercise;
         private int currentPosition;
+        private boolean isUpdatingFromWatcher = false; // Flag to prevent infinite loop
+        private TextWatcher setsTextWatcher;
+        private TextWatcher repsTextWatcher;
 
         public ExerciseViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -188,6 +194,9 @@ public class EditWorkoutAdapter extends RecyclerView.Adapter<EditWorkoutAdapter.
             
             setsTxt.setText(String.valueOf(currentSets));
             repsTxt.setText(String.valueOf(currentReps));
+            
+            // Setup TextWatchers for EditText fields
+            setupTextWatchers();
 
             // Set rest duration
             int restSec = exercise.getDefaultConfig().getRestSec();
@@ -258,6 +267,127 @@ public class EditWorkoutAdapter extends RecyclerView.Adapter<EditWorkoutAdapter.
         }
         
         /**
+         * Setup TextWatchers for EditText fields to handle keyboard input
+         */
+        private void setupTextWatchers() {
+            // Remove existing watchers to avoid duplicates
+            if (setsTextWatcher != null) {
+                setsTxt.removeTextChangedListener(setsTextWatcher);
+            }
+            if (repsTextWatcher != null) {
+                repsTxt.removeTextChangedListener(repsTextWatcher);
+            }
+            
+            // Sets TextWatcher
+            setsTextWatcher = new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                }
+                
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                }
+                
+                @Override
+                public void afterTextChanged(Editable s) {
+                    if (isUpdatingFromWatcher || currentExercise == null || currentExercise.getDefaultConfig() == null) {
+                        return;
+                    }
+                    
+                    String text = s.toString().trim();
+                    if (text.isEmpty()) {
+                        return;
+                    }
+                    
+                    try {
+                        int value = Integer.parseInt(text);
+                        // Validate range: 1-10 for sets
+                        if (value < 1) {
+                            value = 1;
+                        } else if (value > 10) {
+                            value = 10;
+                        }
+                        
+                        // Update if different
+                        if (value != currentExercise.getDefaultConfig().getSets()) {
+                            isUpdatingFromWatcher = true;
+                            currentExercise.getDefaultConfig().setSets(value);
+                            setsTxt.setText(String.valueOf(value));
+                            setsTxt.setSelection(setsTxt.getText().length());
+                            isUpdatingFromWatcher = false;
+                            
+                            // Notify listener to update duration
+                            if (reorderListener != null) {
+                                reorderListener.onExercisesReordered();
+                            }
+                        }
+                    } catch (NumberFormatException e) {
+                        // Invalid input, reset to current value
+                        isUpdatingFromWatcher = true;
+                        setsTxt.setText(String.valueOf(currentExercise.getDefaultConfig().getSets()));
+                        setsTxt.setSelection(setsTxt.getText().length());
+                        isUpdatingFromWatcher = false;
+                    }
+                }
+            };
+            setsTxt.addTextChangedListener(setsTextWatcher);
+            
+            // Reps TextWatcher
+            repsTextWatcher = new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                }
+                
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                }
+                
+                @Override
+                public void afterTextChanged(Editable s) {
+                    if (isUpdatingFromWatcher || currentExercise == null || currentExercise.getDefaultConfig() == null) {
+                        return;
+                    }
+                    
+                    String text = s.toString().trim();
+                    if (text.isEmpty()) {
+                        return;
+                    }
+                    
+                    try {
+                        int value = Integer.parseInt(text);
+                        // Validate range: 1-50 for reps
+                        if (value < 1) {
+                            value = 1;
+                        } else if (value > 50) {
+                            value = 50;
+                        }
+                        
+                        // Update if different
+                        if (value != currentExercise.getDefaultConfig().getReps()) {
+                            isUpdatingFromWatcher = true;
+                            currentExercise.getDefaultConfig().setReps(value);
+                            repsTxt.setText(String.valueOf(value));
+                            repsTxt.setSelection(repsTxt.getText().length());
+                            isUpdatingFromWatcher = false;
+                            
+                            // Notify listener to update duration
+                            if (reorderListener != null) {
+                                reorderListener.onExercisesReordered();
+                            }
+                        }
+                    } catch (NumberFormatException e) {
+                        // Invalid input, reset to current value
+                        isUpdatingFromWatcher = true;
+                        repsTxt.setText(String.valueOf(currentExercise.getDefaultConfig().getReps()));
+                        repsTxt.setSelection(repsTxt.getText().length());
+                        isUpdatingFromWatcher = false;
+                    }
+                }
+            };
+            repsTxt.addTextChangedListener(repsTextWatcher);
+        }
+        
+        /**
          * Update sets value
          */
         private void updateSets(int delta) {
@@ -271,7 +401,12 @@ public class EditWorkoutAdapter extends RecyclerView.Adapter<EditWorkoutAdapter.
             if (newSets > 10) newSets = 10; // Maximum 10 sets
             
             currentExercise.getDefaultConfig().setSets(newSets);
+            
+            // Update EditText with flag to prevent TextWatcher trigger
+            isUpdatingFromWatcher = true;
             setsTxt.setText(String.valueOf(newSets));
+            setsTxt.setSelection(setsTxt.getText().length());
+            isUpdatingFromWatcher = false;
             
             // Notify listener to update duration
             if (reorderListener != null) {
@@ -293,7 +428,12 @@ public class EditWorkoutAdapter extends RecyclerView.Adapter<EditWorkoutAdapter.
             if (newReps > 50) newReps = 50; // Maximum 50 reps
             
             currentExercise.getDefaultConfig().setReps(newReps);
+            
+            // Update EditText with flag to prevent TextWatcher trigger
+            isUpdatingFromWatcher = true;
             repsTxt.setText(String.valueOf(newReps));
+            repsTxt.setSelection(repsTxt.getText().length());
+            isUpdatingFromWatcher = false;
             
             // Notify listener to update duration
             if (reorderListener != null) {
