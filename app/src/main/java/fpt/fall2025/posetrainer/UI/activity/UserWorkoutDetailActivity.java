@@ -470,6 +470,9 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
             return;
         }
         
+        // Update duration before starting workout to ensure it's current
+        updateDuration();
+        
         // Check if coming from MyWorkoutFragment or from schedule
         boolean isFromMyWorkoutFragment = getIntent().getBooleanExtra("fromMyWorkoutFragment", true);
         boolean fromSchedule = getIntent().getBooleanExtra("fromSchedule", false);
@@ -1350,6 +1353,8 @@ public class UserWorkoutDetailActivity extends AppCompatActivity implements User
             exerciseSets[exerciseIndex] = sets;
             exerciseReps[exerciseIndex] = reps;
             Log.d(TAG, "Exercise " + exerciseIndex + " updated: " + sets + " sets x " + reps + " reps");
+            // Update duration when rep/set changes
+            updateDuration();
         }
     }
     

@@ -15,6 +15,7 @@
     <string name="daily_calories_label">Calo</string>
     <string name="daily_calories_default">0 kcal</string>
     <string name="daily_sessions_title">Buổi tập trong ngày</string>
+    <string name="daily_sessions_title_empty">📭 Không có buổi tập nào trong ngày này</string>
     <string name="daily_empty_state">Không có buổi tập nào trong ngày này</string>
     <string name="daily_view_schedule">📅 Xem lịch đã lên</string>
     <string name="daily_add_activity">➕ Thêm hoạt động</string>
