@@ -10,6 +10,7 @@ import android.view.ViewGroup
 import android.widget.Toast
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import android.media.ToneGenerator
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
@@ -125,6 +126,7 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
     private var isTtsReady: Boolean = false
     private var isSpeakingFeedback: Boolean = false
     private var lastFeedbackSignature: String? = null
+    private var toneGenerator: ToneGenerator? = null
     
     // User settings
     private var selectedPoseModel: Int = 0 // Default to full model (0)
@@ -219,6 +221,9 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         loadUserPoseModelSetting()
 
         initTextToSpeech()
+        
+        // Initialize tone generator for correct form sound
+        toneGenerator = ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 100)
     }
 
     /**
@@ -825,8 +830,20 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
             // Log.d(TAG, "onCorrectFormDetected: correctCount increased to $correctCount")
             updateCorrectCount()
             
+            // Play ting sound
+            playTingSound()
+            
             // Show form feedback
-            Toast.makeText(requireContext(), "Good form! ($correctCount)", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "Form chuẩn! ($correctCount)", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    // Play a ting sound when correct form is detected
+    private fun playTingSound() {
+        try {
+            toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP, 150) // 150ms duration
+        } catch (e: Exception) {
+            Log.e(TAG, "Error playing ting sound: ${e.message}")
         }
     }
 
@@ -855,6 +872,7 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         backgroundExecutor.shutdown()
         backgroundExecutor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS)
         shutdownTextToSpeech()
+        releaseToneGenerator()
     }
 
     private fun setUpCamera() {
@@ -1060,6 +1078,15 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
         isTtsReady = false
         isSpeakingFeedback = false
         lastFeedbackSignature = null
+    }
+    
+    private fun releaseToneGenerator() {
+        try {
+            toneGenerator?.release()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error releasing tone generator: ${e.message}")
+        }
+        toneGenerator = null
     }
 
     private fun maybeSpeakFeedback(feedback: ExerciseFeedback) {
