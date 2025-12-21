@@ -186,11 +186,14 @@ public class SquatAnalyzer implements ExerciseAnalyzerInterface {
                     incorrectPosture = true;
                     feedbackList.add("Đầu gối vượt quá mũi chân");
                 }
+
+                /*
                 if (kneeAngle >= (thresholds.getKneeMin() + 1) && kneeAngle < thresholds.getKneeMax() && 
                     stateSequence.stream().filter(s -> s.equals("s2")).count() == 1 && !stateSequence.contains("s3")) {
                     lowerHips = true;
                     feedbackList.add("Hạ hông xuống");
                 }
+                 */
             }
             
             // Inactivity logic
