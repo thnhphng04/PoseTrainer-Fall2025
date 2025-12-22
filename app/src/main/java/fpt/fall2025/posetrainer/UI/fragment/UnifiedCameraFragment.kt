@@ -811,9 +811,12 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
             // Log.d(TAG, "Rep detected: $currentRep/$reps for Set $currentSet")
             
             // Show progress message
+            /*
             if (currentRep < reps) {
                 Toast.makeText(requireContext(), "Lần $currentRep/$reps", Toast.LENGTH_SHORT).show()
             }
+
+            */
             
             // Complete set only when reaching target reps
             if (currentRep >= reps) {
@@ -834,7 +837,7 @@ class UnifiedCameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListene
             playTingSound()
             
             // Show form feedback
-            Toast.makeText(requireContext(), "Form chuẩn! ($correctCount)", Toast.LENGTH_SHORT).show()
+            //Toast.makeText(requireContext(), "Form chuẩn! ($correctCount)", Toast.LENGTH_SHORT).show()
         }
     }
     
