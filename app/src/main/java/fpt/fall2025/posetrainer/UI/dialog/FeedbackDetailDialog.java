@@ -169,9 +169,13 @@ public class FeedbackDetailDialog extends DialogFragment {
         int statusBgRes = R.drawable.status_background_pending;
         
         switch (status.toLowerCase()) {
-            case "read":
-                statusText = "Đã đọc";
-                statusBgRes = R.drawable.status_background_read;
+            case "accepted":
+                statusText = "Đã chấp nhận";
+                statusBgRes = R.drawable.status_background_accepted;
+                break;
+            case "rejected":
+                statusText = "Đã từ chối";
+                statusBgRes = R.drawable.status_background_rejected;
                 break;
             case "resolved":
                 statusText = "Đã xử lý";

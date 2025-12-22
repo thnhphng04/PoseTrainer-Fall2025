@@ -8,6 +8,7 @@ import androidx.annotation.Nullable;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
@@ -201,6 +202,41 @@ public class FeedbackDAO {
                     }
                 }
             });
+    }
+    
+    /**
+     * Lắng nghe real-time updates cho danh sách feedback của user theo UID
+     * Sắp xếp theo thời gian tạo mới nhất trước
+     * @param uid UID của user
+     * @param listener Listener để xử lý updates (nhận danh sách Feedback mỗi khi có thay đổi)
+     * @return ListenerRegistration để có thể remove listener khi không cần nữa
+     */
+    @NonNull
+    public ListenerRegistration listenByUserId(@NonNull String uid, 
+                                               @NonNull com.google.firebase.firestore.EventListener<QuerySnapshot> listener) {
+        Log.d(TAG, "Đang lắng nghe feedback của user: " + uid);
+        
+        Query query = firestoreContext.getCollection(COLLECTION_NAME)
+            .whereEqualTo("uid", uid)
+            .orderBy("createdAt", Query.Direction.DESCENDING);
+        
+        ListenerRegistration registration = query.addSnapshotListener((querySnapshot, error) -> {
+            if (error != null) {
+                // Nếu lỗi do thiếu index, log cảnh báo và vẫn gọi listener với error
+                if (error.getMessage() != null && (error.getMessage().contains("index") || error.getMessage().contains("requires an index"))) {
+                    Log.w(TAG, "⚠ Thiếu index cho feedback query với orderBy. Có thể cần tạo index hoặc dùng query đơn giản hơn.");
+                }
+                Log.e(TAG, "❌ Lỗi lắng nghe feedback của user: " + uid, error);
+                listener.onEvent(null, error);
+                return;
+            }
+            
+            if (querySnapshot != null) {
+                listener.onEvent(querySnapshot, null);
+            }
+        });
+        
+        return registration;
     }
 }
 
