@@ -94,13 +94,57 @@ public class LoginActivity extends AppCompatActivity {
             authService.signInWithEmailPassword(email, password, task -> {
                 buttonLogin.setEnabled(true);
                 if (task.isSuccessful()) {
-                    // Check if user is active
+                    // Reload user để lấy trạng thái email verification mới nhất
                     FirebaseUser user = authService.getCurrentUser();
                     if (user != null) {
-                        checkUserActiveStatus(user.getUid(), () -> {
-                            Toast.makeText(LoginActivity.this, "Đăng nhập thành công", Toast.LENGTH_SHORT).show();
-                            startActivity(new Intent(getApplicationContext(), MainActivity.class));
-                            finish();
+                        user.reload().addOnCompleteListener(reloadTask -> {
+                            if (reloadTask.isSuccessful()) {
+                                authService.refreshUser();
+                                FirebaseUser reloadedUser = authService.getCurrentUser();
+                                
+                                if (reloadedUser != null) {
+                                    // Kiểm tra email đã được xác minh chưa
+                                    if (!reloadedUser.isEmailVerified()) {
+                                        // Email chưa được xác minh, xóa tài khoản và đăng xuất
+                                        String userEmail = reloadedUser.getEmail() != null ? reloadedUser.getEmail() : email;
+                                        authService.deleteCurrentUser(deleteTask -> {
+                                            authService.signOut();
+                                            if (deleteTask.isSuccessful()) {
+                                                Log.d("FIREBASE_AUTH", "✅ Đã xóa tài khoản chưa xác minh sau khi đăng nhập");
+                                            }
+                                            showEmailVerificationRequiredDialog(userEmail);
+                                        });
+                                        return;
+                                    }
+                                    
+                                    // Email đã được xác minh, kiểm tra user document có tồn tại không
+                                    // Nếu không có user document, có nghĩa là chưa hoàn tất đăng ký
+                                    checkUserDocumentAndActiveStatus(reloadedUser.getUid(), () -> {
+                                        Toast.makeText(LoginActivity.this, "Đăng nhập thành công", Toast.LENGTH_SHORT).show();
+                                        startActivity(new Intent(getApplicationContext(), MainActivity.class));
+                                        finish();
+                                    });
+                                }
+                            } else {
+                                // Lỗi reload, vẫn kiểm tra email verification từ cache
+                                if (!user.isEmailVerified()) {
+                                    // Email chưa được xác minh, xóa tài khoản và đăng xuất
+                                    String userEmail = user.getEmail() != null ? user.getEmail() : email;
+                                    authService.deleteCurrentUser(deleteTask -> {
+                                        authService.signOut();
+                                        if (deleteTask.isSuccessful()) {
+                                            Log.d("FIREBASE_AUTH", "✅ Đã xóa tài khoản chưa xác minh");
+                                        }
+                                        showEmailVerificationRequiredDialog(userEmail);
+                                    });
+                                } else {
+                                    checkUserDocumentAndActiveStatus(user.getUid(), () -> {
+                                        Toast.makeText(LoginActivity.this, "Đăng nhập thành công", Toast.LENGTH_SHORT).show();
+                                        startActivity(new Intent(getApplicationContext(), MainActivity.class));
+                                        finish();
+                                    });
+                                }
+                            }
                         });
                     }
                 } else {
@@ -214,19 +258,100 @@ public class LoginActivity extends AppCompatActivity {
 
     /**
      * Check if user is already logged in and navigate to MainActivity if true
+     * Kiểm tra email verification và user document
+     * Nếu email chưa xác minh → xóa tài khoản và đăng xuất
      */
     private void checkCurrentUser() {
         FirebaseUser currentUser = authService.getCurrentUser();
         if (currentUser != null) {
-            // User is already logged in, check if active
+            // User is already logged in, kiểm tra email verification
             Log.d("FIREBASE_AUTH", "User already logged in: " + currentUser.getUid());
-            checkUserActiveStatus(currentUser.getUid(), () -> {
-                startActivity(new Intent(getApplicationContext(), MainActivity.class));
-                finish();
+            
+            // Reload user để lấy trạng thái email verification mới nhất
+            currentUser.reload().addOnCompleteListener(reloadTask -> {
+                if (reloadTask.isSuccessful()) {
+                    authService.refreshUser();
+                    FirebaseUser reloadedUser = authService.getCurrentUser();
+                    
+                    if (reloadedUser != null) {
+                        // Kiểm tra email đã được xác minh chưa
+                        if (!reloadedUser.isEmailVerified()) {
+                            // Email chưa được xác minh, xóa tài khoản và đăng xuất
+                            Log.d("FIREBASE_AUTH", "Email chưa được xác minh, xóa tài khoản");
+                            String email = reloadedUser.getEmail() != null ? reloadedUser.getEmail() : "";
+                            authService.deleteCurrentUser(deleteTask -> {
+                                authService.signOut();
+                                if (deleteTask.isSuccessful()) {
+                                    Log.d("FIREBASE_AUTH", "✅ Đã xóa tài khoản chưa xác minh");
+                                }
+                            });
+                            return;
+                        }
+                        
+                        // Email đã được xác minh, kiểm tra user document và active status
+                        checkUserDocumentAndActiveStatus(reloadedUser.getUid(), () -> {
+                            startActivity(new Intent(getApplicationContext(), MainActivity.class));
+                            finish();
+                        });
+                    }
+                } else {
+                    // Lỗi reload, kiểm tra email verification từ cache
+                    Log.e("FIREBASE_AUTH", "Error reloading user", reloadTask.getException());
+                    if (!currentUser.isEmailVerified()) {
+                        // Email chưa được xác minh, xóa tài khoản và đăng xuất
+                        String email = currentUser.getEmail() != null ? currentUser.getEmail() : "";
+                        authService.deleteCurrentUser(deleteTask -> {
+                            authService.signOut();
+                            if (deleteTask.isSuccessful()) {
+                                Log.d("FIREBASE_AUTH", "✅ Đã xóa tài khoản chưa xác minh");
+                            }
+                        });
+                    } else {
+                        checkUserDocumentAndActiveStatus(currentUser.getUid(), () -> {
+                            startActivity(new Intent(getApplicationContext(), MainActivity.class));
+                            finish();
+                        });
+                    }
+                }
             });
         }
     }
 
+    /**
+     * Check if user document exists and user is active
+     * Nếu user document không tồn tại → đăng xuất (chưa hoàn tất đăng ký)
+     * @param uid User ID to check
+     * @param onActive Callback to execute if user is active
+     */
+    private void checkUserDocumentAndActiveStatus(String uid, Runnable onActive) {
+        userDAO.getById(uid, task -> {
+            if (task.isSuccessful() && task.getResult() != null) {
+                // User document tồn tại, kiểm tra active status
+                fpt.fall2025.posetrainer.Domain.User user = task.getResult();
+                if (user.isActive()) {
+                    onActive.run();
+                } else {
+                    // User is deactivated
+                    authService.signOut();
+                    Toast.makeText(LoginActivity.this, "Tài khoản của bạn đã bị vô hiệu hóa.", Toast.LENGTH_LONG).show();
+                }
+            } else {
+                // User document không tồn tại → chưa hoàn tất đăng ký (chưa xác minh email)
+                // Xóa tài khoản Firebase Auth vì chưa hoàn tất đăng ký
+                Log.d("FIREBASE_AUTH", "User document không tồn tại, xóa tài khoản chưa hoàn tất đăng ký");
+                FirebaseUser currentUser = authService.getCurrentUser();
+                String email = currentUser != null && currentUser.getEmail() != null ? currentUser.getEmail() : "";
+                authService.deleteCurrentUser(deleteTask -> {
+                    authService.signOut();
+                    if (deleteTask.isSuccessful()) {
+                        Log.d("FIREBASE_AUTH", "✅ Đã xóa tài khoản chưa hoàn tất đăng ký");
+                    }
+                    showEmailVerificationRequiredDialog(email);
+                });
+            }
+        });
+    }
+    
     /**
      * Check if user is active, if not sign out and show message
      * @param uid User ID to check
@@ -248,5 +373,31 @@ public class LoginActivity extends AppCompatActivity {
                 onActive.run();
             }
         });
+    }
+    
+    /**
+     * Hiển thị dialog yêu cầu xác minh email
+     */
+    private void showEmailVerificationRequiredDialog(String email) {
+        String message = "Vui lòng xác minh email của bạn trước khi đăng nhập.\n\n";
+        if (email != null && !email.isEmpty()) {
+            message += "Email: " + email + "\n\n";
+        }
+        message += "Để tiếp tục, bạn cần:\n" +
+                "1. Kiểm tra email và click vào link xác minh\n" +
+                "2. Hoặc đăng ký lại và xác minh email ngay sau khi đăng ký\n\n" +
+                "Lưu ý: Tài khoản chưa xác minh email sẽ không thể đăng nhập.";
+        
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("Email chưa được xác minh")
+                .setMessage(message)
+                .setPositiveButton("Đăng ký lại", (dialog, which) -> {
+                    // Chuyển đến màn hình đăng ký
+                    startActivity(new Intent(getApplicationContext(), RegisterAccountActivity.class));
+                    finish();
+                })
+                .setNegativeButton("Đóng", null)
+                .setCancelable(false)
+                .show();
     }
 }

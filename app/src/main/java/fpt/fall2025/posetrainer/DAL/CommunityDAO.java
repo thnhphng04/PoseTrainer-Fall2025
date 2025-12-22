@@ -1,5 +1,6 @@
 package fpt.fall2025.posetrainer.DAL;
 
+import android.content.Context;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -19,6 +20,7 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.storage.StorageMetadata;
 import com.google.firebase.storage.StorageReference;
 
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -185,6 +187,20 @@ public class CommunityDAO {
     public void uploadPostImages(@NonNull String uid, @NonNull String postId, 
                                 @NonNull List<Uri> imageUris,
                                 @Nullable OnCompleteListener<UploadResult> listener) {
+        uploadPostImages(null, uid, postId, imageUris, listener);
+    }
+    
+    /**
+     * Upload nhiều ảnh cho post (với Context để đọc InputStream từ URI)
+     * @param context Context để đọc InputStream từ URI (cần thiết cho FileProvider URI)
+     * @param uid User ID
+     * @param postId Post ID
+     * @param imageUris Danh sách Uri của ảnh
+     * @param listener Callback trả về danh sách download URLs và paths
+     */
+    public void uploadPostImages(@Nullable Context context, @NonNull String uid, @NonNull String postId, 
+                                @NonNull List<Uri> imageUris,
+                                @Nullable OnCompleteListener<UploadResult> listener) {
         if (imageUris.isEmpty()) {
             Log.d(TAG, "Không có ảnh để upload");
             if (listener != null) {
@@ -207,19 +223,82 @@ public class CommunityDAO {
                 .setContentType("image/jpeg")
                 .build();
             
-            Task<Uri> uploadTask = ref.putFile(imageUri, metadata)
-                .continueWithTask(task -> {
-                    if (!task.isSuccessful()) {
-                        throw task.getException();
+            Task<Uri> uploadTask;
+            
+            // Nếu có context và URI là FileProvider URI (content://), sử dụng InputStream
+            // Điều này cần thiết cho ảnh chụp từ camera
+            if (context != null && "content".equals(imageUri.getScheme())) {
+                try {
+                    InputStream inputStream = context.getContentResolver().openInputStream(imageUri);
+                    if (inputStream != null) {
+                        uploadTask = ref.putStream(inputStream, metadata)
+                            .continueWithTask(task -> {
+                                try {
+                                    inputStream.close();
+                                } catch (Exception e) {
+                                    Log.e(TAG, "Error closing input stream", e);
+                                }
+                                if (!task.isSuccessful()) {
+                                    throw task.getException();
+                                }
+                                return ref.getDownloadUrl();
+                            })
+                            .addOnSuccessListener(uri -> {
+                                synchronized (imageUrls) {
+                                    imageUrls.add(uri.toString());
+                                    imagePaths.add(ref.getPath());
+                                }
+                            });
+                    } else {
+                        // Fallback: thử dùng putFile
+                        Log.w(TAG, "Cannot open InputStream for URI: " + imageUri + ", trying putFile");
+                        uploadTask = ref.putFile(imageUri, metadata)
+                            .continueWithTask(task -> {
+                                if (!task.isSuccessful()) {
+                                    throw task.getException();
+                                }
+                                return ref.getDownloadUrl();
+                            })
+                            .addOnSuccessListener(uri -> {
+                                synchronized (imageUrls) {
+                                    imageUrls.add(uri.toString());
+                                    imagePaths.add(ref.getPath());
+                                }
+                            });
                     }
-                    return ref.getDownloadUrl();
-                })
-                .addOnSuccessListener(uri -> {
-                    synchronized (imageUrls) {
-                        imageUrls.add(uri.toString());
-                        imagePaths.add(ref.getPath());
-                    }
-                });
+                } catch (Exception e) {
+                    Log.e(TAG, "Error opening InputStream for URI: " + imageUri, e);
+                    // Fallback: thử dùng putFile
+                    uploadTask = ref.putFile(imageUri, metadata)
+                        .continueWithTask(task -> {
+                            if (!task.isSuccessful()) {
+                                throw task.getException();
+                            }
+                            return ref.getDownloadUrl();
+                        })
+                        .addOnSuccessListener(uri -> {
+                            synchronized (imageUrls) {
+                                imageUrls.add(uri.toString());
+                                imagePaths.add(ref.getPath());
+                            }
+                        });
+                }
+            } else {
+                // Sử dụng putFile cho file:// URI hoặc khi không có context
+                uploadTask = ref.putFile(imageUri, metadata)
+                    .continueWithTask(task -> {
+                        if (!task.isSuccessful()) {
+                            throw task.getException();
+                        }
+                        return ref.getDownloadUrl();
+                    })
+                    .addOnSuccessListener(uri -> {
+                        synchronized (imageUrls) {
+                            imageUrls.add(uri.toString());
+                            imagePaths.add(ref.getPath());
+                        }
+                    });
+            }
             
             uploadTasks.add(uploadTask);
         }
@@ -227,9 +306,31 @@ public class CommunityDAO {
         // Đợi tất cả ảnh upload xong
         Tasks.whenAllComplete(uploadTasks)
             .addOnSuccessListener(allTasks -> {
-                Log.d(TAG, "✅ Upload " + imageUrls.size() + " ảnh thành công");
-                if (listener != null) {
-                    listener.onComplete(Tasks.forResult(new UploadResult(imageUrls, imagePaths)));
+                // Kiểm tra xem có ảnh nào upload thành công không
+                int successCount = 0;
+                Exception firstError = null;
+                
+                for (Task<?> task : allTasks) {
+                    if (task.isSuccessful()) {
+                        successCount++;
+                    } else if (firstError == null && task.getException() != null) {
+                        firstError = task.getException();
+                    }
+                }
+                
+                if (successCount > 0) {
+                    Log.d(TAG, "✅ Upload " + imageUrls.size() + " ảnh thành công (tổng " + successCount + "/" + uploadTasks.size() + ")");
+                    if (listener != null) {
+                        listener.onComplete(Tasks.forResult(new UploadResult(imageUrls, imagePaths)));
+                    }
+                } else {
+                    // Tất cả ảnh đều fail
+                    String errorMsg = firstError != null ? firstError.getMessage() : "Tất cả ảnh upload đều thất bại";
+                    Log.e(TAG, "❌ Tất cả ảnh upload đều thất bại: " + errorMsg);
+                    if (listener != null) {
+                        Exception finalError = firstError != null ? firstError : new Exception("Tất cả ảnh upload đều thất bại");
+                        listener.onComplete(Tasks.<UploadResult>forException(finalError));
+                    }
                 }
             })
             .addOnFailureListener(e -> {

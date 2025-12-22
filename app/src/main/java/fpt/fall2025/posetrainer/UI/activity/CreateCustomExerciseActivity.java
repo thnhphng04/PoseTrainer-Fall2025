@@ -210,9 +210,11 @@ public class CreateCustomExerciseActivity extends AppCompatActivity {
     }
     
     private void updateImageViewsVisibility(int steps) {
-        // Update title and hint
+        // Update title and hint - Thêm hướng dẫn về góc camera side view
         tvImageUploadTitle.setText("Upload " + steps + " ảnh mô tả các trạng thái của động tác *");
-        tvImageUploadHint.setText("Upload " + steps + " ảnh theo thứ tự các trạng thái của động tác. Mỗi ảnh mô tả một bước trong quá trình thực hiện động tác.");
+        tvImageUploadHint.setText("⚠️ QUAN TRỌNG: Chụp ảnh từ góc NGANG NGƯỜI (side view - từ bên cạnh), KHÔNG phải chính diện.\n" +
+                "Upload " + steps + " ảnh theo thứ tự các trạng thái của động tác. Mỗi ảnh mô tả một bước trong quá trình thực hiện động tác.\n" +
+                "Đảm bảo camera nhìn thấy toàn bộ cơ thể người tập từ góc ngang để AI có thể phân tích chính xác.");
         
         // Show/hide image views based on number of steps
         layoutImage1.setVisibility(steps >= 1 ? View.VISIBLE : View.GONE);
@@ -500,7 +502,7 @@ public class CreateCustomExerciseActivity extends AppCompatActivity {
         exerciseUser.setName(name);
         exerciseUser.setSlug(name.toLowerCase().replace(" ", "_"));
         exerciseUser.setLevel("beginner");
-        exerciseUser.setPublic(false); // Custom exercise chỉ user đó thấy
+        exerciseUser.setPublic(true); // FIX: Set isPublic = true để có thể tập được như các bài tập mẫu
         exerciseUser.setUpdatedAt(System.currentTimeMillis() / 1000);
         exerciseUser.setUid(uid); // Set uid để Firestore rules có thể kiểm tra
 
@@ -530,7 +532,7 @@ public class CreateCustomExerciseActivity extends AppCompatActivity {
         exerciseMap.put("name", name);
         exerciseMap.put("slug", exerciseUser.getSlug());
         exerciseMap.put("level", "beginner");
-        exerciseMap.put("isPublic", false); // Đảm bảo field name là "isPublic"
+        exerciseMap.put("isPublic", true); // FIX: Set isPublic = true để có thể tập được như các bài tập mẫu
         exerciseMap.put("uid", uid); // Field uid để Firestore rules kiểm tra
         exerciseMap.put("updatedAt", System.currentTimeMillis() / 1000);
         
@@ -553,7 +555,7 @@ public class CreateCustomExerciseActivity extends AppCompatActivity {
         Map<String, Object> mediaMap = new HashMap<>();
         exerciseMap.put("media", mediaMap);
         
-        Log.d(TAG, "Saving ExerciseUser with uid: " + uid + ", isPublic: false");
+        Log.d(TAG, "Saving ExerciseUser with uid: " + uid + ", isPublic: true");
         Log.d(TAG, "ExerciseUser map keys: " + exerciseMap.keySet().toString());
         
         // Save to Firestore - collection exerciseUser để tách biệt với exercises public

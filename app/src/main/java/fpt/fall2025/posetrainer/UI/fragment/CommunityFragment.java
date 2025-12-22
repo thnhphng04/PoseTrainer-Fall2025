@@ -70,7 +70,7 @@ public class CommunityFragment extends Fragment {
     private LinearLayout emptyState, loadingState;
     
     // Tab state
-    private int currentTab = 0; // 0: Tất cả, 1: Phổ biến, 2: Mới nhất, 3: Theo dõi
+    private int currentTab = 0; // 0: Tất cả, 1: Phổ biến, 2: Mới nhất, 3: Theo dõi, 4: Cá nhân
     private String currentSearchQuery = "";
     private boolean isAutoSwitchingTab = false; // Flag để tránh clear search khi tự động chuyển tab
     
@@ -212,12 +212,22 @@ public class CommunityFragment extends Fragment {
             }
         });
 
-        // Create post button
+        // Create post button - setup click cho cả layout và textview
+        LinearLayout layoutCreatePost = v.findViewById(R.id.layoutCreatePost);
         TextView tvCreatePost = v.findViewById(R.id.tvCreatePost);
-        tvCreatePost.setOnClickListener(view -> {
+        
+        // Setup click cho cả layout và textview để tránh khoảng hở không bắt được click
+        View.OnClickListener createPostClickListener = view -> {
             Intent i = new Intent(getActivity(), CreatePostActivity.class);
             startActivity(i);
-        });
+        };
+        
+        if (layoutCreatePost != null) {
+            layoutCreatePost.setOnClickListener(createPostClickListener);
+        }
+        if (tvCreatePost != null) {
+            tvCreatePost.setOnClickListener(createPostClickListener);
+        }
 
         searchView.setIconifiedByDefault(false);
         searchView.setIconified(false);
@@ -271,6 +281,7 @@ public class CommunityFragment extends Fragment {
         tabLayout.addTab(tabLayout.newTab().setText("Phổ biến"));
         tabLayout.addTab(tabLayout.newTab().setText("Mới nhất"));
         tabLayout.addTab(tabLayout.newTab().setText("Theo dõi"));
+        tabLayout.addTab(tabLayout.newTab().setText("Cá nhân"));
 
         tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
@@ -425,6 +436,23 @@ public class CommunityFragment extends Fragment {
                 }
                 loadFollowingFeed(currentUser.getUid());
                 return;
+            case 4: // Cá nhân
+                // Không hỗ trợ search, chuyển về tab Tất cả
+                if (hasSearch) {
+                    currentTab = 0;
+                    isAutoSwitchingTab = true;
+                    tabLayout.getTabAt(0).select();
+                    // Search filter sẽ được thực hiện ở client side
+                    baseQuery = baseQuery.orderBy("createdAt", Query.Direction.DESCENDING);
+                    break;
+                }
+                FirebaseUser currentUserForMyPosts = authService.getCurrentUser();
+                if (currentUserForMyPosts == null) {
+                    showEmptyState("Bạn cần đăng nhập để xem bài viết của mình");
+                    return;
+                }
+                loadMyPostsFeed(currentUserForMyPosts.getUid());
+                return;
         }
         
         baseQuery = baseQuery.limit(50);
@@ -469,7 +497,7 @@ public class CommunityFragment extends Fragment {
                 h.itemView.setVisibility(View.VISIBLE);
                 h.itemView.setLayoutParams(new RecyclerView.LayoutParams(
                     RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
-                h.bind(p);
+                h.bind(p, currentTab);
             }
 
             @Override
@@ -579,7 +607,7 @@ public class CommunityFragment extends Fragment {
                             h.itemView.setVisibility(View.VISIBLE);
                             h.itemView.setLayoutParams(new RecyclerView.LayoutParams(
                                 RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
-                            h.bind(p);
+                            h.bind(p, currentTab);
                         }
 
                         @Override
@@ -625,6 +653,96 @@ public class CommunityFragment extends Fragment {
                     showLoading(false);
                     Toast.makeText(getContext(), "Lỗi tải danh sách theo dõi: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
+    }
+
+    private void loadMyPostsFeed(String currentUserId) {
+        Query query = communityDAO.getCollection()
+                .whereEqualTo("uid", currentUserId)
+                .whereEqualTo("isVisible", true) // Chỉ lấy các post visible
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .limit(50);
+        
+        FirestoreRecyclerOptions<Community> opts = new FirestoreRecyclerOptions.Builder<Community>()
+                .setQuery(query, Community.class)
+                .setLifecycleOwner(getViewLifecycleOwner())
+                .build();
+
+        if (adapter != null) {
+            adapter.stopListening();
+        }
+
+        adapter = new FirestoreRecyclerAdapter<Community, PostVH>(opts) {
+            @NonNull
+            @Override
+            public PostVH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                View item = LayoutInflater.from(parent.getContext())
+                        .inflate(R.layout.item_post, parent, false);
+                return new PostVH(item, CommunityFragment.this);
+            }
+
+            @Override
+            protected void onBindViewHolder(@NonNull PostVH h, int position, @NonNull Community p) {
+                // Filter search query: kiểm tra cả content và author.displayName (hỗ trợ tìm không dấu)
+                boolean matchesSearchResult = true;
+                if (!TextUtils.isEmpty(currentSearchQuery)) {
+                    boolean contentMatch = matchesSearch(p.content, currentSearchQuery);
+                    boolean authorMatch = p.author != null && p.author.displayName != null && 
+                        matchesSearch(p.author.displayName, currentSearchQuery);
+                    matchesSearchResult = contentMatch || authorMatch;
+                }
+                
+                if (!matchesSearchResult) {
+                    // Ẩn item nếu không match search query
+                    h.itemView.setVisibility(View.GONE);
+                    h.itemView.setLayoutParams(new RecyclerView.LayoutParams(0, 0));
+                    return;
+                }
+                
+                // Hiển thị item nếu match
+                h.itemView.setVisibility(View.VISIBLE);
+                h.itemView.setLayoutParams(new RecyclerView.LayoutParams(
+                    RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
+                h.bind(p, currentTab);
+            }
+
+            @Override
+            public void onDataChanged() {
+                super.onDataChanged();
+                showLoading(false);
+                
+                // Đếm số item thực sự hiển thị sau khi filter search
+                int visibleCount = 0;
+                if (!TextUtils.isEmpty(currentSearchQuery)) {
+                    for (int i = 0; i < getItemCount(); i++) {
+                        Community p = getItem(i);
+                        if (p != null) {
+                            boolean contentMatch = matchesSearch(p.content, currentSearchQuery);
+                            boolean authorMatch = p.author != null && p.author.displayName != null && 
+                                matchesSearch(p.author.displayName, currentSearchQuery);
+                            if (contentMatch || authorMatch) {
+                                visibleCount++;
+                            }
+                        }
+                    }
+                } else {
+                    visibleCount = getItemCount();
+                }
+                
+                if (visibleCount == 0) {
+                    String message = !TextUtils.isEmpty(currentSearchQuery) 
+                        ? "Không tìm thấy kết quả cho \"" + currentSearchQuery + "\""
+                        : "Bạn chưa có bài viết nào";
+                    showEmptyState(message);
+                } else {
+                    hideEmptyState();
+                }
+            }
+        };
+
+        rvFeed.setAdapter(adapter);
+        if (isFragmentVisible && !isHidden()) {
+            adapter.startListening();
+        }
     }
 
     private void showLoading(boolean show) {
@@ -787,6 +905,7 @@ public class CommunityFragment extends Fragment {
         private boolean isLiked = false;
         private String currentPostId = null;
         private String currentPostContent = null;
+        private String currentPostUid = null;
         private long currentLikesCount = 0;
         private long currentCommentsCount = 0;
         private CommunityDAO communityDAO;
@@ -816,7 +935,7 @@ public class CommunityFragment extends Fragment {
             tvComment = itemView.findViewById(R.id.tvComment);
         }
 
-        public void bind(Community p) {
+        public void bind(Community p, int currentTab) {
             AuthService authService = new AuthService();
             FirebaseUser currentUser = authService.getCurrentUser();
 
@@ -919,6 +1038,7 @@ public class CommunityFragment extends Fragment {
             isLiked = currentUser != null && p.likedBy != null && p.likedBy.contains(currentUser.getUid());
             currentPostId = p.id;
             currentPostContent = p.content != null ? p.content : "";
+            currentPostUid = p.uid;
             currentLikesCount = p.likesCount;
             currentCommentsCount = p.commentsCount;
             renderLike(isLiked);
@@ -929,12 +1049,34 @@ public class CommunityFragment extends Fragment {
                     PopupMenu popupMenu = new PopupMenu(itemView.getContext(), v);
                     popupMenu.getMenuInflater().inflate(R.menu.post_options_menu, popupMenu.getMenu());
                     
+                    // Ẩn/hiện menu items dựa trên tab và quyền sở hữu
+                    boolean isMyPost = currentUser != null && currentPostUid != null && currentPostUid.equals(currentUser.getUid());
+                    boolean isMyPostsTab = currentTab == 4; // Tab Cá nhân
+                    
+                    // Ẩn "Báo cáo" nếu là bài viết của mình
+                    if (isMyPost) {
+                        popupMenu.getMenu().findItem(R.id.menu_report_post).setVisible(false);
+                    }
+                    
+                    // Chỉ hiển thị "Xóa" khi ở tab Cá nhân và là bài viết của mình
+                    if (isMyPostsTab && isMyPost) {
+                        popupMenu.getMenu().findItem(R.id.menu_delete_post).setVisible(true);
+                    } else {
+                        popupMenu.getMenu().findItem(R.id.menu_delete_post).setVisible(false);
+                    }
+                    
                     popupMenu.setOnMenuItemClickListener(item -> {
                         if (item.getItemId() == R.id.menu_report_post) {
                             // Show PostFeedbackDialog
                             if (currentPostId != null && fragment != null) {
                                 PostFeedbackDialog dialog = PostFeedbackDialog.newInstance(currentPostId, currentPostContent);
                                 dialog.show(fragment.getParentFragmentManager(), "PostFeedbackDialog");
+                            }
+                            return true;
+                        } else if (item.getItemId() == R.id.menu_delete_post) {
+                            // Xóa bài viết
+                            if (currentPostId != null && fragment != null) {
+                                showDeletePostDialog(currentPostId);
                             }
                             return true;
                         }
@@ -1203,6 +1345,29 @@ public class CommunityFragment extends Fragment {
                 tvLike.setTextColor(android.graphics.Color.parseColor("#606770"));
                 tvLike.setText("Thích");
             }
+        }
+        
+        private void showDeletePostDialog(String postId) {
+            new androidx.appcompat.app.AlertDialog.Builder(itemView.getContext())
+                    .setTitle("Xóa bài viết")
+                    .setMessage("Bạn có chắc chắn muốn xóa bài viết này? Hành động này không thể hoàn tác.")
+                    .setPositiveButton("Xóa", (dialog, which) -> {
+                        deletePost(postId);
+                    })
+                    .setNegativeButton("Hủy", null)
+                    .show();
+        }
+        
+        private void deletePost(String postId) {
+            communityDAO.delete(postId, task -> {
+                if (task.isSuccessful()) {
+                    Toast.makeText(itemView.getContext(), "Đã xóa bài viết", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(itemView.getContext(), "Lỗi xóa bài viết: " + 
+                        (task.getException() != null ? task.getException().getMessage() : "Unknown error"), 
+                        Toast.LENGTH_SHORT).show();
+                }
+            });
         }
     }
     

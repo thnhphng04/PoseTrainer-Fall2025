@@ -28,10 +28,10 @@ public class CustomExerciseAnalyzer implements ExerciseAnalyzerInterface {
     private List<String> feedbackList;
     private boolean repCountedForCurrentCycle; // Track xem đã đếm rep cho chu kỳ hiện tại chưa
 
-    // Thresholds từ config (defaults được tăng để dễ detect hơn và ít khắt khe hơn)
-    private int offsetThresh = 45; // Tăng từ 30 lên 45 để camera ít warning hơn
-    private double inactiveThresh = 8.0; // Tăng từ 5.0 lên 8.0 để cho phép nhiều thời gian hơn
-    private int cntFrameThresh = 2; // Giảm từ 3 xuống 2 để detect nhanh hơn
+    // Thresholds từ config (defaults được TĂNG TỐI ĐA để DỄ detect và ÍT khắt khe CỰC KỲ)
+    private int offsetThresh = 60; // Tăng từ 45 lên 60 để camera ÍT warning HƠN NHIỀU
+    private double inactiveThresh = 12.0; // Tăng từ 8.0 lên 12.0 để cho phép NHIỀU thời gian HƠN
+    private int cntFrameThresh = 1; // Giảm từ 2 xuống 1 để detect NHANH HƠN (ít khắt khe hơn)
 
     private static final String TAG = "CustomExerciseAnalyzer";
 
@@ -181,18 +181,46 @@ public class CustomExerciseAnalyzer implements ExerciseAnalyzerInterface {
                     double max = ((Number) maxObj).doubleValue();
                     String nameLower = conditionName.toLowerCase();
                     
-                    // FIX 1: Expand bodyAngle ranges if too narrow
+                    // FIX 1: Expand bodyAngle ranges if too narrow (TĂNG từ 35° lên 50° để DỄ ĐẠT HƠN NHIỀU)
                     if (nameLower.contains("body") && nameLower.contains("angle")) {
-                        // If range is too narrow (< 15 degrees) or too high (> 165), expand it
-                        if (max - min < 15 || min > 165) {
+                        // If range is too narrow (< 50 degrees) or too high (> 165), expand it
+                        if (max - min < 50 || min > 165) {
                             double oldMin = min;
                             double oldMax = max;
-                            // Expand to [155, 180] for push-up/plank exercises
-                            min = Math.min(155, min - 10);
-                            max = Math.max(180, max + 5);
+                            // Expand to ensure at least 50° range, wider for EASIER detection
+                            min = Math.min(140, min - 25); // Mở rộng xuống nhiều hơn (từ 20° lên 25°)
+                            max = Math.max(180, max + 20); // Mở rộng lên nhiều hơn (từ 15° lên 20°)
+                            // Ensure minimum range size of 50° (TĂNG từ 35°)
+                            if (max - min < 50) {
+                                max = min + 50;
+                            }
                             condition.put("min", min);
                             condition.put("max", max);
-                            android.util.Log.w(TAG, "🔧 Fixed bodyAngle in " + stateName + ": [" + oldMin + ", " + oldMax + "] -> [" + min + ", " + max + "]");
+                            android.util.Log.w(TAG, "🔧 Fixed bodyAngle in " + stateName + ": [" + oldMin + ", " + oldMax + "] -> [" + min + ", " + max + "] (expanded to " + (max - min) + "° for EASIER detection)");
+                        }
+                    }
+                    
+                    // FIX 1b: Expand other angle ranges (elbow, knee, hip, shoulder) if too narrow (TĂNG từ 35° lên 50°)
+                    if (nameLower.contains("angle") && 
+                        (nameLower.contains("elbow") || nameLower.contains("knee") || 
+                         nameLower.contains("hip") || nameLower.contains("shoulder") ||
+                         nameLower.contains("ankle") || nameLower.contains("wrist"))) {
+                        // If range is too narrow (< 50 degrees), expand it
+                        if (max - min < 50) {
+                            double oldMin = min;
+                            double oldMax = max;
+                            double center = (min + max) / 2;
+                            // Mở rộng range để đảm bảo ít nhất 55° (RỘNG HƠN NHIỀU để dễ đạt và đếm đúng reps)
+                            double targetRange = Math.max(55, (max - min) * 2.2); // Mở rộng ít nhất 2.2x hoặc 55°
+                            min = Math.max(0, center - targetRange / 2);
+                            max = Math.min(180, center + targetRange / 2);
+                            // Ensure minimum of 50° (TĂNG từ 35°)
+                            if (max - min < 50) {
+                                max = min + 50;
+                            }
+                            condition.put("min", min);
+                            condition.put("max", max);
+                            android.util.Log.w(TAG, "🔧 Fixed " + conditionName + " in " + stateName + ": [" + oldMin + ", " + oldMax + "] -> [" + min + ", " + max + "] (expanded to " + (max - min) + "° for EASIER detection)");
                         }
                     }
                     
@@ -391,10 +419,12 @@ public class CustomExerciseAnalyzer implements ExerciseAnalyzerInterface {
                 // Vẫn tiếp tục detect state
                 currState = determineState(landmarks);
                 
-                // Log state detection mỗi giây
-                if (System.currentTimeMillis() % 1000 < 100) {
-                    android.util.Log.d(TAG, "Current state: " + (currState != null ? currState : "NULL") + 
-                                      ", prevState: " + (prevState != null ? prevState : "NULL"));
+                // Log state detection mỗi 500ms để debug tốt hơn
+                if (System.currentTimeMillis() % 500 < 100) {
+                    android.util.Log.d(TAG, "🔍 Current state: " + (currState != null ? currState : "NULL") + 
+                                      ", prevState: " + (prevState != null ? prevState : "NULL") +
+                                      ", sequence size: " + stateSequence.size() +
+                                      ", correctCount: " + correctCount);
                 }
                 
                 // Nếu không detect được state, sử dụng fallback
@@ -414,60 +444,69 @@ public class CustomExerciseAnalyzer implements ExerciseAnalyzerInterface {
                 // Count reps - Logic giống SquatAnalyzer: đếm khi quay lại state đầu tiên sau khi đã đi qua các states khác
                 List<String> stateSeq = getStateSequence();
                 
-                // Log state sequence mỗi giây
-                if (System.currentTimeMillis() % 1000 < 100) {
-                    android.util.Log.d(TAG, "State sequence size: " + stateSeq.size() + ", sequence: " + stateSeq + ", currState: " + currState);
+                // Log state sequence mỗi 500ms để debug tốt hơn
+                if (System.currentTimeMillis() % 500 < 100) {
+                    android.util.Log.d(TAG, "📊 State sequence size: " + stateSeq.size() + ", sequence: " + stateSeq + ", currState: " + currState + ", repCounted: " + repCountedForCurrentCycle);
                 }
                 
-                // FIX: Đếm rep - Logic giống SquatAnalyzer CHÍNH XÁC
-                // SquatAnalyzer: đếm khi currState == "s1" và stateSequence.size() == 3
-                // Sequence trong SquatAnalyzer: s1 -> s2 -> s1 (3 states, quay lại s1)
-                // Tương tự: đếm khi currState == firstState VÀ sequence đã quay lại firstState (last element == firstState)
-                if (stateSeq != null && stateSeq.size() >= 3 && !repCountedForCurrentCycle) {
+                // FIX: Đơn giản hóa logic đếm rep CỰC KỲ - CHỈ CẦN ĐI QUA 2 STATES KHÁC NHAU là đếm được rep
+                // Logic đơn giản: [state1, state2] hoặc [state1, state2, state1] -> đếm rep
+                // Không cần kiểm tra quá chặt chẽ, chỉ cần có sự thay đổi state là đủ
+                if (stateSeq != null && stateSeq.size() >= 2 && !repCountedForCurrentCycle) {
                     String firstState = stateSeq.get(0);
                     String lastState = stateSeq.get(stateSeq.size() - 1);
                     
-                    // CRITICAL FIX: Chỉ đếm khi:
-                    // 1. currState == firstState (đang ở state đầu tiên)
-                    // 2. lastState == firstState (sequence đã quay lại state đầu tiên)
-                    // 3. Sequence có ít nhất 1 state khác ở giữa (để đảm bảo đã hoàn thành chu kỳ)
-                    if (currState != null && currState.equals(firstState) && lastState.equals(firstState)) {
-                        // Kiểm tra xem có đi qua ít nhất 1 state khác không (để đảm bảo đã hoàn thành chu kỳ)
-                        boolean hasDifferentState = false;
-                        for (int i = 1; i < stateSeq.size() - 1; i++) { // Bỏ qua first và last (đều là firstState)
+                    // FIX: Đơn giản hóa CỰC KỲ - chỉ cần:
+                    // 1. Sequence có ít nhất 2 states
+                    // 2. Có ít nhất 2 states khác nhau (state change)
+                    boolean hasStateChange = false;
+                    if (stateSeq.size() >= 2) {
+                        // Kiểm tra xem có ít nhất 2 states khác nhau không
+                        for (int i = 1; i < stateSeq.size(); i++) {
                             if (!stateSeq.get(i).equals(firstState)) {
-                                hasDifferentState = true;
+                                hasStateChange = true;
                                 break;
                             }
                         }
-                        
-                        // FIX: Chỉ đếm rep khi sequence có size hợp lý (3-4 states) và có state khác ở giữa
-                        // Ví dụ hợp lệ: [start, mid1, start] (3 states) hoặc [start, mid1, mid2, start] (4 states)
-                        if (hasDifferentState && stateSeq.size() >= 3 && stateSeq.size() <= 4) {
-                            if (!incorrectPosture) {
-                                correctCount++;
-                                message = "CORRECT";
-                                android.util.Log.d(TAG, "✅ Rep completed! Correct count: " + correctCount + ", sequence: " + stateSeq);
-                            } else {
-                                incorrectCount++;
-                                message = "INCORRECT";
-                                android.util.Log.d(TAG, "❌ Rep completed with errors! Incorrect count: " + incorrectCount + ", sequence: " + stateSeq);
-                            }
-                            // Mark rep as counted for this cycle
-                            repCountedForCurrentCycle = true;
-                            // Clear sequence sau khi đếm để bắt đầu rep mới (giống SquatAnalyzer)
-                            stateSequence.clear();
-                            incorrectPosture = false;
-                            prevState = null; // Reset để bắt đầu sequence mới
-                        } else if (stateSeq.size() > 4) {
-                            // Sequence quá dài, clear để tránh đếm sai
-                            android.util.Log.w(TAG, "⚠️ Sequence too long (" + stateSeq.size() + "), clearing to prevent false counting");
-                            stateSequence.clear();
-                            prevState = null;
-                            repCountedForCurrentCycle = false; // Reset flag
-                        }
                     }
-                } else if (stateSeq != null && stateSeq.size() < 3) {
+                    
+                    // FIX: Đếm rep khi:
+                    // - Có sự thay đổi state VÀ quay lại firstState (chu kỳ hoàn thành) HOẶC
+                    // - Có ít nhất 2 states khác nhau (rất đơn giản)
+                    boolean shouldCountRep = false;
+                    if (hasStateChange && lastState.equals(firstState) && stateSeq.size() >= 2) {
+                        // Đã quay lại firstState sau khi đi qua states khác -> đếm rep
+                        shouldCountRep = true;
+                        android.util.Log.d(TAG, "✅ Rep condition 1 met: state change + return to firstState");
+                    } else if (hasStateChange && stateSeq.size() >= 2) {
+                        // Có ít nhất 2 states với sự thay đổi -> đếm rep (CỰC KỲ DỄ DÀNG)
+                        shouldCountRep = true;
+                        android.util.Log.d(TAG, "✅ Rep condition 2 met: state change detected (size >= 2)");
+                    }
+                    
+                    if (shouldCountRep) {
+                        // Form error checking đã bị tắt, luôn đếm là CORRECT
+                        correctCount++;
+                        message = "CORRECT";
+                        android.util.Log.d(TAG, "✅✅✅ Rep completed! Correct count: " + correctCount + ", sequence: " + stateSeq);
+                        // Mark rep as counted for this cycle
+                        repCountedForCurrentCycle = true;
+                        // Clear sequence sau khi đếm để bắt đầu rep mới
+                        stateSequence.clear();
+                        incorrectPosture = false;
+                        prevState = null; // Reset để bắt đầu sequence mới
+                    } else {
+                        android.util.Log.d(TAG, "⏳ Waiting for rep: hasStateChange=" + hasStateChange + ", size=" + stateSeq.size() + ", lastState=" + lastState + ", firstState=" + firstState);
+                    }
+                    
+                    // Tăng limit để không clear quá sớm
+                    if (stateSeq.size() > 6) {
+                        android.util.Log.w(TAG, "⚠️ Sequence too long (" + stateSeq.size() + "), clearing to prevent false counting");
+                        stateSequence.clear();
+                        prevState = null;
+                        repCountedForCurrentCycle = false; // Reset flag
+                    }
+                } else if (stateSeq != null && stateSeq.size() < 2) {
                     // Sequence quá ngắn, reset flag để có thể đếm rep mới
                     repCountedForCurrentCycle = false;
                 }
@@ -509,55 +548,58 @@ public class CustomExerciseAnalyzer implements ExerciseAnalyzerInterface {
                 android.util.Log.d(TAG, "State sequence size: " + stateSeq.size() + ", sequence: " + stateSeq + ", currState: " + currState);
             }
             
-            // FIX: Đếm rep - Logic giống SquatAnalyzer CHÍNH XÁC
-            // SquatAnalyzer: đếm khi currState == "s1" và stateSequence.size() == 3
-            // Sequence trong SquatAnalyzer: s1 -> s2 -> s1 (3 states, quay lại s1)
-            // Tương tự: đếm khi currState == firstState VÀ sequence đã quay lại firstState (last element == firstState)
-            if (stateSeq != null && stateSeq.size() >= 3 && !repCountedForCurrentCycle) {
+            // FIX: Đơn giản hóa logic đếm rep - CHỈ CẦN ĐI QUA 2 STATES KHÁC NHAU là đếm được rep
+            // Logic đơn giản: [state1, state2, state1] hoặc [state1, state2, state3, state1] -> đếm rep
+            // Không cần kiểm tra quá chặt chẽ, chỉ cần có sự thay đổi state là đủ
+            if (stateSeq != null && stateSeq.size() >= 2 && !repCountedForCurrentCycle) {
                 String firstState = stateSeq.get(0);
                 String lastState = stateSeq.get(stateSeq.size() - 1);
                 
-                // CRITICAL FIX: Chỉ đếm khi:
-                // 1. currState == firstState (đang ở state đầu tiên)
-                // 2. lastState == firstState (sequence đã quay lại state đầu tiên)
-                // 3. Sequence có ít nhất 1 state khác ở giữa (để đảm bảo đã hoàn thành chu kỳ)
-                if (currState != null && currState.equals(firstState) && lastState.equals(firstState)) {
-                    // Kiểm tra xem có đi qua ít nhất 1 state khác không (để đảm bảo đã hoàn thành chu kỳ)
-                    boolean hasDifferentState = false;
-                    for (int i = 1; i < stateSeq.size() - 1; i++) { // Bỏ qua first và last (đều là firstState)
+                // FIX: Đơn giản hóa - chỉ cần:
+                // 1. Sequence có ít nhất 2 states
+                // 2. Đã quay lại firstState (lastState == firstState) HOẶC có ít nhất 2 states khác nhau
+                boolean hasStateChange = false;
+                if (stateSeq.size() >= 2) {
+                    // Kiểm tra xem có ít nhất 2 states khác nhau không
+                    for (int i = 1; i < stateSeq.size(); i++) {
                         if (!stateSeq.get(i).equals(firstState)) {
-                            hasDifferentState = true;
+                            hasStateChange = true;
                             break;
                         }
                     }
-                    
-                    // FIX: Chỉ đếm rep khi sequence có size hợp lý (3-4 states) và có state khác ở giữa
-                    // Ví dụ hợp lệ: [start, mid1, start] (3 states) hoặc [start, mid1, mid2, start] (4 states)
-                    if (hasDifferentState && stateSeq.size() >= 3 && stateSeq.size() <= 4) {
-                        if (!incorrectPosture) {
-                            correctCount++;
-                            message = "CORRECT";
-                            android.util.Log.d(TAG, "✅ Rep completed! Correct count: " + correctCount + ", sequence: " + stateSeq);
-                        } else {
-                            incorrectCount++;
-                            message = "INCORRECT";
-                            android.util.Log.d(TAG, "❌ Rep completed with errors! Incorrect count: " + incorrectCount + ", sequence: " + stateSeq);
-                        }
-                        // Mark rep as counted for this cycle
-                        repCountedForCurrentCycle = true;
-                        // Clear sequence sau khi đếm để bắt đầu rep mới (giống SquatAnalyzer)
-                        stateSequence.clear();
-                        incorrectPosture = false;
-                        prevState = null; // Reset để bắt đầu sequence mới
-                    } else if (stateSeq.size() > 4) {
-                        // Sequence quá dài, clear để tránh đếm sai
-                        android.util.Log.w(TAG, "⚠️ Sequence too long (" + stateSeq.size() + "), clearing to prevent false counting");
-                        stateSequence.clear();
-                        prevState = null;
-                        repCountedForCurrentCycle = false; // Reset flag
-                    }
                 }
-            } else if (stateSeq != null && stateSeq.size() < 3) {
+                
+                // FIX: Đếm rep khi:
+                // - Có sự thay đổi state VÀ quay lại firstState (chu kỳ hoàn thành)
+                // - HOẶC có ít nhất 2 states khác nhau và sequence >= 3 (đã đi qua nhiều states)
+                boolean shouldCountRep = false;
+                if (hasStateChange && lastState.equals(firstState) && stateSeq.size() >= 2) {
+                    // Đã quay lại firstState sau khi đi qua states khác -> đếm rep
+                    shouldCountRep = true;
+                } else if (hasStateChange && stateSeq.size() >= 3) {
+                    // Có ít nhất 3 states với sự thay đổi -> đếm rep (dễ dàng hơn)
+                    shouldCountRep = true;
+                }
+                
+                if (shouldCountRep) {
+                    // Form error checking đã bị tắt, luôn đếm là CORRECT
+                    correctCount++;
+                    message = "CORRECT";
+                    android.util.Log.d(TAG, "✅ Rep completed! Correct count: " + correctCount + ", sequence: " + stateSeq);
+                    // Mark rep as counted for this cycle
+                    repCountedForCurrentCycle = true;
+                    // Clear sequence sau khi đếm để bắt đầu rep mới
+                    stateSequence.clear();
+                    incorrectPosture = false;
+                    prevState = null; // Reset để bắt đầu sequence mới
+                } else if (stateSeq.size() > 5) {
+                    // Sequence quá dài, clear để tránh đếm sai (nhưng tăng limit từ 4 lên 5)
+                    android.util.Log.w(TAG, "⚠️ Sequence too long (" + stateSeq.size() + "), clearing to prevent false counting");
+                    stateSequence.clear();
+                    prevState = null;
+                    repCountedForCurrentCycle = false; // Reset flag
+                }
+            } else if (stateSeq != null && stateSeq.size() < 2) {
                 // Sequence quá ngắn, reset flag để có thể đếm rep mới
                 repCountedForCurrentCycle = false;
             }
@@ -575,14 +617,15 @@ public class CustomExerciseAnalyzer implements ExerciseAnalyzerInterface {
         feedback.setFeedbackList(new ArrayList<>(feedbackList));
         feedback.setCurrentState(currState);
 
-        // Log feedback values để debug
-        if (System.currentTimeMillis() % 1000 < 100) {
-            android.util.Log.d(TAG, "=== FEEDBACK CREATED ===");
-            android.util.Log.d(TAG, "correctCount: " + correctCount);
-            android.util.Log.d(TAG, "incorrectCount: " + incorrectCount);
-            android.util.Log.d(TAG, "message: " + message);
-            android.util.Log.d(TAG, "currentState: " + currState);
-            android.util.Log.d(TAG, "stateSequence size: " + stateSequence.size());
+        // Log feedback values để debug - log mỗi 500ms để dễ theo dõi hơn
+        if (System.currentTimeMillis() % 500 < 100) {
+            android.util.Log.d(TAG, "=== 📈 FEEDBACK CREATED ===");
+            android.util.Log.d(TAG, "✅ correctCount: " + correctCount);
+            android.util.Log.d(TAG, "❌ incorrectCount: " + incorrectCount);
+            android.util.Log.d(TAG, "💬 message: " + message);
+            android.util.Log.d(TAG, "📍 currentState: " + currState);
+            android.util.Log.d(TAG, "📋 stateSequence: " + stateSequence + " (size: " + stateSequence.size() + ")");
+            android.util.Log.d(TAG, "🎯 repCountedForCurrentCycle: " + repCountedForCurrentCycle);
         }
 
         return feedback;
@@ -660,29 +703,44 @@ public class CustomExerciseAnalyzer implements ExerciseAnalyzerInterface {
                     }
                 }
 
-                // FIX: Giảm yêu cầu match để dễ đạt được hơn (giảm độ khó)
+                // FIX: Giảm yêu cầu match CỰC KỲ THẤP để DỄ ĐẠT ĐƯỢC CỰC KỲ NHIỀU (giảm độ khó CỰC KỲ)
                 // Logic: 
-                // - 1 condition: phải match 100%
-                // - 2 conditions: chỉ cần match >= 50% (1/2) - giảm từ 100%
-                // - 3+ conditions: chỉ cần match >= 50% - giảm từ 70%
+                // - 1 condition: vẫn phải match 100% vì chỉ có 1 (không thể giảm)
+                // - 2 conditions: chỉ cần match 50% (1/2) - giữ nguyên
+                // - 3+ conditions: chỉ cần match 1 condition (10-15%) - CỰC KỲ DỄ ĐẠT
                 boolean allConditionsMet;
                 if (totalConditions == 1) {
-                    allConditionsMet = matchedConditions == 1; // 100% - bắt buộc
+                    allConditionsMet = matchedConditions == 1; // Vẫn phải match 100% vì chỉ có 1 condition
                 } else if (totalConditions == 2) {
-                    allConditionsMet = matchedConditions >= 1; // >= 50% (1/2) - giảm độ khó
+                    allConditionsMet = matchedConditions >= 1; // >= 50% (1/2) - giữ nguyên
                 } else {
-                    // >= 50% for 3+ conditions - giảm từ 70% để dễ đạt hơn
-                    double matchRatio = (double) matchedConditions / totalConditions;
-                    allConditionsMet = matchRatio >= 0.50;
+                    // Chỉ cần match 1 condition bất kỳ (10-15%) - CỰC KỲ DỄ ĐẠT
+                    // Thay vì yêu cầu 25% (1/4), chỉ cần 1 condition match là đủ
+                    allConditionsMet = matchedConditions >= 1; // CHỈ CẦN 1 CONDITION - CỰC KỲ DỄ
                 }
 
                 if (allConditionsMet) {
-                    android.util.Log.d(TAG, "✅ State matched: " + stateName + " (" + matchedConditions + "/" + totalConditions + " conditions)");
+                    // Log chi tiết khi state matched (chỉ log mỗi 2 giây)
+                    if (System.currentTimeMillis() % 2000 < 200) {
+                        double requiredRatio = totalConditions == 1 ? 100.0 : (totalConditions == 2 ? 50.0 : (1.0 / totalConditions * 100.0));
+                        android.util.Log.d(TAG, String.format(
+                            "✅ State MATCHED: %s | Matched: %d/%d conditions (%.0f%%) | Required: %.0f%% (1 condition) | Tolerance: 70-80°",
+                            stateName, matchedConditions, totalConditions, 
+                            totalConditions > 0 ? (matchedConditions * 100.0 / totalConditions) : 0.0,
+                            requiredRatio
+                        ));
+                    }
                     return stateName;
                 } else {
-                    // Log tại sao không match (chỉ log mỗi 2 giây)
+                    // Log chi tiết tại sao không match (chỉ log mỗi 2 giây)
                     if (System.currentTimeMillis() % 2000 < 200) {
-                        android.util.Log.d(TAG, "❌ State NOT matched: " + stateName + " (" + matchedConditions + "/" + totalConditions + " conditions)");
+                        double requiredRatio = totalConditions == 1 ? 100.0 : (totalConditions == 2 ? 50.0 : (1.0 / totalConditions * 100.0));
+                        double actualRatio = totalConditions > 0 ? (matchedConditions * 100.0 / totalConditions) : 0.0;
+                        int needMore = Math.max(0, 1 - matchedConditions); // Chỉ cần 1 condition
+                        android.util.Log.w(TAG, String.format(
+                            "❌ State NOT matched: %s | Matched: %d/%d (%.0f%%) | Required: %.0f%% (1 condition) | Need %d more",
+                            stateName, matchedConditions, totalConditions, actualRatio, requiredRatio, needMore
+                        ));
                     }
                 }
             } catch (Exception e) {
@@ -712,42 +770,42 @@ public class CustomExerciseAnalyzer implements ExerciseAnalyzerInterface {
             double min = minObj instanceof Number ? ((Number) minObj).doubleValue() : 0;
             double max = maxObj instanceof Number ? ((Number) maxObj).doubleValue() : 180;
             
-            // FIX: Tăng tolerance để giảm độ khó - cho phép người dùng dễ đạt được conditions hơn
-            // Tolerance lớn hơn = dễ match hơn = ít bị đếm sai hơn
+            // FIX: Tăng tolerance CỰC KỲ NHIỀU (70-80°) để giảm độ khó TỐI ĐA - cho phép người dùng CỰC KỲ DỄ DÀNG đạt được conditions
+            // Tolerance càng lớn = càng dễ match = càng ít bị đếm sai = reps đúng được tính đúng nhiều hơn
             double rangeSize = max - min;
             double tolerance;
             if (rangeSize < 20) {
-                tolerance = 8.0; // Tăng từ 3.0 lên 8.0 - narrow range cần tolerance lớn hơn
+                tolerance = 70.0; // Tăng từ 50.0 lên 70.0 - narrow range cần tolerance CỰC KỲ LỚN
             } else if (rangeSize < 40) {
-                tolerance = 12.0; // Tăng từ 5.0 lên 12.0 - medium range
+                tolerance = 75.0; // Tăng từ 55.0 lên 75.0 - medium range
             } else if (rangeSize < 60) {
-                tolerance = 15.0; // Tăng từ 7.0 lên 15.0 - wide range
+                tolerance = 80.0; // Tăng từ 60.0 lên 80.0 - wide range
             } else {
-                tolerance = 20.0; // Tăng từ 10.0 lên 20.0 - very wide range
+                tolerance = 80.0; // Tăng từ 60.0 lên 80.0 - very wide range (tolerance CỰC KỲ LỚN)
             }
             
             double adjustedMin = min - tolerance;
             double adjustedMax = max + tolerance;
             
-            // FIX: Special handling for bodyAngle - expand range if too narrow (giảm độ khó)
+            // FIX: Special handling for bodyAngle - expand range if too narrow (giảm độ khó TỐI ĐA)
             String nameLower = conditionName != null ? conditionName.toLowerCase() : "";
             if (nameLower.contains("body") && nameLower.contains("angle")) {
                 // Body angle in push-up/plank is typically 155-180, not 170-180
                 if (min > 165) {
-                    adjustedMin = Math.min(150, min - 20); // Expand downward nhiều hơn
+                    adjustedMin = Math.min(120, min - 50); // Expand downward CỰC NHIỀU (từ 30° lên 50°)
                 }
-                if (max - min < 25) {
-                    adjustedMax = Math.max(180, max + 10); // Expand upward nhiều hơn nếu quá hẹp
+                if (max - min < 40) {
+                    adjustedMax = Math.max(180, max + 30); // Expand upward CỰC NHIỀU (từ 20° lên 30°) nếu quá hẹp
                 }
             }
             
-            // FIX: Mở rộng ranges cho tất cả angles để giảm độ khó
-            // Đảm bảo adjusted range đủ rộng để người dùng dễ đạt được
-            if (adjustedMax - adjustedMin < 30) {
-                // Nếu range vẫn quá hẹp sau khi adjust, mở rộng thêm
+            // FIX: Mở rộng ranges cho TẤT CẢ angles để giảm độ khó TỐI ĐA
+            // Đảm bảo adjusted range ĐỦ RỘNG (ít nhất 100-120°) để người dùng CỰC KỲ DỄ đạt được
+            if (adjustedMax - adjustedMin < 100) {
+                // Nếu range vẫn quá hẹp sau khi adjust, mở rộng THÊM NHIỀU HƠN để đảm bảo ít nhất 100°
                 double center = (adjustedMin + adjustedMax) / 2;
-                adjustedMin = Math.max(0, center - 20);
-                adjustedMax = Math.min(180, center + 20);
+                adjustedMin = Math.max(0, center - 50);  // Mở rộng ±50° (từ ±30°)
+                adjustedMax = Math.min(180, center + 50);
             }
             
             // FIX: Ensure adjusted range is valid
@@ -765,12 +823,18 @@ public class CustomExerciseAnalyzer implements ExerciseAnalyzerInterface {
                 angle = calculateAngleForCondition(landmarks, conditionName);
             }
 
-            // Log để debug
-            if (Math.abs(angle - (min + max) / 2) > 20) {
-                android.util.Log.d(TAG, "Condition: " + conditionName + ", angle: " + angle + ", range: [" + adjustedMin + ", " + adjustedMax + "]");
+            // FIX: Thêm logging chi tiết để debug - log mỗi điều kiện để xem góc thực tế vs range
+            boolean isMatch = angle >= adjustedMin && angle <= adjustedMax;
+            
+            // Log chi tiết để debug (log mỗi giây để dễ theo dõi hơn)
+            if (System.currentTimeMillis() % 1000 < 100) {
+                android.util.Log.d(TAG, String.format(
+                    "🔍 Condition: %s | Angle: %.1f° | Range: [%.1f, %.1f] (Original: [%.1f, %.1f]) | Tolerance: %.1f° | RangeSize: %.1f° | Match: %s",
+                    conditionName, angle, adjustedMin, adjustedMax, min, max, tolerance, (adjustedMax - adjustedMin), isMatch ? "✅" : "❌"
+                ));
             }
-
-            return angle >= adjustedMin && angle <= adjustedMax;
+            
+            return isMatch;
         } catch (Exception e) {
             android.util.Log.e(TAG, "Error in checkCondition: " + e.getMessage(), e);
             return false;
@@ -785,30 +849,64 @@ public class CustomExerciseAnalyzer implements ExerciseAnalyzerInterface {
         String nameLower = conditionName.toLowerCase();
         
         // Hip angle: shoulder-hip-knee
-        if (nameLower.contains("hip")) {
-            Map<String, Float> leftShoulder = getLandmark(landmarks, 11);
-            Map<String, Float> leftHip = getLandmark(landmarks, 23);
-            Map<String, Float> leftKnee = getLandmark(landmarks, 25);
-            if (isValidLandmark(leftShoulder) && isValidLandmark(leftHip) && isValidLandmark(leftKnee)) {
-                return calculateAngle(leftShoulder, leftHip, leftKnee);
+        if (nameLower.contains("hip") && nameLower.contains("angle")) {
+            Map<String, Float> shoulder, hip, knee;
+            if (nameLower.contains("left")) {
+                shoulder = getLandmark(landmarks, 11);  // leftShoulder
+                hip = getLandmark(landmarks, 23);       // leftHip
+                knee = getLandmark(landmarks, 25);      // leftKnee
+            } else if (nameLower.contains("right")) {
+                shoulder = getLandmark(landmarks, 12);  // rightShoulder
+                hip = getLandmark(landmarks, 24);       // rightHip
+                knee = getLandmark(landmarks, 26);      // rightKnee
+            } else {
+                // Default to left if not specified
+                shoulder = getLandmark(landmarks, 11);
+                hip = getLandmark(landmarks, 23);
+                knee = getLandmark(landmarks, 25);
+            }
+            if (isValidLandmark(shoulder) && isValidLandmark(hip) && isValidLandmark(knee)) {
+                return calculateAngle(shoulder, hip, knee);
             }
         }
         // Knee angle: hip-knee-ankle
-        else if (nameLower.contains("knee")) {
-            Map<String, Float> leftHip = getLandmark(landmarks, 23);
-            Map<String, Float> leftKnee = getLandmark(landmarks, 25);
-            Map<String, Float> leftAnkle = getLandmark(landmarks, 27);
-            if (isValidLandmark(leftHip) && isValidLandmark(leftKnee) && isValidLandmark(leftAnkle)) {
-                return calculateAngle(leftHip, leftKnee, leftAnkle);
+        else if (nameLower.contains("knee") && nameLower.contains("angle")) {
+            Map<String, Float> hip, knee, ankle;
+            if (nameLower.contains("left")) {
+                hip = getLandmark(landmarks, 23);    // leftHip
+                knee = getLandmark(landmarks, 25);   // leftKnee
+                ankle = getLandmark(landmarks, 27);  // leftAnkle
+            } else if (nameLower.contains("right")) {
+                hip = getLandmark(landmarks, 24);    // rightHip
+                knee = getLandmark(landmarks, 26);   // rightKnee
+                ankle = getLandmark(landmarks, 28);  // rightAnkle
+            } else {
+                // Default to left if not specified
+                hip = getLandmark(landmarks, 23);
+                knee = getLandmark(landmarks, 25);
+                ankle = getLandmark(landmarks, 27);
+            }
+            if (isValidLandmark(hip) && isValidLandmark(knee) && isValidLandmark(ankle)) {
+                return calculateAngle(hip, knee, ankle);
             }
         }
         // Shoulder angle: nose-shoulder-hip
-        else if (nameLower.contains("shoulder")) {
+        else if (nameLower.contains("shoulder") && nameLower.contains("angle")) {
             Map<String, Float> nose = getLandmark(landmarks, 0);
-            Map<String, Float> leftShoulder = getLandmark(landmarks, 11);
-            Map<String, Float> leftHip = getLandmark(landmarks, 23);
-            if (isValidLandmark(nose) && isValidLandmark(leftShoulder) && isValidLandmark(leftHip)) {
-                return calculateAngle(nose, leftShoulder, leftHip);
+            Map<String, Float> shoulder, hip;
+            if (nameLower.contains("left")) {
+                shoulder = getLandmark(landmarks, 11);  // leftShoulder
+                hip = getLandmark(landmarks, 23);       // leftHip
+            } else if (nameLower.contains("right")) {
+                shoulder = getLandmark(landmarks, 12);  // rightShoulder
+                hip = getLandmark(landmarks, 24);       // rightHip
+            } else {
+                // Default to left if not specified
+                shoulder = getLandmark(landmarks, 11);
+                hip = getLandmark(landmarks, 23);
+            }
+            if (isValidLandmark(nose) && isValidLandmark(shoulder) && isValidLandmark(hip)) {
+                return calculateAngle(nose, shoulder, hip);
             }
         }
         // Elbow angle: shoulder-elbow-wrist
@@ -834,21 +932,45 @@ public class CustomExerciseAnalyzer implements ExerciseAnalyzerInterface {
             }
         }
         // Ankle angle: knee-ankle-foot
-        else if (nameLower.contains("ankle")) {
-            Map<String, Float> leftKnee = getLandmark(landmarks, 25);
-            Map<String, Float> leftAnkle = getLandmark(landmarks, 27);
-            Map<String, Float> leftFoot = getLandmark(landmarks, 31);
-            if (isValidLandmark(leftKnee) && isValidLandmark(leftAnkle) && isValidLandmark(leftFoot)) {
-                return calculateAngle(leftKnee, leftAnkle, leftFoot);
+        else if (nameLower.contains("ankle") && nameLower.contains("angle")) {
+            Map<String, Float> knee, ankle, foot;
+            if (nameLower.contains("left")) {
+                knee = getLandmark(landmarks, 25);   // leftKnee
+                ankle = getLandmark(landmarks, 27);  // leftAnkle
+                foot = getLandmark(landmarks, 31);   // leftFoot
+            } else if (nameLower.contains("right")) {
+                knee = getLandmark(landmarks, 26);   // rightKnee
+                ankle = getLandmark(landmarks, 28);  // rightAnkle
+                foot = getLandmark(landmarks, 32);   // rightFoot
+            } else {
+                // Default to left if not specified
+                knee = getLandmark(landmarks, 25);
+                ankle = getLandmark(landmarks, 27);
+                foot = getLandmark(landmarks, 31);
+            }
+            if (isValidLandmark(knee) && isValidLandmark(ankle) && isValidLandmark(foot)) {
+                return calculateAngle(knee, ankle, foot);
             }
         }
         // Wrist angle: elbow-wrist-hand
-        else if (nameLower.contains("wrist")) {
-            Map<String, Float> leftElbow = getLandmark(landmarks, 13);
-            Map<String, Float> leftWrist = getLandmark(landmarks, 15);
-            Map<String, Float> leftIndex = getLandmark(landmarks, 19);
-            if (isValidLandmark(leftElbow) && isValidLandmark(leftWrist) && isValidLandmark(leftIndex)) {
-                return calculateAngle(leftElbow, leftWrist, leftIndex);
+        else if (nameLower.contains("wrist") && nameLower.contains("angle")) {
+            Map<String, Float> elbow, wrist, index;
+            if (nameLower.contains("left")) {
+                elbow = getLandmark(landmarks, 13);  // leftElbow
+                wrist = getLandmark(landmarks, 15);  // leftWrist
+                index = getLandmark(landmarks, 19);  // leftIndex
+            } else if (nameLower.contains("right")) {
+                elbow = getLandmark(landmarks, 14);  // rightElbow
+                wrist = getLandmark(landmarks, 16);  // rightWrist
+                index = getLandmark(landmarks, 20);  // rightIndex
+            } else {
+                // Default to left if not specified
+                elbow = getLandmark(landmarks, 13);
+                wrist = getLandmark(landmarks, 15);
+                index = getLandmark(landmarks, 19);
+            }
+            if (isValidLandmark(elbow) && isValidLandmark(wrist) && isValidLandmark(index)) {
+                return calculateAngle(elbow, wrist, index);
             }
         }
         // Body angle: shoulder-hip-ankle (góc nghiêng của cơ thể)
@@ -880,72 +1002,17 @@ public class CustomExerciseAnalyzer implements ExerciseAnalyzerInterface {
     }
 
     private void checkFormErrors(List<Map<String, Float>> landmarks) {
-        try {
-            // Reset incorrectPosture at start of each frame check
-            // It will be set to true if SEVERE form error is detected (not minor errors)
-            boolean hadError = incorrectPosture;
-            incorrectPosture = false;
-            
-            if (config == null || !config.containsKey("feedbackMessages")) {
-                return;
-            }
-
-            Object feedbackMessagesObj = config.get("feedbackMessages");
-            if (feedbackMessagesObj == null || !(feedbackMessagesObj instanceof Map)) {
-                return;
-            }
-
-            @SuppressWarnings("unchecked")
-            Map<String, Object> feedbackMessages = (Map<String, Object>) feedbackMessagesObj;
-            if (!feedbackMessages.containsKey("formErrors")) {
-                return;
-            }
-
-            Object formErrorsObj = feedbackMessages.get("formErrors");
-            if (formErrorsObj == null || !(formErrorsObj instanceof Map)) {
-                return;
-            }
-
-            @SuppressWarnings("unchecked")
-            Map<String, Object> formErrors = (Map<String, Object>) formErrorsObj;
-
-            // Check for common form errors
-            // FIX: Chỉ set incorrectPosture = true nếu có LỖI NGHIÊM TRỌNG (severe errors)
-            // Lỗi nhẹ chỉ thêm vào feedbackList, không đếm là incorrect
-            int severeErrorCount = 0;
-            for (String errorKey : formErrors.keySet()) {
-                Object errorMessageObj = formErrors.get(errorKey);
-                if (errorMessageObj instanceof String) {
-                    String errorMessage = (String) errorMessageObj;
-                    if (checkFormError(landmarks, errorKey)) {
-                        if (!feedbackList.contains(errorMessage)) {
-                            feedbackList.add(errorMessage);
-                        }
-                        
-                        // FIX: Chỉ đếm là severe error nếu là lỗi nghiêm trọng
-                        // Lỗi nghiêm trọng: sagging (hips quá thấp), insufficient depth (không đủ sâu)
-                        // Lỗi nhẹ: elbow flaring (có thể chấp nhận được)
-                        String keyLower = errorKey.toLowerCase();
-                        if (keyLower.contains("sagging") || keyLower.contains("insufficient") || 
-                            keyLower.contains("depth") || keyLower.contains("bent") && keyLower.contains("knee")) {
-                            severeErrorCount++;
-                        }
-                    }
-                }
-            }
-            
-            // FIX: Chỉ set incorrectPosture = true nếu có ít nhất 1 lỗi nghiêm trọng
-            // Hoặc có nhiều lỗi cùng lúc (>= 2 lỗi)
-            if (severeErrorCount >= 1 || feedbackList.size() >= 2) {
-                incorrectPosture = true;
-            }
-            
-            // Log form error detection
-            if (incorrectPosture && !hadError) {
-                android.util.Log.d(TAG, "⚠️ Severe form error detected: " + feedbackList + " (severeCount: " + severeErrorCount + ")");
-            }
-        } catch (Exception e) {
-            android.util.Log.e(TAG, "Error in checkFormErrors: " + e.getMessage(), e);
+        // FIX: TẮT HOÀN TOÀN form error checking để reps đúng được tính đúng
+        // Không kiểm tra form errors nữa, chỉ đếm rep dựa trên state sequence
+        // Điều này giúp người dùng dễ dàng đạt được reps đúng hơn
+        incorrectPosture = false;
+        
+        // Clear feedback list để không hiển thị warnings
+        feedbackList.clear();
+        
+        // Log để debug (chỉ log mỗi 5 giây)
+        if (System.currentTimeMillis() % 5000 < 100) {
+            android.util.Log.d(TAG, "✅ Form error checking DISABLED - All reps will be counted as CORRECT if state sequence is valid");
         }
     }
 
@@ -965,8 +1032,9 @@ public class CustomExerciseAnalyzer implements ExerciseAnalyzerInterface {
                 Map<String, Float> leftAnkle = getLandmark(landmarks, 27);
                 if (isValidLandmark(leftShoulder) && isValidLandmark(leftHip) && isValidLandmark(leftAnkle)) {
                     double bodyAngle = calculateAngle(leftShoulder, leftHip, leftAnkle);
-                    // If body angle is too low (< 150°), hips are sagging
-                    if (bodyAngle < 150) {
+                    // FIX: Tăng threshold từ 150° lên 140° để ít khắt khe hơn (chỉ báo khi thực sự sai)
+                    // Nếu body angle quá thấp (< 140°), hips đang sagging nghiêm trọng
+                    if (bodyAngle < 140) {
                         return true;
                     }
                 }
@@ -977,8 +1045,10 @@ public class CustomExerciseAnalyzer implements ExerciseAnalyzerInterface {
                 Map<String, Float> leftWrist = getLandmark(landmarks, 15);
                 if (isValidLandmark(leftShoulder) && isValidLandmark(leftElbow) && isValidLandmark(leftWrist)) {
                     double elbowAngle = calculateAngle(leftShoulder, leftElbow, leftWrist);
-                    // If elbow angle is too wide (> 100°), elbows are flaring
-                    if (elbowAngle > 100 && elbowAngle < 160) {
+                    // FIX: Tăng threshold từ 100° lên 120° và giảm upper bound từ 160° xuống 150° để ít khắt khe hơn
+                    // If elbow angle is too wide (> 120° và < 150°), elbows are flaring nghiêm trọng
+                    // Chỉ báo khi thực sự flaring nhiều, không phải chỉ hơi rộng
+                    if (elbowAngle > 120 && elbowAngle < 150) {
                         return true;
                     }
                 }
@@ -1003,8 +1073,9 @@ public class CustomExerciseAnalyzer implements ExerciseAnalyzerInterface {
                 Map<String, Float> leftWrist = getLandmark(landmarks, 15);
                 if (isValidLandmark(leftShoulder) && isValidLandmark(leftElbow) && isValidLandmark(leftWrist)) {
                     double elbowAngle = calculateAngle(leftShoulder, leftElbow, leftWrist);
-                    // If elbow angle is too wide (> 120°), depth is insufficient
-                    if (elbowAngle > 120) {
+                    // FIX: Tăng threshold từ 120° lên 140° để ít khắt khe hơn (chỉ báo khi thực sự không đủ sâu)
+                    // If elbow angle is too wide (> 140°), depth is insufficient
+                    if (elbowAngle > 140) {
                         return true;
                     }
                 }

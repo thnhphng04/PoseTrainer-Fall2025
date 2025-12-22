@@ -57,6 +57,26 @@
         <activity
             android:name=".UI.activity.ForgotPasswordActivity"
             android:exported="false"/>
+        <activity
+            android:name=".UI.activity.EmailVerificationActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="posetrainer-capstonefall2025.firebaseapp.com"
+                    android:pathPrefix="/__/auth/action" />
+            </intent-filter>
+            <!-- Intent filter cho custom scheme -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="posetrainer" />
+            </intent-filter>
+        </activity>
 
         <activity
             android:name=".UI.activity.EditGoalsActivity"
@@ -154,6 +174,17 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+
+        <!-- FileProvider for camera images -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 

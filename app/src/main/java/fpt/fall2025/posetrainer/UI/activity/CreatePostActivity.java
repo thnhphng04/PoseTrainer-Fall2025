@@ -1,10 +1,13 @@
 package fpt.fall2025.posetrainer.UI.activity;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -15,16 +18,23 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseUser;
 
+import java.io.File;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 import fpt.fall2025.posetrainer.R;
 import fpt.fall2025.posetrainer.Service.AuthService;
@@ -49,6 +59,8 @@ public class CreatePostActivity extends AppCompatActivity {
 
     private AuthService authService;
     private CommunityDAO communityDAO;
+    
+    private Uri cameraImageUri;
 
     private final ActivityResultLauncher<String> pickMultipleImages =
             registerForActivityResult(new ActivityResultContracts.GetMultipleContents(),
@@ -67,6 +79,21 @@ public class CreatePostActivity extends AppCompatActivity {
                             
                             adapter.notifyDataSetChanged();
                             updateImageListVisibility();
+                        }
+                    });
+
+    private final ActivityResultLauncher<Uri> takePicture =
+            registerForActivityResult(new ActivityResultContracts.TakePicture(),
+                    success -> {
+                        if (success && cameraImageUri != null) {
+                            int remainingSlots = MAX_IMAGES - selectedImages.size();
+                            if (remainingSlots > 0) {
+                                selectedImages.add(cameraImageUri);
+                                adapter.notifyDataSetChanged();
+                                updateImageListVisibility();
+                            } else {
+                                Toast.makeText(this, "Chỉ có thể thêm tối đa " + MAX_IMAGES + " ảnh", Toast.LENGTH_SHORT).show();
+                            }
                         }
                     });
 
@@ -132,14 +159,109 @@ public class CreatePostActivity extends AppCompatActivity {
             return;
         }
 
+        // Hiển thị dialog để chọn nguồn ảnh
+        showImageSourceDialog();
+    }
+
+    private void showImageSourceDialog() {
+        String[] options = {"Chọn từ thư viện", "Chụp ảnh"};
+        
+        new AlertDialog.Builder(this)
+                .setTitle("Chọn nguồn ảnh")
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        // Chọn từ thư viện
+                        selectFromGallery();
+                    } else if (which == 1) {
+                        // Chụp ảnh
+                        takePictureFromCamera();
+                    }
+                })
+                .show();
+    }
+
+    private void selectFromGallery() {
         if (Build.VERSION.SDK_INT >= 33) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES)
                     != PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(new String[]{Manifest.permission.READ_MEDIA_IMAGES}, 1001);
                 return;
             }
+        } else {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+                    != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 1001);
+                return;
+            }
         }
         pickMultipleImages.launch("image/*");
+    }
+
+    private void takePictureFromCamera() {
+        // Kiểm tra quyền camera
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.CAMERA}, 1002);
+            return;
+        }
+
+        // Tạo file để lưu ảnh
+        try {
+            File photoFile = createImageFile();
+            if (photoFile != null) {
+                cameraImageUri = FileProvider.getUriForFile(
+                        this,
+                        getPackageName() + ".fileprovider",
+                        photoFile
+                );
+                takePicture.launch(cameraImageUri);
+            } else {
+                Toast.makeText(this, "Không thể tạo file ảnh", Toast.LENGTH_SHORT).show();
+            }
+        } catch (IOException e) {
+            Log.e(TAG, "Error creating image file", e);
+            Toast.makeText(this, "Lỗi tạo file ảnh: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private File createImageFile() throws IOException {
+        // Tạo tên file với timestamp
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+        String imageFileName = "JPEG_" + timeStamp + "_";
+        
+        File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+        if (storageDir == null) {
+            storageDir = getFilesDir();
+        }
+        
+        File imageFile = File.createTempFile(
+                imageFileName,  /* prefix */
+                ".jpg",         /* suffix */
+                storageDir      /* directory */
+        );
+        
+        return imageFile;
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        
+        if (requestCode == 1001) {
+            // Quyền đọc ảnh
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                pickMultipleImages.launch("image/*");
+            } else {
+                Toast.makeText(this, "Cần quyền truy cập thư viện ảnh để chọn ảnh", Toast.LENGTH_SHORT).show();
+            }
+        } else if (requestCode == 1002) {
+            // Quyền camera
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                takePictureFromCamera();
+            } else {
+                Toast.makeText(this, "Cần quyền camera để chụp ảnh", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 
     private void setUiEnabled(boolean enabled) {
@@ -203,8 +325,8 @@ public class CreatePostActivity extends AppCompatActivity {
             }
             });
         } else {
-            // Upload ảnh trước
-            communityDAO.uploadPostImages(uid, postId, selectedImages, uploadTask -> {
+            // Upload ảnh trước (truyền context để xử lý FileProvider URI từ camera)
+            communityDAO.uploadPostImages(this, uid, postId, selectedImages, uploadTask -> {
                 if (uploadTask.isSuccessful()) {
                     CommunityDAO.UploadResult result = uploadTask.getResult();
                     post.imageUrls = result.imageUrls;
@@ -231,10 +353,24 @@ public class CreatePostActivity extends AppCompatActivity {
                         }
                     });
                 } else {
-                    Log.e(TAG, "Error uploading images: " + uploadTask.getException().getMessage(), uploadTask.getException());
-                    Toast.makeText(this, "Lỗi upload ảnh: " + uploadTask.getException().getMessage(), Toast.LENGTH_LONG).show();
-            setUiEnabled(true);
-            progress.setVisibility(ProgressBar.GONE);
+                    Exception exception = uploadTask.getException();
+                    String errorMessage = "Lỗi upload ảnh";
+                    
+                    if (exception != null) {
+                        String exceptionMsg = exception.getMessage();
+                        Log.e(TAG, "Error uploading images: " + exceptionMsg, exception);
+                        
+                        // Kiểm tra nếu là lỗi permission
+                        if (exceptionMsg != null && (exceptionMsg.contains("403") || exceptionMsg.contains("Permission denied"))) {
+                            errorMessage = "Lỗi quyền truy cập: Vui lòng kiểm tra Firebase Storage Rules. Đảm bảo user có quyền upload vào path community/{uid}/{postId}/";
+                        } else {
+                            errorMessage = "Lỗi upload ảnh: " + exceptionMsg;
+                        }
+                    }
+                    
+                    Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show();
+                    setUiEnabled(true);
+                    progress.setVisibility(ProgressBar.GONE);
                 }
         });
         }

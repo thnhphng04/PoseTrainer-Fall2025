@@ -141,6 +141,9 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
                     debugSessionData();
                     updateSessionProgress();
                     
+                    // FIX: Update start/resume button sau khi exercises đã được load
+                    updateStartResumeButton();
+                    
                     // Handle timer based on completion status
                     boolean isCompleted = getIntent().getBooleanExtra("isCompleted", false);
                     if (isCompleted) {
@@ -566,8 +569,31 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
 
     @Override
     public void onExerciseClick(Session.PerExercise perExercise, Exercise exercise) {
-        // This method is no longer used since we only have one start/resume button
-        // The actual exercise start logic is handled by startCurrentExercise()
+        // FIX: Xử lý click từ button trong adapter
+        Log.d(TAG, "=== onExerciseClick CALLED ===");
+        Log.d(TAG, "PerExercise: " + (perExercise != null ? "NOT NULL" : "NULL"));
+        Log.d(TAG, "Exercise: " + (exercise != null ? "NOT NULL" : "NULL"));
+        
+        if (perExercise == null || exercise == null) {
+            Log.w(TAG, "Cannot start exercise: perExercise or exercise is null");
+            return;
+        }
+        
+        Log.d(TAG, "Starting exercise from adapter click: " + exercise.getName() + " (exerciseNo: " + perExercise.getExerciseNo() + ")");
+        Log.d(TAG, "Session ID: " + (currentSession != null ? currentSession.getId() : "NULL"));
+        
+        if (currentSession == null || currentSession.getId() == null) {
+            Log.e(TAG, "Cannot start exercise: currentSession or sessionId is null");
+            return;
+        }
+        
+        // Start ExerciseActivity với sessionId và exerciseNo
+        Intent intent = new Intent(this, ExerciseActivity.class);
+        intent.putExtra("sessionId", currentSession.getId());
+        intent.putExtra("exerciseNo", perExercise.getExerciseNo());
+        
+        Log.d(TAG, "Starting ExerciseActivity with sessionId: " + currentSession.getId() + ", exerciseNo: " + perExercise.getExerciseNo());
+        startActivityForResult(intent, EXERCISE_REQUEST_CODE);
     }
 
     private void startCurrentExercise() {
@@ -620,6 +646,16 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
         for (Session.PerExercise nextPerExercise : currentSession.getPerExercise()) {
             if ("not_started".equals(nextPerExercise.getState()) &&
                     nextPerExercise.getExerciseNo() > currentExerciseNo) {
+                // FIX: Tìm exercise trực tiếp bằng exerciseId thay vì dùng getExerciseByOrder
+                String nextExerciseId = nextPerExercise.getExerciseId();
+                if (nextExerciseId != null && exercises != null) {
+                    for (Exercise ex : exercises) {
+                        if (ex.getId() != null && ex.getId().equals(nextExerciseId)) {
+                            return ex;
+                        }
+                    }
+                }
+                // Fallback: Nếu không tìm thấy bằng ID, thử dùng getExerciseByOrder
                 return getExerciseByOrder(nextPerExercise.getExerciseNo());
             }
         }
@@ -628,6 +664,8 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
     }
 
     private void updateStartResumeButton() {
+        Log.d(TAG, "=== updateStartResumeButton CALLED ===");
+        
         // Check if session is completed (from intent) - if so, hide button
         boolean isCompleted = getIntent().getBooleanExtra("isCompleted", false);
         if (isCompleted) {
@@ -637,20 +675,59 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
         }
         
         Session.PerExercise currentExercise = getCurrentExercise();
+        Log.d(TAG, "Current exercise: " + (currentExercise != null ? "NOT NULL, ID: " + currentExercise.getExerciseId() : "NULL"));
+        
         if (currentExercise == null) {
             binding.startResumeBtn.setVisibility(View.GONE);
             Log.d(TAG, "No current exercise found, hiding start/resume button");
             return;
         }
 
-        Exercise exercise = getExerciseByOrder(currentExercise.getExerciseNo());
+        // FIX: Tìm exercise trực tiếp bằng exerciseId thay vì dùng getExerciseByOrder
+        // Điều này hoạt động tốt hơn với custom exercises
+        Exercise exercise = null;
+        String exerciseId = currentExercise.getExerciseId();
+        Log.d(TAG, "Looking for exercise with ID: " + exerciseId);
+        Log.d(TAG, "Available exercises count: " + (exercises != null ? exercises.size() : 0));
+        
+        if (exercises != null && exerciseId != null) {
+            for (Exercise ex : exercises) {
+                if (ex.getId() != null && ex.getId().equals(exerciseId)) {
+                    exercise = ex;
+                    Log.d(TAG, "✓ Found exercise by ID: " + ex.getName());
+                    break;
+                }
+            }
+        }
+        
+        // Fallback: Nếu không tìm thấy bằng ID, thử dùng getExerciseByOrder (cho backward compatibility)
+        if (exercise == null) {
+            Log.w(TAG, "Exercise not found by ID: " + exerciseId + ", trying getExerciseByOrder");
+            exercise = getExerciseByOrder(currentExercise.getExerciseNo());
+            if (exercise != null) {
+                Log.d(TAG, "✓ Found exercise by order: " + exercise.getName());
+            }
+        }
+        
         if (exercise == null) {
             binding.startResumeBtn.setVisibility(View.GONE);
-            Log.w(TAG, "Exercise not found for ID: " + currentExercise.getExerciseId());
+            Log.w(TAG, "❌ Exercise not found for ID: " + exerciseId + " and order: " + currentExercise.getExerciseNo());
+            if (exercises != null) {
+                StringBuilder ids = new StringBuilder();
+                for (Exercise ex : exercises) {
+                    if (ids.length() > 0) ids.append(", ");
+                    ids.append(ex.getId());
+                }
+                Log.w(TAG, "Available exercise IDs: " + ids.toString());
+            } else {
+                Log.w(TAG, "Available exercise IDs: null (exercises list is null)");
+            }
             return;
         }
 
         binding.startResumeBtn.setVisibility(View.VISIBLE);
+        binding.startResumeBtn.setClickable(true);
+        binding.startResumeBtn.setEnabled(true);
 
         String state = currentExercise.getState();
         if ("doing".equals(state)) {
@@ -659,7 +736,8 @@ public class SessionActivity extends AppCompatActivity implements SessionExercis
             binding.startResumeBtn.setText("Bắt đầu " + exercise.getName());
         }
 
-        Log.d(TAG, "Updated start/resume button for exercise: " + exercise.getName() + " (state: " + state + ")");
+        Log.d(TAG, "✓ Updated start/resume button for exercise: " + exercise.getName() + " (state: " + state + ")");
+        Log.d(TAG, "=== updateStartResumeButton COMPLETE ===");
     }
 
     private Exercise getExerciseByOrder(int exerciseOrder) {

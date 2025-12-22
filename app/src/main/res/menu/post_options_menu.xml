@@ -6,6 +6,11 @@
         android:id="@+id/menu_report_post"
         android:title="Báo cáo bài viết"
         app:showAsAction="never" />
+    
+    <item
+        android:id="@+id/menu_delete_post"
+        android:title="Xóa bài viết"
+        app:showAsAction="never" />
         
 </menu>
 
