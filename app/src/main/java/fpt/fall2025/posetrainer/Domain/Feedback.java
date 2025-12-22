@@ -9,8 +9,9 @@ import java.io.Serializable;
  * Lưu trong collection "feedbacks" trên Firestore
  * 
  * Status values:
- * - "pending": Admin chưa xác nhận
- * - "read": Admin đã đọc
+ * - "pending": Đang chờ xử lý
+ * - "accepted": Đã chấp nhận
+ * - "rejected": Đã từ chối
  * - "resolved": Đã xử lý
  */
 @IgnoreExtraProperties
@@ -23,7 +24,7 @@ public class Feedback implements Serializable {
     private String postId; // ID của bài viết (nếu type = "post")
     private String postContent; // Nội dung bài viết (để hiển thị, không cần query lại)
     private String content; // Nội dung feedback
-    private String status; // "pending", "read", "resolved"
+    private String status; // "pending", "accepted", "rejected", "resolved"
     private long createdAt; // Timestamp khi tạo feedback
     private long updatedAt; // Timestamp khi cập nhật (khi admin xử lý)
 

@@ -20,6 +20,9 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,6 +48,7 @@ public class FeedbackHistoryDialog extends DialogFragment {
     private FeedbackDAO feedbackDAO;
     private FirebaseAuth mAuth;
     private FeedbackHistoryAdapter adapter;
+    private ListenerRegistration feedbacksListener; // Listener cho real-time updates
     
     @NonNull
     @Override
@@ -87,14 +91,14 @@ public class FeedbackHistoryDialog extends DialogFragment {
             btnClose.setOnClickListener(v -> dismiss());
         }
         
-        // Load feedbacks
-        loadFeedbacks();
+        // Load feedbacks với real-time listener
+        startFeedbacksListener();
     }
     
     /**
-     * Load danh sách feedback của user hiện tại
+     * Bắt đầu lắng nghe real-time updates cho danh sách feedback
      */
-    private void loadFeedbacks() {
+    private void startFeedbacksListener() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser == null) {
             Toast.makeText(getContext(), "Vui lòng đăng nhập", Toast.LENGTH_SHORT).show();
@@ -102,16 +106,41 @@ public class FeedbackHistoryDialog extends DialogFragment {
             return;
         }
         
+        // Dừng listener cũ nếu có
+        stopFeedbacksListener();
+        
         setLoading(true);
         
-        feedbackDAO.getByUserId(currentUser.getUid(), task -> {
+        // Sử dụng real-time listener thay vì chỉ load một lần
+        feedbacksListener = feedbackDAO.listenByUserId(currentUser.getUid(), (querySnapshot, error) -> {
             setLoading(false);
             
-            if (task.isSuccessful()) {
-                List<Feedback> feedbacks = task.getResult();
-                if (feedbacks == null) {
-                    feedbacks = new ArrayList<>();
+            if (error != null) {
+                Log.e(TAG, "Error listening to feedbacks", error);
+                // Nếu lỗi do thiếu index, thử dùng query đơn giản hơn
+                if (error.getMessage() != null && (error.getMessage().contains("index") || error.getMessage().contains("requires an index"))) {
+                    Log.w(TAG, "Thử dùng query đơn giản (không có orderBy)");
+                    // Fallback: dùng query đơn giản và sort client-side
+                    startSimpleFeedbacksListener(currentUser.getUid());
+                    return;
                 }
+                Toast.makeText(getContext(), "Lỗi khi tải lịch sử phản hồi. Vui lòng thử lại.", Toast.LENGTH_SHORT).show();
+                showEmptyState(true);
+                return;
+            }
+            
+            if (querySnapshot != null) {
+                List<Feedback> feedbacks = new ArrayList<>();
+                for (QueryDocumentSnapshot doc : querySnapshot) {
+                    Feedback feedback = doc.toObject(Feedback.class);
+                    if (feedback != null) {
+                        feedback.setId(doc.getId());
+                        feedbacks.add(feedback);
+                    }
+                }
+                
+                // Sort client-side nếu cần (trong trường hợp query không có orderBy)
+                feedbacks.sort((a, b) -> Long.compare(b.getCreatedAt(), a.getCreatedAt()));
                 
                 if (feedbacks.isEmpty()) {
                     showEmptyState(true);
@@ -119,12 +148,64 @@ public class FeedbackHistoryDialog extends DialogFragment {
                     showEmptyState(false);
                     adapter.updateFeedbacks(feedbacks);
                 }
-            } else {
-                Log.e(TAG, "Error loading feedbacks", task.getException());
-                Toast.makeText(getContext(), "Lỗi khi tải lịch sử phản hồi. Vui lòng thử lại.", Toast.LENGTH_SHORT).show();
-                showEmptyState(true);
+                
+                Log.d(TAG, "✅ Cập nhật " + feedbacks.size() + " feedback (real-time)");
             }
         });
+    }
+    
+    /**
+     * Fallback: Dùng query đơn giản (không có orderBy) và sort client-side
+     */
+    private void startSimpleFeedbacksListener(String uid) {
+        stopFeedbacksListener();
+        
+        feedbacksListener = feedbackDAO.getCollection()
+            .whereEqualTo("uid", uid)
+            .addSnapshotListener((querySnapshot, error) -> {
+                setLoading(false);
+                
+                if (error != null) {
+                    Log.e(TAG, "Error listening to feedbacks (simple query)", error);
+                    Toast.makeText(getContext(), "Lỗi khi tải lịch sử phản hồi. Vui lòng thử lại.", Toast.LENGTH_SHORT).show();
+                    showEmptyState(true);
+                    return;
+                }
+                
+                if (querySnapshot != null) {
+                    List<Feedback> feedbacks = new ArrayList<>();
+                    for (QueryDocumentSnapshot doc : querySnapshot) {
+                        Feedback feedback = doc.toObject(Feedback.class);
+                        if (feedback != null) {
+                            feedback.setId(doc.getId());
+                            feedbacks.add(feedback);
+                        }
+                    }
+                    
+                    // Sort client-side theo createdAt giảm dần
+                    feedbacks.sort((a, b) -> Long.compare(b.getCreatedAt(), a.getCreatedAt()));
+                    
+                    if (feedbacks.isEmpty()) {
+                        showEmptyState(true);
+                    } else {
+                        showEmptyState(false);
+                        adapter.updateFeedbacks(feedbacks);
+                    }
+                    
+                    Log.d(TAG, "✅ Cập nhật " + feedbacks.size() + " feedback (simple query, real-time)");
+                }
+            });
+    }
+    
+    /**
+     * Dừng lắng nghe real-time updates
+     */
+    private void stopFeedbacksListener() {
+        if (feedbacksListener != null) {
+            feedbacksListener.remove();
+            feedbacksListener = null;
+            Log.d(TAG, "Đã dừng listener feedback");
+        }
     }
     
     /**
@@ -166,5 +247,19 @@ public class FeedbackHistoryDialog extends DialogFragment {
             // Thêm dim background để làm nổi bật dialog
             getDialog().getWindow().setDimAmount(0.7f);
         }
+    }
+    
+    @Override
+    public void onDismiss(@NonNull android.content.DialogInterface dialog) {
+        super.onDismiss(dialog);
+        // Dừng listener khi dialog bị dismiss
+        stopFeedbacksListener();
+    }
+    
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        // Dừng listener khi dialog bị đóng để tránh memory leak
+        stopFeedbacksListener();
     }
 }
