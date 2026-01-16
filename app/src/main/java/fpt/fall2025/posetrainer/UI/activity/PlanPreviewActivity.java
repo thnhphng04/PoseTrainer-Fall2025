@@ -8,6 +8,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.AppCompatButton;
 
 import androidx.annotation.Nullable;
@@ -26,6 +27,7 @@ import java.util.Map;
 import fpt.fall2025.posetrainer.Domain.Schedule;
 import fpt.fall2025.posetrainer.Domain.UserWorkout;
 import fpt.fall2025.posetrainer.Domain.PlanModels;
+import fpt.fall2025.posetrainer.Domain.Profile;
 import fpt.fall2025.posetrainer.UI.adapter.common.PlanDayAdapter;
 import fpt.fall2025.posetrainer.Service.AuthService;
 import fpt.fall2025.posetrainer.Service.FunctionsService;
@@ -36,7 +38,7 @@ import fpt.fall2025.posetrainer.R;
 
 public class PlanPreviewActivity extends AppCompatActivity {
     private static final String TAG = "PlanPreviewActivity";
-    
+
     private RecyclerView rvDays;
     private ProgressBar progress;
     private AppCompatButton btnGenerate;
@@ -106,7 +108,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
     }
 
     /**
-     * Kiểm tra profile tồn tại trước khi generate plan
+     * Kiểm tra profile tồn tại và đầy đủ thông tin trước khi generate plan
      */
     private void checkProfileAndGenerate() {
         if (uid == null || uid.isEmpty()) {
@@ -117,27 +119,130 @@ public class PlanPreviewActivity extends AppCompatActivity {
         setLoading(true);
         tvSub.setText("Đang kiểm tra hồ sơ...");
 
-        // Kiểm tra profile có tồn tại không
-        profileDAO.getDocumentSnapshot(uid)
-                .addOnSuccessListener(documentSnapshot -> {
-                    if (documentSnapshot.exists()) {
-                        // Profile tồn tại, tiếp tục generate plan
-                        generatePlan(false);
-                    } else {
-                        setLoading(false);
-                        String errorMsg = "Chưa có hồ sơ. Vui lòng hoàn thành questionnaire trước.";
-                        tvSub.setText(errorMsg);
-                        Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
-                        Log.w(TAG, "Profile not found for uid: " + uid);
-                    }
+        // Lấy profile để kiểm tra đầy đủ thông tin
+        profileDAO.getById(uid, task -> {
+            if (!task.isSuccessful() || task.getResult() == null) {
+                setLoading(false);
+                String errorMsg = "Bạn chưa cập nhật hồ sơ. Hãy thêm vào trong hồ sơ cá nhân!";
+                tvSub.setText(errorMsg);
+                showProfileIncompleteDialog();
+                Log.w(TAG, "Profile not found for uid: " + uid);
+                return;
+            }
+
+            Profile profile = task.getResult();
+
+            // Kiểm tra tất cả các trường bắt buộc
+            String missingField = validateProfile(profile);
+
+            if (missingField != null) {
+                setLoading(false);
+                // Có trường thiếu, hiển thị thông báo yêu cầu cập nhật profile
+                String errorMsg = "Bạn chưa cập nhật hồ sơ. Hãy thêm vào trong hồ sơ cá nhân!";
+                tvSub.setText(errorMsg);
+                showProfileIncompleteDialog();
+                Log.w(TAG, "Profile missing field: " + missingField + " for uid: " + uid);
+                return;
+            }
+
+            // Tất cả thông tin đã đầy đủ, tiếp tục generate plan
+            // generatePlan() sẽ tự quản lý loading state
+            generatePlan(false);
+        });
+    }
+
+    /**
+     * Kiểm tra profile có đầy đủ thông tin không
+     * @param profile Profile object cần kiểm tra
+     * @return Tên trường thiếu (null nếu đầy đủ)
+     */
+    private String validateProfile(Profile profile) {
+        if (profile == null) {
+            return "Hồ sơ";
+        }
+
+        // Kiểm tra birthday
+        if (profile.getBirthday() == null || profile.getBirthday().trim().isEmpty()) {
+            return "Ngày sinh";
+        }
+
+        // Kiểm tra gender
+        if (profile.getGender() == null || profile.getGender().trim().isEmpty()) {
+            return "Giới tính";
+        }
+
+        // Kiểm tra heightCm
+        if (profile.getHeightCm() <= 0) {
+            return "Chiều cao";
+        }
+
+        // Kiểm tra weightKg
+        if (profile.getWeightKg() <= 0) {
+            return "Cân nặng";
+        }
+
+        // Kiểm tra currentBodyType
+        if (profile.getCurrentBodyType() == null || profile.getCurrentBodyType().trim().isEmpty()) {
+            return "Cơ thể hiện tại";
+        }
+
+        // Kiểm tra dailyTrainingMinutes
+        if (profile.getDailyTrainingMinutes() <= 0) {
+            return "Thời gian tập mỗi ngày";
+        }
+
+        // Kiểm tra weeklyGoal
+        if (profile.getWeeklyGoal() <= 0) {
+            return "Số ngày có thể tập luyện trong 1 tuần";
+        }
+
+        // Kiểm tra experienceLevel
+        if (profile.getExperienceLevel() == null || profile.getExperienceLevel().trim().isEmpty()) {
+            return "Kinh nghiệm tập luyện";
+        }
+
+        // Kiểm tra trainingStartTime
+        if (profile.getTrainingStartTime() == null || profile.getTrainingStartTime().trim().isEmpty()) {
+            return "Thời gian bắt đầu tập";
+        }
+
+        // Kiểm tra trainingEndTime
+        if (profile.getTrainingEndTime() == null || profile.getTrainingEndTime().trim().isEmpty()) {
+            return "Thời gian kết thúc tập";
+        }
+
+        // Kiểm tra goals
+        Profile.Goals goals = profile.getGoals();
+        if (goals == null) {
+            return "Mục tiêu (cân nặng mục tiêu và cơ thể mục tiêu)";
+        }
+
+        // Kiểm tra targetWeightKg
+        if (goals.getTargetWeightKg() == null || goals.getTargetWeightKg() <= 0) {
+            return "Cân nặng mục tiêu";
+        }
+
+        // Kiểm tra targetBodyType
+        if (goals.getTargetBodyType() == null || goals.getTargetBodyType().trim().isEmpty()) {
+            return "Cơ thể mục tiêu";
+        }
+
+        // Tất cả các trường đã đầy đủ
+        return null;
+    }
+
+    /**
+     * Hiển thị dialog thông báo hồ sơ chưa đầy đủ
+     */
+    private void showProfileIncompleteDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("Thông báo")
+                .setMessage("Bạn chưa cập nhật hồ sơ. Hãy thêm vào trong hồ sơ cá nhân!")
+                .setPositiveButton("Đã hiểu", (dialog, which) -> {
+                    dialog.dismiss();
                 })
-                .addOnFailureListener(e -> {
-                    setLoading(false);
-                    String errorMsg = "Không thể kiểm tra hồ sơ. Vui lòng thử lại.";
-                    tvSub.setText(errorMsg);
-                    Toast.makeText(this, errorMsg, Toast.LENGTH_SHORT).show();
-                    Log.e(TAG, "Error checking profile", e);
-                });
+                .setCancelable(true)
+                .show();
     }
 
     private void generatePlan(boolean force) {
@@ -168,103 +273,103 @@ public class PlanPreviewActivity extends AppCompatActivity {
         Log.d(TAG, "Gọi generatePlan với uid: " + uid + ", force: " + force);
 
         functionsService.callGeneratePlan(uid, force, desiredDays, task -> {
-                    if (!task.isSuccessful()) {
-                        setLoading(false);
-                        Log.e(TAG, "generatePlan failed", task.getException());
-                        String errorMsg = functionsService.getErrorMessage(task.getException());
-                        tvSub.setText(errorMsg);
-                        Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
-                        return;
-                    }
-                    
-                    HttpsCallableResult r = task.getResult();
-                    try {
-                        Object obj = r.getData();
-                        if (!(obj instanceof Map)) {
-                            setLoading(false);
-                            String errorMsg = "Phản hồi không hợp lệ từ server";
-                            tvSub.setText(errorMsg);
-                            Toast.makeText(this, errorMsg, Toast.LENGTH_SHORT).show();
-                            Log.e(TAG, "Unexpected response type: " + (obj != null ? obj.getClass().getName() : "null"));
-                            return;
-                        }
+            if (!task.isSuccessful()) {
+                setLoading(false);
+                Log.e(TAG, "generatePlan failed", task.getException());
+                String errorMsg = functionsService.getErrorMessage(task.getException());
+                tvSub.setText(errorMsg);
+                Toast.makeText(this, errorMsg, Toast.LENGTH_LONG).show();
+                return;
+            }
 
-                        Map res = (Map) obj;
-                        
-                        // ✅ Xử lý cached response
-                        Object statusObj = res.get("status");
-                        String status = statusObj != null ? String.valueOf(statusObj) : "unknown";
-                        Log.d(TAG, "Response status: " + status);
-                        
-                        if ("cached".equals(status)) {
-                            Log.d(TAG, "Nhận được plan từ cache");
-                            tvSub.setText("Đang tải kế hoạch đã lưu...");
-                        } else {
-                            Log.d(TAG, "Nhận được plan mới từ AI");
-                            Object modelObj = res.get("model");
-                            String model = modelObj != null ? String.valueOf(modelObj) : "unknown";
-                            Log.d(TAG, "Model sử dụng: " + model);
-                        }
-                        
-                        Object planObj = res.get("plan");
-                        
-                        if (planObj == null || !(planObj instanceof Map)) {
-                            setLoading(false);
-                            String errorMsg = "Không tìm thấy kế hoạch trong phản hồi";
-                            tvSub.setText(errorMsg);
-                            Toast.makeText(this, errorMsg, Toast.LENGTH_SHORT).show();
-                            Log.e(TAG, "Plan not found in response. Response keys: " + res.keySet());
-                            return;
-                        }
+            HttpsCallableResult r = task.getResult();
+            try {
+                Object obj = r.getData();
+                if (!(obj instanceof Map)) {
+                    setLoading(false);
+                    String errorMsg = "Phản hồi không hợp lệ từ server";
+                    tvSub.setText(errorMsg);
+                    Toast.makeText(this, errorMsg, Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "Unexpected response type: " + (obj != null ? obj.getClass().getName() : "null"));
+                    return;
+                }
 
-                        Map planMap = (Map) planObj;
-                        currentPlan = PlanModels.Plan.from(planMap);
-                        
-                        // ✅ Log để debug reason
-                        if (currentPlan != null && currentPlan.days != null) {
-                            int totalItems = 0;
-                            int itemsWithReason = 0;
-                            for (PlanModels.Day day : currentPlan.days) {
-                                if (day.items != null) {
-                                    for (PlanModels.Item item : day.items) {
-                                        totalItems++;
-                                        if (item.reason != null && !item.reason.isEmpty()) {
-                                            itemsWithReason++;
-                                            Log.d(TAG, "Item có reason: " + item.name + " - " + item.reason);
-                                        } else {
-                                            Log.d(TAG, "Item KHÔNG có reason: " + item.name);
-                                        }
-                                    }
+                Map res = (Map) obj;
+
+                // ✅ Xử lý cached response
+                Object statusObj = res.get("status");
+                String status = statusObj != null ? String.valueOf(statusObj) : "unknown";
+                Log.d(TAG, "Response status: " + status);
+
+                if ("cached".equals(status)) {
+                    Log.d(TAG, "Nhận được plan từ cache");
+                    tvSub.setText("Đang tải kế hoạch đã lưu...");
+                } else {
+                    Log.d(TAG, "Nhận được plan mới từ AI");
+                    Object modelObj = res.get("model");
+                    String model = modelObj != null ? String.valueOf(modelObj) : "unknown";
+                    Log.d(TAG, "Model sử dụng: " + model);
+                }
+
+                Object planObj = res.get("plan");
+
+                if (planObj == null || !(planObj instanceof Map)) {
+                    setLoading(false);
+                    String errorMsg = "Không tìm thấy kế hoạch trong phản hồi";
+                    tvSub.setText(errorMsg);
+                    Toast.makeText(this, errorMsg, Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "Plan not found in response. Response keys: " + res.keySet());
+                    return;
+                }
+
+                Map planMap = (Map) planObj;
+                currentPlan = PlanModels.Plan.from(planMap);
+
+                // ✅ Log để debug reason
+                if (currentPlan != null && currentPlan.days != null) {
+                    int totalItems = 0;
+                    int itemsWithReason = 0;
+                    for (PlanModels.Day day : currentPlan.days) {
+                        if (day.items != null) {
+                            for (PlanModels.Item item : day.items) {
+                                totalItems++;
+                                if (item.reason != null && !item.reason.isEmpty()) {
+                                    itemsWithReason++;
+                                    Log.d(TAG, "Item có reason: " + item.name + " - " + item.reason);
+                                } else {
+                                    Log.d(TAG, "Item KHÔNG có reason: " + item.name);
                                 }
                             }
-                            Log.d(TAG, "Tổng số items: " + totalItems + ", items có reason: " + itemsWithReason);
                         }
-                        
-                        if (currentPlan == null || currentPlan.days == null || currentPlan.days.isEmpty()) {
-                            setLoading(false);
-                            String errorMsg = "Kế hoạch được tạo nhưng không có dữ liệu";
-                            tvSub.setText(errorMsg);
-                            Toast.makeText(this, errorMsg, Toast.LENGTH_SHORT).show();
-                            Log.e(TAG, "Plan is null or empty");
-                            return;
-                        }
-
-                        // Load profile để lấy thời gian tập luyện và tính toán thời gian cho từng bài tập
-                        loadProfileAndCalculateTimes(currentPlan);
-                        setLoading(false);
-                        
-                        String successMsg = "cached".equals(status) ? 
-                                "Đã tải kế hoạch đã lưu!" : "Tạo kế hoạch thành công!";
-                        Toast.makeText(this, successMsg, Toast.LENGTH_SHORT).show();
-                        Log.d(TAG, "Plan generated successfully: " + currentPlan.days.size() + " days");
-                    } catch (Exception e) {
-                        setLoading(false);
-                        String errorMsg = "Lỗi khi xử lý phản hồi: " + e.getMessage();
-                        tvSub.setText(errorMsg);
-                        Toast.makeText(this, errorMsg, Toast.LENGTH_SHORT).show();
-                        Log.e(TAG, "Error processing response", e);
                     }
-                });
+                    Log.d(TAG, "Tổng số items: " + totalItems + ", items có reason: " + itemsWithReason);
+                }
+
+                if (currentPlan == null || currentPlan.days == null || currentPlan.days.isEmpty()) {
+                    setLoading(false);
+                    String errorMsg = "Kế hoạch được tạo nhưng không có dữ liệu";
+                    tvSub.setText(errorMsg);
+                    Toast.makeText(this, errorMsg, Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "Plan is null or empty");
+                    return;
+                }
+
+                // Load profile để lấy thời gian tập luyện và tính toán thời gian cho từng bài tập
+                loadProfileAndCalculateTimes(currentPlan);
+                setLoading(false);
+
+                String successMsg = "cached".equals(status) ?
+                        "Đã tải kế hoạch đã lưu!" : "Tạo kế hoạch thành công!";
+                Toast.makeText(this, successMsg, Toast.LENGTH_SHORT).show();
+                Log.d(TAG, "Plan generated successfully: " + currentPlan.days.size() + " days");
+            } catch (Exception e) {
+                setLoading(false);
+                String errorMsg = "Lỗi khi xử lý phản hồi: " + e.getMessage();
+                tvSub.setText(errorMsg);
+                Toast.makeText(this, errorMsg, Toast.LENGTH_SHORT).show();
+                Log.e(TAG, "Error processing response", e);
+            }
+        });
     }
 
 
@@ -284,7 +389,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
                     if (documentSnapshot.exists()) {
                         String trainingStartTime = documentSnapshot.getString("trainingStartTime");
                         String trainingEndTime = documentSnapshot.getString("trainingEndTime");
-                        
+
                         // Tính toán thời gian cho từng bài tập
                         calculateExerciseTimes(plan, trainingStartTime, trainingEndTime);
                     }
@@ -302,8 +407,8 @@ public class PlanPreviewActivity extends AppCompatActivity {
      * Tính toán thời gian bắt đầu và kết thúc cho từng bài tập trong mỗi ngày
      */
     private void calculateExerciseTimes(PlanModels.Plan plan, String trainingStartTime, String trainingEndTime) {
-        if (trainingStartTime == null || trainingStartTime.isEmpty() || 
-            trainingEndTime == null || trainingEndTime.isEmpty()) {
+        if (trainingStartTime == null || trainingStartTime.isEmpty() ||
+                trainingEndTime == null || trainingEndTime.isEmpty()) {
             Log.d(TAG, "No training time range provided, skipping time calculation");
             return;
         }
@@ -312,7 +417,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
             // Parse thời gian bắt đầu và kết thúc
             String[] startParts = trainingStartTime.split(":");
             String[] endParts = trainingEndTime.split(":");
-            
+
             if (startParts.length != 2 || endParts.length != 2) {
                 Log.w(TAG, "Invalid time format: " + trainingStartTime + " - " + trainingEndTime);
                 return;
@@ -341,7 +446,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
                 // Tính tổng thời gian ước tính cho tất cả bài tập trong ngày (tính bằng giây)
                 int totalEstimatedSeconds = 0;
                 java.util.List<Integer> itemSecondsList = new java.util.ArrayList<>();
-                
+
                 for (PlanModels.Item item : day.items) {
                     // Ước tính: mỗi rep mất ~2 giây, cộng thêm rest time
                     int exerciseTimePerSet = item.reps * 2; // 2 giây mỗi rep
@@ -364,14 +469,14 @@ public class PlanPreviewActivity extends AppCompatActivity {
                 if (totalEstimatedSeconds > availableSeconds) {
                     // Scale DOWN: thời gian ước tính dài hơn, cần rút ngắn để vừa
                     scaleFactor = (float) availableSeconds / totalEstimatedSeconds;
-                    Log.d(TAG, String.format("Day %d: Estimated time (%d sec) > Available time (%d sec), scaling DOWN by factor %.2f", 
-                        day.dayIndex, totalEstimatedSeconds, availableSeconds, scaleFactor));
+                    Log.d(TAG, String.format("Day %d: Estimated time (%d sec) > Available time (%d sec), scaling DOWN by factor %.2f",
+                            day.dayIndex, totalEstimatedSeconds, availableSeconds, scaleFactor));
                 } else {
                     // Thời gian ước tính ngắn hơn hoặc bằng, sẽ phân bổ đều thời gian còn lại
-                    Log.d(TAG, String.format("Day %d: Estimated time (%d sec) <= Available time (%d sec), will distribute remaining time", 
-                        day.dayIndex, totalEstimatedSeconds, availableSeconds));
+                    Log.d(TAG, String.format("Day %d: Estimated time (%d sec) <= Available time (%d sec), will distribute remaining time",
+                            day.dayIndex, totalEstimatedSeconds, availableSeconds));
                 }
-                
+
                 // Tính thời gian còn lại sau khi trừ đi thời gian ước tính (đã scale nếu cần)
                 int scaledEstimatedSeconds = (int) (totalEstimatedSeconds * scaleFactor);
                 int remainingSeconds = availableSeconds - scaledEstimatedSeconds;
@@ -379,17 +484,17 @@ public class PlanPreviewActivity extends AppCompatActivity {
                 // Phân bổ thời gian cho từng bài tập
                 int currentTimeMinutes = startTotalMinutes;
                 int totalAllocatedSeconds = 0;
-                
+
                 // Phân bổ thời gian còn lại đều cho các bài tập (thêm vào thời gian nghỉ giữa các bài)
-                int extraSecondsPerItem = remainingSeconds > 0 && day.items.size() > 0 
-                    ? remainingSeconds / day.items.size() : 0;
-                
+                int extraSecondsPerItem = remainingSeconds > 0 && day.items.size() > 0
+                        ? remainingSeconds / day.items.size() : 0;
+
                 for (int i = 0; i < day.items.size(); i++) {
                     PlanModels.Item item = day.items.get(i);
-                    
+
                     // Tính thời gian cho bài tập này (đã scale)
                     int itemSeconds = (int) (itemSecondsList.get(i) * scaleFactor);
-                    
+
                     // Thêm thời gian nghỉ bổ sung nếu có (để lấp đầy khoảng thời gian)
                     if (i < day.items.size() - 1) {
                         // Thêm thời gian nghỉ giữa các bài tập
@@ -401,14 +506,14 @@ public class PlanPreviewActivity extends AppCompatActivity {
                             itemSeconds += remainingForLastItem;
                         }
                     }
-                    
+
                     // Đảm bảo ít nhất 30 giây
                     if (itemSeconds < 30) {
                         itemSeconds = 30;
                     }
-                    
+
                     int itemMinutes = (itemSeconds / 60) + (itemSeconds % 60 > 0 ? 1 : 0); // Làm tròn lên
-                    
+
                     // Đảm bảo ít nhất 1 phút
                     if (itemMinutes < 1) {
                         itemMinutes = 1;
@@ -454,12 +559,12 @@ public class PlanPreviewActivity extends AppCompatActivity {
                         break;
                     }
                 }
-                
+
                 // Log để debug
                 int finalMinutes = currentTimeMinutes - startTotalMinutes;
-                Log.d(TAG, String.format("Day %d: Allocated %d minutes out of %d available minutes (%.1f%%)", 
-                    day.dayIndex, finalMinutes, availableMinutes, 
-                    availableMinutes > 0 ? ((float)finalMinutes / availableMinutes * 100) : 0));
+                Log.d(TAG, String.format("Day %d: Allocated %d minutes out of %d available minutes (%.1f%%)",
+                        day.dayIndex, finalMinutes, availableMinutes,
+                        availableMinutes > 0 ? ((float)finalMinutes / availableMinutes * 100) : 0));
             }
 
             Log.d(TAG, "Successfully calculated exercise times for all days");
@@ -477,7 +582,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
 
         String info = String.format("%d tuần • %d ngày tập", plan.weekCount, plan.days.size());
         tvSub.setText(info);
-        
+
         if (rvDays != null) {
             PlanDayAdapter adapter = new PlanDayAdapter(plan.days);
             adapter.setOnActionButtonClickListener(new PlanDayAdapter.OnActionButtonClickListener() {
@@ -494,7 +599,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
             });
             rvDays.setAdapter(adapter);
         }
-        
+
         setLoading(false); // Ensure buttons are enabled
     }
 
@@ -521,7 +626,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
      */
     private void deleteOldAIWorkouts() {
         tvSub.setText("Đang tìm và xóa kế hoạch cũ...");
-        
+
         // Query tất cả workouts có source="ai" của user này
         userWorkoutDAO.getCollection()
                 .whereEqualTo("uid", uid)
@@ -530,25 +635,25 @@ public class PlanPreviewActivity extends AppCompatActivity {
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     int totalOldWorkouts = queryDocumentSnapshots.size();
                     Log.d(TAG, "Tìm thấy " + totalOldWorkouts + " workout cũ từ AI");
-                    
+
                     if (totalOldWorkouts == 0) {
                         // Không có workout cũ, tiếp tục lưu mới
                         convertPlanToWorkoutsAndSchedule();
                         return;
                     }
-                    
+
                     // Xóa từng workout
                     int[] deletedCount = {0};
                     for (com.google.firebase.firestore.DocumentSnapshot doc : queryDocumentSnapshots) {
                         String workoutId = doc.getId();
                         Log.d(TAG, "Đang xóa workout cũ: " + workoutId);
-                        
+
                         userWorkoutDAO.getDocument(workoutId)
                                 .delete()
                                 .addOnSuccessListener(aVoid -> {
                                     deletedCount[0]++;
                                     Log.d(TAG, "Đã xóa workout " + deletedCount[0] + "/" + totalOldWorkouts);
-                                    
+
                                     // Khi đã xóa hết, xóa schedule cũ và tiếp tục lưu mới
                                     if (deletedCount[0] == totalOldWorkouts) {
                                         deleteOldSchedule();
@@ -576,7 +681,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
      */
     private void deleteOldSchedule() {
         tvSub.setText("Đang xóa lịch tập cũ...");
-        
+
         scheduleDAO.getCollection()
                 .whereEqualTo("uid", uid)
                 .whereEqualTo("title", "Kế hoạch tập luyện AI")
@@ -587,7 +692,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
                         com.google.firebase.firestore.DocumentSnapshot doc = queryDocumentSnapshots.getDocuments().get(0);
                         String scheduleId = doc.getId();
                         Log.d(TAG, "Đang xóa schedule cũ: " + scheduleId);
-                        
+
                         scheduleDAO.getDocument(scheduleId)
                                 .delete()
                                 .addOnSuccessListener(aVoid -> {
@@ -617,14 +722,14 @@ public class PlanPreviewActivity extends AppCompatActivity {
      */
     private void convertPlanToWorkoutsAndSchedule() {
         tvSub.setText("Đang tạo kế hoạch mới...");
-        
+
         // ✅ Load profile để lấy trainingStartTime và weeklyGoal trước khi tạo Schedule
         profileDAO.getDocument(uid)
                 .get()
                 .addOnSuccessListener(documentSnapshot -> {
                     String trainingStartTime = "08:00"; // Default fallback
                     int weeklyGoal = 4; // Default fallback
-                    
+
                     if (documentSnapshot.exists()) {
                         String profileStartTime = documentSnapshot.getString("trainingStartTime");
                         if (profileStartTime != null && !profileStartTime.isEmpty()) {
@@ -633,7 +738,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
                         } else {
                             Log.d(TAG, "Profile không có trainingStartTime, sử dụng mặc định: 08:00");
                         }
-                        
+
                         // ✅ Lấy weeklyGoal từ profile
                         Long weeklyGoalLong = documentSnapshot.getLong("weeklyGoal");
                         if (weeklyGoalLong != null) {
@@ -645,7 +750,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
                     } else {
                         Log.d(TAG, "Profile không tồn tại, sử dụng mặc định: 08:00 và 4 ngày/tuần");
                     }
-                    
+
                     // Tạo workouts và schedule với thời gian và weeklyGoal từ profile
                     createWorkoutsAndScheduleWithTime(trainingStartTime, weeklyGoal);
                 })
@@ -669,7 +774,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
         // ✅ Tính toán ngày bắt đầu: bắt đầu từ ngày mai (hoặc hôm nay nếu chưa qua giờ tập)
         Calendar calendar = Calendar.getInstance();
         int currentDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK);
-        
+
         // ✅ Sử dụng trainingStartTime để xác định xem đã qua thời gian tập chưa
         int trainingHour = 8; // Default
         int trainingMinute = 0;
@@ -682,7 +787,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
         } catch (Exception e) {
             Log.w(TAG, "Lỗi parse trainingStartTime, sử dụng mặc định 8:00", e);
         }
-        
+
         // ✅ Xác định ngày bắt đầu: LUÔN bắt đầu từ ngày mai để tránh ngày trong quá khứ
         // Không bắt đầu hôm nay vì có thể đã qua giờ tập, dẫn đến exactDate trong quá khứ
         calendar.add(Calendar.DAY_OF_MONTH, 1); // Luôn bắt đầu từ ngày mai
@@ -691,31 +796,31 @@ public class PlanPreviewActivity extends AppCompatActivity {
         calendar.set(Calendar.SECOND, 0);
         calendar.set(Calendar.MILLISECOND, 0);
         Calendar startDate = (Calendar) calendar.clone();
-        
+
         // ✅ Tạo Calendar cho ngày hôm nay (dùng chung cho toàn bộ method)
         Calendar today = Calendar.getInstance();
         today.set(Calendar.HOUR_OF_DAY, 0);
         today.set(Calendar.MINUTE, 0);
         today.set(Calendar.SECOND, 0);
         today.set(Calendar.MILLISECOND, 0);
-        
+
         // ✅ Đảm bảo startDate không phải là quá khứ (double check)
         if (startDate.before(today)) {
             // Nếu vì lý do nào đó startDate vẫn là quá khứ, set về ngày mai
             startDate = (Calendar) today.clone();
             startDate.add(Calendar.DAY_OF_MONTH, 1);
-            Log.w(TAG, "⚠️ startDate là quá khứ, đã điều chỉnh về ngày mai: " + 
-                new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(startDate.getTime()));
+            Log.w(TAG, "⚠️ startDate là quá khứ, đã điều chỉnh về ngày mai: " +
+                    new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(startDate.getTime()));
         }
-        
-        Log.d(TAG, String.format("Bắt đầu từ ngày: %s, weeklyGoal: %d ngày/tuần", 
-            new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(startDate.getTime()), 
-            weeklyGoal));
+
+        Log.d(TAG, String.format("Bắt đầu từ ngày: %s, weeklyGoal: %d ngày/tuần",
+                new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(startDate.getTime()),
+                weeklyGoal));
 
         // Convert mỗi Day thành UserWorkout
         // ✅ Tính toán ngày bắt đầu: bắt đầu từ ngày mai (hoặc hôm nay nếu chưa qua giờ tập)
         Calendar firstWorkoutDate = (Calendar) startDate.clone();
-        
+
         // ✅ Tìm thứ 2 của tuần chứa startDate
         Calendar currentWeekMonday = (Calendar) startDate.clone();
         int dayOfWeek = startDate.get(Calendar.DAY_OF_WEEK);
@@ -725,21 +830,21 @@ public class PlanPreviewActivity extends AppCompatActivity {
         currentWeekMonday.set(Calendar.MINUTE, 0);
         currentWeekMonday.set(Calendar.SECOND, 0);
         currentWeekMonday.set(Calendar.MILLISECOND, 0);
-        
+
         // ✅ Logic mới: Nhóm các ngày theo tuần
         // Mỗi tuần có weeklyGoal ngày, bắt đầu từ thứ 2 (dayOfWeek = 1, 2, 3, ...)
         // currentDayInWeek: vị trí trong tuần (0 = thứ 2, 1 = thứ 3, ..., weeklyGoal-1 = thứ cuối)
         int currentDayInWeek = 0;
-        
+
         // ✅ Ngày hiện tại: bắt đầu từ thứ 2 của tuần chứa startDate
         // Nếu startDate không phải thứ 2, vẫn bắt đầu từ thứ 2 của tuần đó
         Calendar currentDate = (Calendar) currentWeekMonday.clone();
-        
-        Log.d(TAG, String.format("Bắt đầu: %s, Thứ 2 tuần hiện tại: %s, weeklyGoal: %d ngày/tuần", 
-            new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(startDate.getTime()),
-            new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(currentWeekMonday.getTime()),
-            weeklyGoal));
-        
+
+        Log.d(TAG, String.format("Bắt đầu: %s, Thứ 2 tuần hiện tại: %s, weeklyGoal: %d ngày/tuần",
+                new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(startDate.getTime()),
+                new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(currentWeekMonday.getTime()),
+                weeklyGoal));
+
         for (PlanModels.Day day : currentPlan.days) {
             // Tạo UserWorkout từ Day
             UserWorkout workout = createUserWorkoutFromDay(day, currentTime);
@@ -752,16 +857,16 @@ public class PlanPreviewActivity extends AppCompatActivity {
                 currentWeekMonday.add(Calendar.DAY_OF_MONTH, 7);
                 currentDate = (Calendar) currentWeekMonday.clone();
                 currentDayInWeek = 0;
-                Log.d(TAG, String.format("✅ Đã đủ %d ngày trong tuần, chuyển sang tuần mới (thứ 2): %s, reset currentDayInWeek về 0", 
-                    weeklyGoal,
-                    new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(currentDate.getTime())));
+                Log.d(TAG, String.format("✅ Đã đủ %d ngày trong tuần, chuyển sang tuần mới (thứ 2): %s, reset currentDayInWeek về 0",
+                        weeklyGoal,
+                        new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(currentDate.getTime())));
             }
-            
+
             // ✅ Tính exactDate: thứ 2 của tuần hiện tại + currentDayInWeek ngày
             // Điều này đảm bảo: tuần 1 = thứ 2, 3, 4; tuần 2 = thứ 2, 3, 4; ...
             Calendar exactDateCalendar = (Calendar) currentWeekMonday.clone();
             exactDateCalendar.add(Calendar.DAY_OF_MONTH, currentDayInWeek);
-            
+
             // ✅ Đảm bảo exactDate không phải là quá khứ
             if (exactDateCalendar.before(today)) {
                 // Nếu exactDate là quá khứ, điều chỉnh về ngày mai
@@ -774,30 +879,30 @@ public class PlanPreviewActivity extends AppCompatActivity {
                 currentWeekMonday.add(Calendar.DAY_OF_MONTH, -newDaysFromMonday);
                 currentDayInWeek = newDaysFromMonday;
                 currentDate = (Calendar) exactDateCalendar.clone();
-                Log.w(TAG, String.format("⚠️ Day %d: exactDate là quá khứ, đã điều chỉnh về: %s", 
-                    day.dayIndex,
-                    new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(exactDateCalendar.getTime())));
+                Log.w(TAG, String.format("⚠️ Day %d: exactDate là quá khứ, đã điều chỉnh về: %s",
+                        day.dayIndex,
+                        new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(exactDateCalendar.getTime())));
             }
-            
+
             java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault());
             String exactDate = sdf.format(exactDateCalendar.getTime());
-            
+
             // ✅ Tính dayOfWeek cho ScheduleItem
             // dayOfWeek = currentDayInWeek + 1 (vì bắt đầu từ thứ 2 = 1)
             // Ví dụ: currentDayInWeek = 0 → dayOfWeek = 1 (thứ 2)
             //        currentDayInWeek = 1 → dayOfWeek = 2 (thứ 3)
             //        currentDayInWeek = 2 → dayOfWeek = 3 (thứ 4)
             int scheduleDay = currentDayInWeek + 1; // 1=Monday, 2=Tuesday, ..., weeklyGoal=thứ cuối
-            
+
             // ✅ Đảm bảo scheduleDay không vượt quá 7
             if (scheduleDay > 7) {
                 scheduleDay = 7; // Tối đa là chủ nhật
                 Log.w(TAG, String.format("⚠️ Day %d: scheduleDay vượt quá 7, đã điều chỉnh về 7", day.dayIndex));
             }
-            
+
             List<Integer> daysOfWeek = new ArrayList<>();
             daysOfWeek.add(scheduleDay);
-            
+
             String dayName = "";
             switch (scheduleDay) {
                 case 1: dayName = "Thứ 2"; break;
@@ -808,20 +913,20 @@ public class PlanPreviewActivity extends AppCompatActivity {
                 case 6: dayName = "Thứ 7"; break;
                 case 7: dayName = "Chủ nhật"; break;
             }
-            
-            Log.d(TAG, String.format("Day %d: exactDate=%s, dayOfWeek=%d (%s), dayInWeek=%d/%d, weekMonday=%s", 
-                day.dayIndex, exactDate, scheduleDay, dayName, currentDayInWeek + 1, weeklyGoal,
-                new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(currentWeekMonday.getTime())));
-            
+
+            Log.d(TAG, String.format("Day %d: exactDate=%s, dayOfWeek=%d (%s), dayInWeek=%d/%d, weekMonday=%s",
+                    day.dayIndex, exactDate, scheduleDay, dayName, currentDayInWeek + 1, weeklyGoal,
+                    new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(currentWeekMonday.getTime())));
+
             // ✅ Tăng counter SAU KHI đã tính exactDate và dayOfWeek
             currentDayInWeek++;
 
             // ✅ Sử dụng trainingStartTime từ profile thay vì hardcode "08:00"
             Schedule.ScheduleItem scheduleItem = new Schedule.ScheduleItem(
-                daysOfWeek,
-                trainingStartTime, // Sử dụng thời gian từ profile
-                workout.getId(), // Link đến workout ID
-                exactDate
+                    daysOfWeek,
+                    trainingStartTime, // Sử dụng thời gian từ profile
+                    workout.getId(), // Link đến workout ID
+                    exactDate
             );
             scheduleItems.add(scheduleItem);
         }
@@ -835,54 +940,54 @@ public class PlanPreviewActivity extends AppCompatActivity {
      */
     private UserWorkout createUserWorkoutFromDay(PlanModels.Day day, long currentTime) {
         UserWorkout workout = new UserWorkout();
-        
+
         // Generate unique ID - sử dụng timestamp và dayIndex để đảm bảo unique
         // Format: ai_<timestamp>_<dayIndex>
         String workoutId = "ai_" + currentTime + "_" + day.dayIndex;
         workout.setId(workoutId);
         workout.setUid(uid);
-        
+
         // Tạo title từ dayIndex và focus
         String focusText = day.focus != null && !day.focus.isEmpty() ? day.focus : "fullbody";
         String title = "Ngày " + day.dayIndex + ": " + capitalizeFirst(focusText);
         workout.setTitle(title);
-        
+
         // Tạo description
         String description = String.format("Kế hoạch tập luyện AI - %d phút", day.estMinutes);
         workout.setDescription(description);
-        
+
         // Set source là "ai"
         workout.setSource("ai");
-        
+
         // Set timestamps
         workout.setCreatedAt(currentTime);
         workout.setUpdatedAt(currentTime);
-        
+
         // Convert items từ PlanModels.Item sang UserWorkout.UserWorkoutItem
         List<UserWorkout.UserWorkoutItem> workoutItems = new ArrayList<>();
         for (int i = 0; i < day.items.size(); i++) {
             PlanModels.Item planItem = day.items.get(i);
-            
+
             // Tạo ExerciseConfig từ plan item
             UserWorkout.ExerciseConfig config = new UserWorkout.ExerciseConfig(
-                planItem.sets,
-                planItem.reps,
-                planItem.restSec,
-                "medium" // Mặc định difficulty
+                    planItem.sets,
+                    planItem.reps,
+                    planItem.restSec,
+                    "medium" // Mặc định difficulty
             );
-            
+
             // Tạo UserWorkoutItem
             UserWorkout.UserWorkoutItem workoutItem = new UserWorkout.UserWorkoutItem(
-                i + 1, // order
-                planItem.exerciseId,
-                config
+                    i + 1, // order
+                    planItem.exerciseId,
+                    config
             );
-            
+
             workoutItems.add(workoutItem);
         }
-        
+
         workout.setItems(workoutItems);
-        
+
         return workout;
     }
 
@@ -926,19 +1031,19 @@ public class PlanPreviewActivity extends AppCompatActivity {
 
         // Tạo NotificationSettings mặc định
         Schedule.NotificationSettings notificationSettings = new Schedule.NotificationSettings(
-            true, // enabled
-            15, // remindBeforeMin (15 minutes)
-            "default" // sound
+                true, // enabled
+                15, // remindBeforeMin (15 minutes)
+                "default" // sound
         );
 
         // Tạo Schedule
         Schedule schedule = new Schedule(
-            null, // id - sẽ được tạo bởi Firestore
-            uid,
-            "Kế hoạch tập luyện AI",
-            java.util.TimeZone.getDefault().getID(),
-            scheduleItems,
-            notificationSettings
+                null, // id - sẽ được tạo bởi Firestore
+                uid,
+                "Kế hoạch tập luyện AI",
+                java.util.TimeZone.getDefault().getID(),
+                scheduleItems,
+                notificationSettings
         );
 
         // Lưu Schedule vào Firestore
@@ -949,7 +1054,7 @@ public class PlanPreviewActivity extends AppCompatActivity {
                 tvSub.setText(successMsg);
                 Toast.makeText(this, successMsg, Toast.LENGTH_LONG).show();
                 Log.d(TAG, "Schedule saved successfully with " + scheduleItems.size() + " items");
-                
+
                 // Đóng activity sau khi lưu thành công
                 finish();
             } else {
