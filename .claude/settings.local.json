@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /d/PoseTrainer-Fall2025 log --oneline -10)",
+      "Bash(git -C /d/PoseTrainer-Fall2025 check-ignore -v gradle.properties app/release_new.jks)"
+    ]
+  }
+}

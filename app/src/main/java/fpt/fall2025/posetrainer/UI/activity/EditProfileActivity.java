@@ -594,6 +594,10 @@ public class EditProfileActivity extends AppCompatActivity {
             Toast.makeText(this, "Vui lòng nhập tên hiển thị!", Toast.LENGTH_SHORT).show();
             return;
         }
+        if (newName.length() > 50) {
+            Toast.makeText(this, "Tên hiển thị không được vượt quá 50 ký tự!", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         if (selectedImageUri != null) {
             // Upload ảnh sử dụng UserDAO

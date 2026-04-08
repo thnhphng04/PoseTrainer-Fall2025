@@ -281,6 +281,10 @@ public class CreatePostActivity extends AppCompatActivity {
             Toast.makeText(this, "Vui lòng nhập nội dung hoặc chọn ảnh!", Toast.LENGTH_SHORT).show();
             return;
         }
+        if (content.length() > 2000) {
+            Toast.makeText(this, "Nội dung không được vượt quá 2000 ký tự!", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         setUiEnabled(false);
         progress.setVisibility(ProgressBar.VISIBLE);

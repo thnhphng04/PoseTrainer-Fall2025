@@ -326,6 +326,14 @@ public class CreateCustomExerciseActivity extends AppCompatActivity {
             Toast.makeText(this, "Vui lòng nhập tên bài tập", Toast.LENGTH_SHORT).show();
             return;
         }
+        if (exerciseName.length() > 100) {
+            Toast.makeText(this, "Tên bài tập không được vượt quá 100 ký tự", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (exerciseDescription.length() > 1000) {
+            Toast.makeText(this, "Mô tả không được vượt quá 1000 ký tự", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         // Get number of steps
         try {

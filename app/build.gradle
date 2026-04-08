@@ -5,6 +5,12 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+// Đọc credentials từ local.properties (không được commit vào git)
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader -> localProperties.load(reader) }
+}
 
 android {
     namespace 'fpt.fall2025.posetrainer'
@@ -39,17 +45,17 @@ android {
     // --- Dùng keystore từ gradle.properties ---
     signingConfigs {
         release {
-            storeFile file(RELEASE_STORE_FILE)
-            storePassword RELEASE_STORE_PASSWORD
-            keyAlias RELEASE_KEY_ALIAS
-            keyPassword RELEASE_KEY_PASSWORD
+            storeFile file(localProperties.getProperty("RELEASE_STORE_FILE", ""))
+            storePassword localProperties.getProperty("RELEASE_STORE_PASSWORD", "")
+            keyAlias localProperties.getProperty("RELEASE_KEY_ALIAS", "")
+            keyPassword localProperties.getProperty("RELEASE_KEY_PASSWORD", "")
         }
         debug {
             // Dùng cùng keystore với release để có 1 SHA duy nhất
-            storeFile file(RELEASE_STORE_FILE)
-            storePassword RELEASE_STORE_PASSWORD
-            keyAlias RELEASE_KEY_ALIAS
-            keyPassword RELEASE_KEY_PASSWORD
+            storeFile file(localProperties.getProperty("RELEASE_STORE_FILE", ""))
+            storePassword localProperties.getProperty("RELEASE_STORE_PASSWORD", "")
+            keyAlias localProperties.getProperty("RELEASE_KEY_ALIAS", "")
+            keyPassword localProperties.getProperty("RELEASE_KEY_PASSWORD", "")
         }
     }
 

@@ -1,0 +1,186 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =====================================================================
+    // Helper functions
+    // =====================================================================
+
+    // Kiểm tra user đã đăng nhập
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Kiểm tra user đang thao tác trên tài nguyên của chính mình
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    // Kiểm tra field không thay đổi (immutable)
+    function isUnchanged(field) {
+      return !(field in request.resource.data) ||
+             request.resource.data[field] == resource.data[field];
+    }
+
+    // =====================================================================
+    // Users collection
+    // =====================================================================
+    match /users/{uid} {
+      // Đọc: chỉ đọc được profile của chính mình
+      allow read: if isOwner(uid);
+
+      // Tạo mới: chỉ tạo được document của chính mình
+      allow create: if isOwner(uid)
+        && request.resource.data.keys().hasAll(['uid', 'email'])
+        && request.resource.data.uid == uid;
+
+      // Cập nhật: chỉ sửa được của chính mình, không được thay đổi uid/email
+      allow update: if isOwner(uid)
+        && isUnchanged('uid')
+        && isUnchanged('email');
+
+      // Xóa: không ai được xóa user document (chỉ admin mới xóa được)
+      allow delete: if false;
+    }
+
+    // =====================================================================
+    // Profiles collection
+    // =====================================================================
+    match /profiles/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) && request.resource.data.uid == uid;
+      allow update: if isOwner(uid) && isUnchanged('uid');
+      allow delete: if false;
+    }
+
+    // =====================================================================
+    // Community (posts) collection
+    // =====================================================================
+    match /community/{postId} {
+      // Đọc: chỉ user đã đăng nhập mới xem được
+      allow read: if isAuthenticated();
+
+      // Tạo: user đã đăng nhập, chỉ tạo bài của chính mình
+      allow create: if isAuthenticated()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.content is string
+        && request.resource.data.content.size() <= 2000;
+
+      // Cập nhật: chỉ chủ bài viết được sửa, không thay đổi uid
+      allow update: if isOwner(resource.data.uid)
+        && isUnchanged('uid')
+        && isUnchanged('createdAt');
+
+      // Xóa: chỉ chủ bài viết được xóa
+      allow delete: if isOwner(resource.data.uid);
+    }
+
+    // =====================================================================
+    // Sessions collection
+    // =====================================================================
+    match /sessions/{sessionId} {
+      allow read: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow delete: if false;
+    }
+
+    // =====================================================================
+    // UserWorkouts collection
+    // =====================================================================
+    match /userWorkouts/{workoutId} {
+      allow read: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.uid == request.auth.uid && isUnchanged('uid');
+      allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+    }
+
+    // =====================================================================
+    // Schedules collection
+    // =====================================================================
+    match /schedules/{scheduleId} {
+      allow read: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.uid == request.auth.uid && isUnchanged('uid');
+      allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+    }
+
+    // =====================================================================
+    // Notifications collection
+    // =====================================================================
+    match /notifications/{notifId} {
+      allow read: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+    }
+
+    // =====================================================================
+    // Favorites collection
+    // =====================================================================
+    match /favorites/{favId} {
+      allow read: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+    }
+
+    // =====================================================================
+    // Achievements collection
+    // =====================================================================
+    match /achievements/{achId} {
+      allow read: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      // Achievements chỉ được tạo/sửa qua Cloud Functions (server-side), không cho client ghi trực tiếp
+      allow write: if false;
+    }
+
+    // =====================================================================
+    // Feedback collection
+    // =====================================================================
+    match /feedback/{feedbackId} {
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
+      allow read: if isOwner(resource.data.uid);
+      allow delete: if false;
+    }
+
+    // =====================================================================
+    // Exercises (public catalog) collection
+    // =====================================================================
+    match /exercises/{exerciseId} {
+      // Ai cũng có thể xem bài tập (public catalog)
+      allow read: if isAuthenticated();
+      // Chỉ admin (Cloud Functions) mới được tạo/sửa exercises chuẩn
+      allow write: if false;
+    }
+
+    // =====================================================================
+    // ExerciseUser (custom exercises) collection
+    // =====================================================================
+    match /exercisesUser/{exerciseId} {
+      allow read: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow create: if isAuthenticated()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 100;
+      allow update: if isAuthenticated() && resource.data.uid == request.auth.uid && isUnchanged('uid');
+      allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+    }
+
+    // =====================================================================
+    // Collections collection
+    // =====================================================================
+    match /collections/{collectionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+    }
+
+    // =====================================================================
+    // Mặc định: từ chối tất cả quyền còn lại
+    // =====================================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
